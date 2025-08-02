@@ -13,7 +13,7 @@ COPY . /app
 RUN gradle clean build --no-daemon
 
 # 2. Run stage: Çalışma ortamı, sadece JRE ile
-FROM eclipse-temurin:17-jdk
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
@@ -21,4 +21,4 @@ WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 
 # Uygulamayı başlat
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
