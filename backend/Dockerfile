@@ -1,11 +1,24 @@
-# Dockerfile
+# 1. Build stage: Gradle kullanarak projeyi derle
+FROM gradle:7.6-jdk17 AS build
 
-# 1. Java base image
-FROM eclipse-temurin:17-jdk
+WORKDIR /app
 
-# 2. JAR dosyasını container’a kopyala
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} app.jar
+# Gradle cache için klasör oluştur (isteğe bağlı hız için)
+VOLUME /home/gradle/.gradle
 
-# 3. Uygulamayı başlat
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+# Proje dosyalarını kopyala
+COPY . /app
+
+# Projeyi derle (jar oluştur)
+RUN gradle clean build --no-daemon
+
+# 2. Run stage: Çalışma ortamı, sadece JRE ile
+FROM eclipse-temurin:17-jre
+
+WORKDIR /app
+
+# Build stage’den jar dosyasını kopyala
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Uygulamayı başlat
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,2 +1,22 @@
-target/
-!target/*.jar
+# Exclude build output
+build/
+!build/libs/*.jar
+
+# Exclude IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
+# Exclude version control
+.git/
+.gitignore
+
+# Exclude temporary files
+*.tmp
+*.log
