@@ -7,7 +7,7 @@ WORKDIR /app
 VOLUME /home/gradle/.gradle
 
 # Proje dosyalarını kopyala
-COPY ./backend /app
+COPY . /app
 
 # Projeyi derle (jar oluştur)
 RUN gradle clean build --no-daemon
