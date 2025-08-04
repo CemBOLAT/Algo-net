@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges }) => {
+const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge }) => {
   const [label, setLabel] = useState(selectedEdge?.label || '');
   const [weight, setWeight] = useState(selectedEdge?.weight || 1);
   const [directed, setDirected] = useState(selectedEdge?.directed || false);
@@ -21,6 +21,12 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges }) => {
       )
     );
   };
+
+  const handleDeletingEdge = () => {
+    setEdges(prevEdges => prevEdges.filter(e => e !== selectedEdge));
+    setSelectedEdge(null);
+    setTempEdge(null);
+  }
 
   const handleClose = () => {
     setSelectedEdge(null);
@@ -59,13 +65,23 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges }) => {
         onChange={(e) => handleChange(setDirected, 'directed', e.target.checked)}
       />
       <div className="text-sm mb-2">Source: <span id="e-source">{selectedEdge.from.label}</span>, Target: <span id="e-target">{selectedEdge.to.label}</span></div>
+      
       <button
         id="close-e-settings"
-        className="w-full bg-black text-white py-1 rounded"
+        className="w-full bg-black text-white py-1 rounded mb-2"
+        onClick={handleDeletingEdge}
+      >
+        Delete
+      </button>
+      
+      <button
+        id="close-e-settings"
+        className="w-full bg-black text-white py-1 rounded "
         onClick={handleClose}
       >
         Close
       </button>
+      
     </div>
   );
 };
