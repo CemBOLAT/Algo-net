@@ -1,6 +1,4 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import ContextMenu from './ContextMenu';
-import EdgeContextMenu from './EdgeContextMenu';
 
 const GraphCanvas = ({
   nodes,
@@ -19,34 +17,123 @@ const GraphCanvas = ({
   const canvasRef = useRef(null);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0, show: false, type: null });
 
+  // Dragging graph
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const justDraggedRef = useRef(false);
+
+  // Zooming
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+
+    const zoomIntensity = 0.1;
+    const wheel = e.deltaY < 0 ? 1 + zoomIntensity : 1 - zoomIntensity;
+
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const zoomCenterX = (mouseX - offset.x) / scale;
+    const zoomCenterY = (mouseY - offset.y) / scale;
+
+    const newScale = Math.min(Math.max(scale * wheel, 0.2), 5);
+
+    // Adjust offset so zoom is centered on mouse
+    const newOffsetX = mouseX - zoomCenterX * newScale;
+    const newOffsetY = mouseY - zoomCenterY * newScale;
+
+    setScale(newScale);
+    setOffset({ x: newOffsetX, y: newOffsetY });
+  };
+
+  const toCanvasCoords = (clientX, clientY) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (clientX - rect.left - offset.x) / scale;
+    const y = (clientY - rect.top - offset.y) / scale;
+    return { x, y };
+  };
+
+
   const getCanvasPos = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    return {
+      x: (e.clientX - rect.left - offset.x) / scale,
+      y: (e.clientY - rect.top - offset.y) / scale,
+    };
   };
 
+  // Dragging graph 
+  const handleMouseDown = (e) => {
+    if (mode === 'add-edge') return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  // Dragging graph
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+
+    // Prevent click action right after dragging for preventing vertex adding
+    setTimeout(() => {
+      justDraggedRef.current = false;
+    }, 0);
+  };
+
+  const handleMouseMove = (e) => {
+    if (tempEdge) {
+      const { x, y } = getCanvasPos(e);
+      setTempEdge(prev => ({ ...prev, x, y }));
+    }
+
+    if (isDraggingRef.current) {
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        justDraggedRef.current = true; // Mark as drag
+      }
+
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
+      
+      setOffset(prev => ({
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+    }
+  };
+
+
   const getNodeAt = useCallback((x, y) => {
-    return nodes.find(n => Math.hypot(n.x - x, n.y - y) <= n.size);
+    
+    return nodes.find(n => Math.hypot((n.x) - x, (n.y) - y) <= n.size);
   }, [nodes]);
 
   const getEdgeAt = useCallback((x, y) => {
+    
     for (const edge of edges) {
       const from = edge.from;
       const to = edge.to;
 
-      const dist = Math.abs((to.y - from.y) * x - (to.x - from.x) * y + to.x * from.y - to.y * from.x) /
-                   Math.hypot(to.x - from.x, to.y - from.y);
+      const fx = from.x , fy = from.y ;
+      const tx = to.x , ty = to.y ;
 
-      // Check if the point is within the bounding box of the edge segment
-      const minX = Math.min(from.x, to.x);
-      const maxX = Math.max(from.x, to.x);
-      const minY = Math.min(from.y, to.y);
-      const maxY = Math.max(from.y, to.y);
+      const dist = Math.abs((ty - fy) * x - (tx - fx) * y + tx * fy - ty * fx) / 
+                  Math.hypot(tx - fx, ty - fy);
 
-      const withinX = x >= minX - 5 && x <= maxX + 5;
-      const withinY = y >= minY - 5 && y <= maxY + 5;
+      const minX = Math.min(fx, tx);
+      const maxX = Math.max(fx, tx);
+      const minY = Math.min(fy, ty);
+      const maxY = Math.max(fy, ty);
 
-      if (dist < 8 && withinX && withinY) { // Increased sensitivity slightly for easier clicking
+      if (dist < 8 && x >= minX - 5 && x <= maxX + 5 && y >= minY - 5 && y <= maxY + 5) {
         return edge;
       }
     }
@@ -54,24 +141,32 @@ const GraphCanvas = ({
   }, [edges]);
 
 
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
+    const { x: ox, y: oy } = offsetRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Apply pan and zoom:
+    ctx.save();
+    ctx.translate(offset.x, offset.y); // Pan
+    ctx.scale(scale, scale);            // Zoom
 
     edges.forEach(edge => {
       const { from, to, label, weight, directed } = edge;
 
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
+      const dx = (to.x + ox) - (from.x + ox);
+      const dy = (to.y + oy) - (from.y + oy);
       const angle = Math.atan2(dy, dx);
       const offset = from.size || 15; // Use node size for offset
 
-      const startX = from.x + offset * Math.cos(angle);
-      const startY = from.y + offset * Math.sin(angle);
-      const endX = to.x - offset * Math.cos(angle);
-      const endY = to.y - offset * Math.sin(angle);
+      const startX = from.x + offset * Math.cos(angle) + ox;
+      const startY = from.y + offset * Math.sin(angle) + oy;
+      const endX = to.x - offset * Math.cos(angle) + ox;
+      const endY = to.y - offset * Math.sin(angle) + oy;
 
       ctx.beginPath();
       ctx.moveTo(startX, startY);
@@ -95,14 +190,14 @@ const GraphCanvas = ({
         ctx.font = "12px sans-serif";
         ctx.textAlign = "center";
         const text = `${label ? label + ' ' : ''}${weight !== undefined ? '(' + weight + ')' : ''}`;
-        ctx.fillText(text.trim(), (from.x + to.x) / 2, (from.y + to.y) / 2 - 8);
+        ctx.fillText(text.trim(), (from.x + to.x) / 2 + ox, (from.y + to.y) / 2 - 8 + oy);
       }
     });
 
     if (tempEdge) {
       ctx.beginPath();
-      ctx.moveTo(tempEdge.from.x, tempEdge.from.y);
-      ctx.lineTo(tempEdge.x, tempEdge.y);
+      ctx.moveTo(tempEdge.from.x + ox, tempEdge.from.y + oy);
+      ctx.lineTo(tempEdge.x + ox, tempEdge.y + oy);
       ctx.setLineDash([4, 4]);
       ctx.strokeStyle = "#f59e0b";
       ctx.stroke();
@@ -111,7 +206,7 @@ const GraphCanvas = ({
 
     nodes.forEach(node => {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
+      ctx.arc(node.x + ox, node.y + oy, node.size, 0, Math.PI * 2);
       ctx.fillStyle = node.color;
       ctx.fill();
       ctx.strokeStyle = "#000"; // Add a border to nodes
@@ -120,9 +215,11 @@ const GraphCanvas = ({
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle"; // Center text vertically
-      ctx.fillText(node.label, node.x, node.y);
+      ctx.fillText(node.label, node.x + ox, node.y + oy);
     });
-  }, [nodes, edges, tempEdge]);
+
+    ctx.restore();
+  }, [scale, offset, nodes, edges, tempEdge]);
 
   useEffect(() => {
     draw();
@@ -134,6 +231,7 @@ const GraphCanvas = ({
 
   const handleClick = (e) => {
     hideMenus();
+    if (justDraggedRef.current) return; // skip click after drag
     const { x, y } = getCanvasPos(e);
 
     if (mode === 'add-edge' && tempEdge) {
@@ -175,88 +273,37 @@ const GraphCanvas = ({
     if (node) {
       setSelectedNode(node);
       setSelectedEdge(null);
-      setContextMenuPos({ x: e.pageX, y: e.pageY, show: true, type: 'node' });
-      ////////////
+      
+      setTimeout(() => {
+        setMode('add-edge');
+        setTempEdge({ from: node, x: node.x, y: node.y });
+      }, 0);
+
     } else if (edge) {
       setSelectedEdge(edge);
       setSelectedNode(null);
-      setContextMenuPos({ x: e.pageX, y: e.pageY, show: true, type: 'edge' });
+      
     }
   };
 
-  const handleMouseMove = (e) => {
-    if (tempEdge) {
-      const { x, y } = getCanvasPos(e);
-      setTempEdge(prev => ({ ...prev, x, y }));
-    }
-  };
 
-  const handleSelectVertex = () => {
-    // This action means opening the settings, already handled by setSelectedNode
-    setContextMenuPos({ ...contextMenuPos, show: false });
-  };
-
-  const handleStartAddEdge = () => {
-    setMode('add-edge');
-    setTempEdge({ from: selectedNode, x: selectedNode.x, y: selectedNode.y });
-    
-  };
-
-  const handleDeleteVertex = () => {
-    if (selectedNode) {
-      setNodes(prevNodes => prevNodes.filter(n => n !== selectedNode));
-      setEdges(prevEdges => prevEdges.filter(e => e.from !== selectedNode && e.to !== selectedNode));
-      setSelectedNode(null);
-    }
-    setContextMenuPos({ ...contextMenuPos, show: false });
-  };
-
-  const handleSelectEdge = () => {
-    // This action means opening the settings, already handled by setSelectedEdge
-    setContextMenuPos({ ...contextMenuPos, show: false });
-  };
-
-  const handleDeleteEdge = () => {
-    if (selectedEdge) {
-      setEdges(prevEdges => prevEdges.filter(e => e !== selectedEdge));
-      setSelectedEdge(null);
-    }
-    setContextMenuPos({ ...contextMenuPos, show: false });
-  };
 
   return (
     <>
       <canvas
         id="graph-canvas"
         height="600"
-        width = "1000"
-        className="bg-gray-200  shadow-md rounded"
+        width="1000"
+        className="bg-gray-200 shadow-md rounded"
         ref={canvasRef}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseMove={handleMouseMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
       ></canvas>
-
-      {contextMenuPos.show && contextMenuPos.type === 'node' && (
-        <ContextMenu
-          x={contextMenuPos.x}
-          y={contextMenuPos.y}
-          onSelect={handleSelectVertex}
-          onAddEdge={handleStartAddEdge}
-          onDelete={handleDeleteVertex}
-          onClose={hideMenus}
-        />
-      )}
-
-      {contextMenuPos.show && contextMenuPos.type === 'edge' && (
-        <EdgeContextMenu
-          x={contextMenuPos.x}
-          y={contextMenuPos.y}
-          onSelect={handleSelectEdge}
-          onDelete={handleDeleteEdge}
-          onClose={hideMenus}
-        />
-      )}
+      
     </>
   );
 };

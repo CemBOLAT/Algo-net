@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const VertexSettings = ({ selectedNode, setSelectedNode, setNodes }) => {
+const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, setTempEdge }) => {
   
   const [label, setLabel] = useState(selectedNode?.label || '');
   const [size, setSize] = useState(selectedNode?.size || 15);
@@ -28,6 +28,13 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes }) => {
   const handleClose = () => {
     setSelectedNode(null);
   };
+
+  const handleDeleteVertex = () =>{
+    setNodes(prevNodes => prevNodes.filter(n => n !== selectedNode));
+    setEdges(prevEdges => prevEdges.filter(e => e.from !== selectedNode && e.to !== selectedNode));
+    setSelectedNode(null);
+    setTempEdge(null);
+  }
 
   if (!selectedNode) return null;
 
@@ -63,6 +70,15 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes }) => {
         value={color}
         onChange={(e) => handleChange(setColor, 'color', e.target.value)}
       />
+
+      <button
+        id="close-v-settings"
+        className="w-full bg-black text-white py-1 rounded mb-2"
+        onClick={handleDeleteVertex}
+      >
+        Delete
+      </button>
+
       <button
         id="close-v-settings"
         className="w-full bg-black text-white py-1 rounded"
@@ -70,6 +86,8 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes }) => {
       >
         Close
       </button>
+
+      
     </div>
   );
 };
