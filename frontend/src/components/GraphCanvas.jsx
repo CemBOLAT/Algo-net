@@ -17,8 +17,12 @@ const GraphCanvas = ({
   const canvasRef = useRef(null);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0, show: false, type: null });
 
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [draggingNode, setDraggingNode] = useState(null);
+
+
+
   // Dragging graph
-  const offsetRef = useRef({ x: 0, y: 0 });
   const dragStartRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const justDraggedRef = useRef(false);
@@ -52,14 +56,6 @@ const GraphCanvas = ({
     setOffset({ x: newOffsetX, y: newOffsetY });
   };
 
-  const toCanvasCoords = (clientX, clientY) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (clientX - rect.left - offset.x) / scale;
-    const y = (clientY - rect.top - offset.y) / scale;
-    return { x, y };
-  };
-
-
   const getCanvasPos = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -73,13 +69,31 @@ const GraphCanvas = ({
   // Dragging graph 
   const handleMouseDown = (e) => {
     if (mode === 'add-edge') return;
-    isDraggingRef.current = true;
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
+
+    const pos = getCanvasPos(e);
+    const clickedNode = nodes.find(node =>
+      Math.hypot(node.x - pos.x, node.y - pos.y) < node.size + 5
+    );
+
+    if (clickedNode) {
+      console.log("Dragging node:", clickedNode);
+      setDraggingNode(clickedNode.id);
+      setDragOffset({
+        x: pos.x - clickedNode.x,
+        y: pos.y - clickedNode.y,
+      });
+      return;
+    } else {
+      isDraggingRef.current = true;  // Pan the whole canvas
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
+    }
   };
 
   // Dragging graph
   const handleMouseUp = () => {
     isDraggingRef.current = false;
+    setDraggingNode(null);
+    setDragOffset({ x: 0, y: 0 });
 
     // Prevent click action right after dragging for preventing vertex adding
     setTimeout(() => {
@@ -93,7 +107,20 @@ const GraphCanvas = ({
       setTempEdge(prev => ({ ...prev, x, y }));
     }
 
-    if (isDraggingRef.current) {
+    if (draggingNode !== null) {
+      const pos = getCanvasPos(e);
+      setNodes(prevNodes =>
+        prevNodes.map(node =>
+          node.id === draggingNode
+            ? {
+                ...node,
+                x: pos.x - dragOffset.x,
+                y: pos.y - dragOffset.y,
+              }
+            : node
+        )
+      );
+    } else if (isDraggingRef.current) {
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
 
@@ -116,16 +143,21 @@ const GraphCanvas = ({
     return nodes.find(n => Math.hypot((n.x) - x, (n.y) - y) <= n.size);
   }, [nodes]);
 
+  
+
+
+
   const getEdgeAt = useCallback((x, y) => {
-    
     for (const edge of edges) {
-      const from = edge.from;
-      const to = edge.to;
+      const fromNode = nodes.find(n => n.id === edge.from);
+      const toNode = nodes.find(n => n.id === edge.to);
 
-      const fx = from.x , fy = from.y ;
-      const tx = to.x , ty = to.y ;
+      if (!fromNode || !toNode) continue;
 
-      const dist = Math.abs((ty - fy) * x - (tx - fx) * y + tx * fy - ty * fx) / 
+      const fx = fromNode.x, fy = fromNode.y;
+      const tx = toNode.x, ty = toNode.y;
+
+      const dist = Math.abs((ty - fy) * x - (tx - fx) * y + tx * fy - ty * fx) /
                   Math.hypot(tx - fx, ty - fy);
 
       const minX = Math.min(fx, tx);
@@ -138,13 +170,14 @@ const GraphCanvas = ({
       }
     }
     return null;
-  }, [edges]);
+  }, [edges, nodes]); // <--- important to include nodes here
 
 
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    const { x: ox, y: oy } = offsetRef.current;
+    
+
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
@@ -156,26 +189,33 @@ const GraphCanvas = ({
     ctx.scale(scale, scale);            // Zoom
 
     edges.forEach(edge => {
-      const { from, to, label, weight, directed } = edge;
+      const { from: fromId, to: toId, label, weight, directed } = edge;
 
-      const dx = (to.x + ox) - (from.x + ox);
-      const dy = (to.y + oy) - (from.y + oy);
+      const from = nodes.find(node => node.id === fromId);
+      const to = nodes.find(node => node.id === toId);
+
+      if (!from || !to) return; // Skip if nodes are not found
+
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
       const angle = Math.atan2(dy, dx);
-      const offset = from.size || 15; // Use node size for offset
+      const nodeOffset = from.size || 15;
 
-      const startX = from.x + offset * Math.cos(angle) + ox;
-      const startY = from.y + offset * Math.sin(angle) + oy;
-      const endX = to.x - offset * Math.cos(angle) + ox;
-      const endY = to.y - offset * Math.sin(angle) + oy;
+      const startX = from.x + nodeOffset * Math.cos(angle);
+      const startY = from.y + nodeOffset * Math.sin(angle);
+      const endX = to.x - nodeOffset * Math.cos(angle);
+      const endY = to.y - nodeOffset * Math.sin(angle);
 
+      // Draw line
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
       ctx.strokeStyle = "#888";
       ctx.stroke();
 
+      // Draw arrow if directed
       if (directed) {
-        const arrowSize = 8; // Slightly larger arrow
+        const arrowSize = 8;
         ctx.beginPath();
         ctx.moveTo(endX, endY);
         ctx.lineTo(endX - arrowSize * Math.cos(angle - 0.3), endY - arrowSize * Math.sin(angle - 0.3));
@@ -185,19 +225,21 @@ const GraphCanvas = ({
         ctx.fill();
       }
 
+      // Draw label and/or weight
       if (label || weight !== undefined) {
         ctx.fillStyle = "#000";
         ctx.font = "12px sans-serif";
         ctx.textAlign = "center";
-        const text = `${label ? label + ' ' : ''}${weight !== undefined ? '(' + weight + ')' : ''}`;
-        ctx.fillText(text.trim(), (from.x + to.x) / 2 + ox, (from.y + to.y) / 2 - 8 + oy);
+        const text = `${label ? label + ' ' : ''}${weight !== undefined ? '(' + weight + ')' : ''}`.trim();
+        ctx.fillText(text, (from.x + to.x) / 2, (from.y + to.y) / 2 - 8);
       }
     });
 
+
     if (tempEdge) {
       ctx.beginPath();
-      ctx.moveTo(tempEdge.from.x + ox, tempEdge.from.y + oy);
-      ctx.lineTo(tempEdge.x + ox, tempEdge.y + oy);
+      ctx.moveTo(tempEdge.from.x , tempEdge.from.y );
+      ctx.lineTo(tempEdge.x , tempEdge.y );
       ctx.setLineDash([4, 4]);
       ctx.strokeStyle = "#f59e0b";
       ctx.stroke();
@@ -206,7 +248,7 @@ const GraphCanvas = ({
 
     nodes.forEach(node => {
       ctx.beginPath();
-      ctx.arc(node.x + ox, node.y + oy, node.size, 0, Math.PI * 2);
+      ctx.arc(node.x , node.y , node.size, 0, Math.PI * 2);
       ctx.fillStyle = node.color;
       ctx.fill();
       ctx.strokeStyle = "#000"; // Add a border to nodes
@@ -215,7 +257,7 @@ const GraphCanvas = ({
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle"; // Center text vertically
-      ctx.fillText(node.label, node.x + ox, node.y + oy);
+      ctx.fillText(node.label, node.x , node.y );
     });
 
     ctx.restore();
@@ -234,33 +276,60 @@ const GraphCanvas = ({
     if (justDraggedRef.current) return; // skip click after drag
     const { x, y } = getCanvasPos(e);
 
+    // if (mode === 'add-edge' && tempEdge) {
+    //   const targetNode = getNodeAt(x, y);
+    //   if (targetNode && targetNode !== tempEdge.from) {
+    //     setEdges(prev => [...prev, { from: tempEdge.from, to: targetNode, label: '', weight: 1, directed: false }]);
+    //   }
+    //   setMode(null);
+    //   setTempEdge(null);
+    //   return;
+    // }
+
     if (mode === 'add-edge' && tempEdge) {
       const targetNode = getNodeAt(x, y);
-      if (targetNode && targetNode !== tempEdge.from) {
-        setEdges(prev => [...prev, { from: tempEdge.from, to: targetNode, label: '', weight: 1, directed: false }]);
+      if (targetNode && targetNode.id !== tempEdge.from.id) { // Fix here: use node IDs
+        setEdges(prev => [...prev, { from: tempEdge.from.id, to: targetNode.id, label: '', weight: 1, directed: false }]);
       }
       setMode(null);
       setTempEdge(null);
       return;
-    }
 
-    const clickedEdge = getEdgeAt(x, y);
-    if (clickedEdge) {
-      setSelectedEdge(clickedEdge);
-      setSelectedNode(null); // Deselect node if edge is clicked
-      return;
     }
 
     const clickedNode = getNodeAt(x, y);
+    const clickedEdge = getEdgeAt(x, y);
+
+    console.log(clickedEdge);
+    console.log("Hellooo");
+
     if (clickedNode) {
       setSelectedNode(clickedNode);
       setSelectedEdge(null); // Deselect edge if node is clicked
+      return;
+    } else if (clickedEdge) {
+      setSelectedEdge(clickedEdge);
+      setSelectedNode(null); // Deselect node if edge is clicked
+      return;
     } else {
       // Create new node
-      setNodes(prev => [...prev, { x, y, label: `V${prev.length + 1}`, size: 15, color: '#2563eb' }]);
+      setNodes(prev => [
+        ...prev,
+        {
+          id: 'node-' + (prev.length + 1), // or use a custom ID generator
+          x,
+          y,
+          label: `V${prev.length + 1}`,
+          size: 15,
+          color: '#2563eb'
+        }
+      ]);
+
       setSelectedNode(null);
       setSelectedEdge(null);
     }
+
+    
   };
 
   const handleContextMenu = (e) => {
@@ -302,6 +371,7 @@ const GraphCanvas = ({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        style={{ cursor: draggingNode !== null ? 'grabbing' : 'default' }}
       ></canvas>
       
     </>
