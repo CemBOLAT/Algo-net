@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -21,7 +21,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
-import { setTokens } from '../../utils/auth';
+import { setTokens, ensureAccessToken } from '../../utils/auth';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -33,6 +33,22 @@ const Login = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // If user already has a valid (or refreshable) access token, go to /graph
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await ensureAccessToken();
+        if (!cancelled && token) {
+          navigate('/graph', { replace: true });
+        }
+      } catch (_) {
+        // no valid token; stay on login
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
