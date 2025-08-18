@@ -42,7 +42,7 @@ const Register = () => {
     if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
@@ -65,8 +65,29 @@ const Register = () => {
       return;
     }
 
-    console.log('Register form data:', formData);
-    setError('Bu özellik henüz aktif değil.');
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.name.split(' ')[0] || formData.name,
+          lastName: formData.name.split(' ').slice(1).join(' ') || ''
+        })
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.message || 'Kayıt sırasında bir hata oluştu.');
+        return;
+      }
+
+      // Başarılıysa şimdilik login sayfasına yönlendir
+      navigate('/login');
+    } catch (err) {
+      setError('Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.');
+    }
   };
 
   return (
