@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
+const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 import { setTokens } from '../../utils/auth';
 
 const Login = () => {
@@ -58,7 +59,7 @@ const Login = () => {
     }
 
     try {
-  const res = await fetch('/api/auth/login', {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, password: formData.password })

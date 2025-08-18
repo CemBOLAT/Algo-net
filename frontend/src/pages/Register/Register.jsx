@@ -1,3 +1,4 @@
+const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 import React, { useState } from 'react';
 import {
   Box,
@@ -66,7 +67,7 @@ const Register = () => {
     }
 
     try {
-      const res = await fetch('/api/users', {
+  const res = await fetch(`${API_BASE}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
