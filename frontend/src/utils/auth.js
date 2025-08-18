@@ -39,12 +39,14 @@ export function isTokenExpired(token, skewSec = 30) {
   return nowSec >= (claims.exp - skewSec);
 }
 
+const API_BASE = import.meta?.env?.VITE_API_BASE || '';
+
 async function refreshAccessToken() {
   const { refreshToken } = getTokens();
   if (!refreshToken || isTokenExpired(refreshToken, 0)) {
     throw new Error('refresh_missing_or_expired');
   }
-  const res = await fetch('/api/auth/refresh', {
+  const res = await fetch(`${API_BASE}/api/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken })
