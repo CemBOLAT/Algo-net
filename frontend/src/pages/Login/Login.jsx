@@ -20,6 +20,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
+const API_BASE = import.meta?.env?.VITE_API_BASE || '';
+import { setTokens } from '../../utils/auth';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,6 +31,8 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -37,11 +41,12 @@ const Login = () => {
     });
     // Clear error when user starts typing
     if (error) setError('');
+  if (successMsg) setSuccessMsg('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!formData.email || !formData.password) {
       setError('Lütfen tüm alanları doldurun.');
@@ -53,9 +58,30 @@ const Login = () => {
       return;
     }
 
-    console.log('Login form data:', formData);
-    // Şimdilik sadece console'a yazdırıyoruz
-    setError('Bu özellik henüz aktif değil.');
+    try {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password })
+      });
+
+  if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.message || 'Giriş başarısız.');
+        return;
+      }
+  // success: save tokens, show green message and redirect after 2s
+  const data = await res.json().catch(() => ({}));
+  if (data?.accessToken && data?.refreshToken) {
+    setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+  }
+  setError('');
+  setSuccessMsg('Giriş başarılı! 2 saniye içinde yönlendirileceksiniz.');
+  setIsRedirecting(true);
+  setTimeout(() => navigate('/graph'), 2000);
+    } catch (err) {
+      setError('Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.');
+    }
   };
 
   const handleClickShowPassword = () => {
@@ -114,6 +140,11 @@ const Login = () => {
                 {error}
               </Alert>
             )}
+            {successMsg && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {successMsg}
+              </Alert>
+            )}
             
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
               <TextField
@@ -127,6 +158,7 @@ const Login = () => {
                 autoFocus
                 value={formData.email}
                 onChange={handleChange}
+                disabled={isRedirecting}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -148,6 +180,7 @@ const Login = () => {
                 autoComplete="off"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isRedirecting}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -160,6 +193,7 @@ const Login = () => {
                         aria-label="toggle password visibility"
                         onClick={handleClickShowPassword}
                         edge="end"
+                        disabled={isRedirecting}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -173,6 +207,7 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
+                disabled={isRedirecting}
                 sx={{
                   mt: 2,
                   mb: 3,
@@ -181,7 +216,7 @@ const Login = () => {
                   fontWeight: 'bold'
                 }}
               >
-                Giriş Yap
+                {isRedirecting ? 'Yönlendiriliyor…' : 'Giriş Yap'}
               </Button>
 
               <Stack spacing={2}>
@@ -189,6 +224,7 @@ const Login = () => {
                   fullWidth
                   variant="outlined"
                   onClick={() => navigate('/register')}
+                  disabled={isRedirecting}
                   sx={{ py: 1 }}
                 >
                   Kayıt Ol
@@ -198,6 +234,7 @@ const Login = () => {
                   component="button"
                   variant="body2"
                   onClick={() => navigate('/forgot-password')}
+                  disabled={isRedirecting}
                   sx={{
                     textAlign: 'center',
                     textDecoration: 'none',
