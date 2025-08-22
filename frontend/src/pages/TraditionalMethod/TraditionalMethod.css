@@ -1,0 +1,42 @@
+/* TraditionalMethod page-specific styles */
+.tm-root {
+  --tm-accent: rgba(79,70,229,0.12);
+  --tm-blob: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(6,182,212,0.06));
+  padding-bottom: 3.5rem;
+}
+
+.tm-header-art { display: inline-flex; align-items: center; justify-content: center; margin-right: 8px; }
+.tm-blob { width: 46px; height: 46px; border-radius: 10px; background: var(--tm-blob); box-shadow: 0 14px 40px rgba(6,16,45,0.18); transform-origin: center; animation: tm-blob-float 5.6s ease-in-out infinite; }
+.tm-blob svg { width: 100%; height: 100%; display: block; filter: saturate(1.05); }
+
+@keyframes tm-blob-float { 0% { transform: translateY(0) rotate(0deg) scale(1); } 50% { transform: translateY(-8px) rotate(6deg) scale(1.04); } 100% { transform: translateY(0) rotate(0deg) scale(1); } }
+
+.tm-glass {
+  border-radius: 14px;
+  padding: 1rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 8px 30px rgba(2,6,23,0.28);
+}
+
+.tm-columns { display: flex; gap: 1rem; flex-direction: column; }
+@media (min-width: 980px) { .tm-columns { flex-direction: row; } }
+
+.tm-vertex { transition: transform 220ms, box-shadow 220ms; border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); padding: 8px; }
+.tm-vertex:hover { transform: translateY(-6px); box-shadow: 0 10px 30px rgba(6,16,45,0.2); }
+
+.tm-edge-item { transition: background 180ms, transform 160ms; border-radius: 8px; padding: 8px; }
+.tm-edge-item:hover { background: rgba(255,255,255,0.02); transform: translateX(4px); }
+
+.tm-actions { display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center; margin-top: 1.25rem; }
+
+.tm-code { border-radius: 10px; padding: 0.9rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace; }
+
+/* modern button style used via sx or tm-modern-btn class */
+.tm-modern-btn { border-radius: 10px; text-transform: none; font-weight: 600; padding: 8px 14px; }
+.tm-modern-primary { background: linear-gradient(90deg,#6366f1,#06b6d4); color: white; box-shadow: 0 8px 30px rgba(99,102,241,0.12); }
+.tm-modern-success { background: linear-gradient(90deg,#16a34a,#34d399); color: white; box-shadow: 0 8px 30px rgba(16,185,129,0.08); }
+
+/* subtle shimmer when success shown */
+.tm-success { animation: tm-success-pulse 3s ease; }
+@keyframes tm-success-pulse { 0% { box-shadow: none } 50% { box-shadow: 0 10px 28px rgba(34,197,94,0.08);} 100% { box-shadow: none } }
