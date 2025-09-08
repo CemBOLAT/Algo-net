@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Paper, Typography, TextField, Slider, Button, Box } from '@mui/material';
 
 const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, setTempEdge }) => {
-  
   const [label, setLabel] = useState(selectedNode?.label || '');
   const [size, setSize] = useState(selectedNode?.size || 15);
   const [color, setColor] = useState(selectedNode?.color || '#2563eb');
-   
-  
+
   useEffect(() => {
     if (selectedNode) {
       setLabel(selectedNode.label);
@@ -15,12 +14,11 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
     }
   }, [selectedNode]);
 
-  
   const handleChange = (setter, key, value) => {
     setter(value);
     setNodes(prevNodes =>
       prevNodes.map(node =>
-        node === selectedNode ? { ...node, [key]: value } : node
+        node.id === selectedNode.id ? { ...node, [key]: value } : node
       )
     );
   };
@@ -30,8 +28,8 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
   };
 
   const handleDeleteVertex = () =>{
-    setNodes(prevNodes => prevNodes.filter(n => n !== selectedNode));
-    setEdges(prevEdges => prevEdges.filter(e => e.from !== selectedNode && e.to !== selectedNode));
+    setNodes(prevNodes => prevNodes.filter(n => n.id !== selectedNode.id));
+    setEdges(prevEdges => prevEdges.filter(e => e.from !== selectedNode.id && e.to !== selectedNode.id));
     setSelectedNode(null);
     setTempEdge(null);
   }
@@ -39,56 +37,41 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
   if (!selectedNode) return null;
 
   return (
-    <div
-      id="vertex-settings"
-      className="absolute top-4 right-4 w-64 bg-white border p-4 shadow-lg rounded"
-    >
-      <h2 className="text-lg font-semibold mb-2">Vertex Settings</h2>
-      <label className="text-sm">Label</label>
-      <input
-        type="text"
-        id="v-label"
-        className="w-full p-1 border rounded mb-2"
+    <Paper id="vertex-settings" sx={{ position: 'absolute', top: 16, right: 16, width: 280, p: 2 }} elevation={6}>
+      <Typography variant="h6" gutterBottom>Vertex Settings</Typography>
+
+      <TextField
+        label="Label"
         value={label}
+        size="small"
+        fullWidth
         onChange={(e) => handleChange(setLabel, 'label', e.target.value)}
+        sx={{ mb: 2 }}
       />
-      <label className="text-sm">Size</label>
-      <input
-        type="range"
-        id="v-size"
-        min="5"
-        max="40"
-        className="w-full mb-2"
+
+      <Typography variant="caption">Size</Typography>
+      <Slider
         value={size}
-        onChange={(e) => handleChange(setSize, 'size', parseInt(e.target.value))}
-      />
-      <label className="text-sm">Color</label>
-      <input
-        type="color"
-        id="v-color"
-        className="w-full h-10 mb-2"
-        value={color}
-        onChange={(e) => handleChange(setColor, 'color', e.target.value)}
+        min={5}
+        max={40}
+        onChange={(e, v) => handleChange(setSize, 'size', v)}
+        sx={{ mb: 2 }}
       />
 
-      <button
-        id="close-v-settings"
-        className="w-full bg-black text-white py-1 rounded mb-2"
-        onClick={handleDeleteVertex}
-      >
-        Delete
-      </button>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="caption" display="block">Color</Typography>
+        <input
+          type="color"
+          id="v-color"
+          style={{ width: '100%', height: 40, border: 'none', background: 'transparent' }}
+          value={color}
+          onChange={(e) => handleChange(setColor, 'color', e.target.value)}
+        />
+      </Box>
 
-      <button
-        id="close-v-settings"
-        className="w-full bg-black text-white py-1 rounded"
-        onClick={handleClose}
-      >
-        Close
-      </button>
-
-      
-    </div>
+      <Button variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeleteVertex}>Delete</Button>
+      <Button variant="outlined" fullWidth onClick={handleClose}>Close</Button>
+    </Paper>
   );
 };
 
