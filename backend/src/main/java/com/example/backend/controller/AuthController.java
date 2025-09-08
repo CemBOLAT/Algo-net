@@ -1,15 +1,19 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.LoginRequest;
+import com.example.backend.dto.ForgotPasswordRequest;
+import com.example.backend.dto.ResetPasswordRequest;
 import com.example.backend.entity.User;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.JwtService;
+import com.example.backend.service.MailService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -20,12 +24,14 @@ public class AuthController {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+	private final JwtService jwtService;
+	private final MailService mailService;
 
-	public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+	public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, MailService mailService) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
+		this.mailService = mailService;
 	}
 
 	@PostMapping("/login")
@@ -46,6 +52,56 @@ public class AuthController {
 		body.put("accessToken", access);
 		body.put("refreshToken", refresh);
 		return ResponseEntity.ok(body);
+	}
+
+	@PostMapping("/forgot-password")
+	public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+		Optional<User> opt = userRepository.findByEmail(request.getEmail());
+        // if there no user exists return error code.
+        if (opt.isEmpty()) {
+            return error(HttpStatus.BAD_REQUEST, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+        }
+        else{
+            User user = opt.get();
+            String code = String.valueOf((int)(Math.random() * 900000) + 100000); // 6 haneli
+            user.setSecurityCode(code);
+			user.setSecurityCodeCreatedAt(LocalDateTime.now());
+            userRepository.save(user);
+            try {
+                mailService.sendResetCode(user.getEmail(), code);
+            } catch (Exception ignored) { /* mail optional */ }
+        }
+		Map<String, Object> res = new HashMap<>();
+		res.put("success", true);
+		return ResponseEntity.ok(res);
+	}
+
+	@PostMapping("/reset-password")
+	public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+		Optional<User> opt = userRepository.findByEmail(request.getEmail());
+		if (opt.isEmpty()) {
+			return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Geçersiz istek");
+		}
+		User user = opt.get();
+		if (user.getSecurityCode() == null || !user.getSecurityCode().equals(request.getCode())) {
+			return error(HttpStatus.BAD_REQUEST, "INVALID_CODE", "Kod geçersiz veya süresi geçmiş");
+		}
+
+		// 15 dk geçerlilik kontrolü
+		LocalDateTime createdAt = user.getSecurityCodeCreatedAt();
+		if (createdAt == null || LocalDateTime.now().isAfter(createdAt.plusMinutes(15))) {
+			user.setSecurityCode(null);
+			user.setSecurityCodeCreatedAt(null);
+			userRepository.save(user);
+			return error(HttpStatus.BAD_REQUEST, "EXPIRED_CODE", "Kodun süresi dolmuş. Lütfen yeni bir kod isteyin.");
+		}
+		user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+		user.setSecurityCode(null); // clear code after use
+		user.setSecurityCodeCreatedAt(null);
+		userRepository.save(user);
+		Map<String, Object> res = new HashMap<>();
+		res.put("success", true);
+		return ResponseEntity.ok(res);
 	}
 
 	public static class RefreshRequest {
