@@ -16,12 +16,14 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
+const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   const handleChange = (e) => {
     setEmail(e.target.value);
@@ -29,7 +31,7 @@ const ForgotPassword = () => {
     if (success) setSuccess('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!email) {
@@ -42,9 +44,27 @@ const ForgotPassword = () => {
       return;
     }
 
-    console.log('Forgot password for:', email);
-    setSuccess('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. (Bu özellik henüz aktif değil)');
-    setError('');
+    try {
+      setIsSending(true);
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.message || 'İşlem başarısız.');
+        setIsSending(false);
+        return;
+      }
+      setError('');
+      setSuccess('Güvenlik kodu e-posta adresinize gönderildi.');
+      // Otomatik yönlendirme yok; kullanıcı isteyince devam edecek
+    } catch (err) {
+      setError('Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -127,6 +147,7 @@ const ForgotPassword = () => {
                 autoFocus
                 value={email}
                 onChange={handleChange}
+                disabled={isSending}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -141,6 +162,7 @@ const ForgotPassword = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
+                disabled={isSending}
                 sx={{
                   mt: 2,
                   mb: 3,
@@ -149,8 +171,19 @@ const ForgotPassword = () => {
                   fontWeight: 'bold'
                 }}
               >
-                Şifre Sıfırlama Bağlantısı Gönder
+                {isSending ? 'Gönderiliyor…' : 'Güvenlik Kodu Gönder'}
               </Button>
+
+              {success && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => navigate('/reset-password', { state: { email } })}
+                  sx={{ py: 1, mb: 2 }}
+                >
+                  Kodu Gir ve Devam Et
+                </Button>
+              )}
 
               <Stack spacing={2}>
                 <Link
