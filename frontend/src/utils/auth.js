@@ -41,7 +41,7 @@ export function isTokenExpired(token, skewSec = 30) {
 
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
-async function refreshAccessToken() {
+async function refreshAccessToken(signal) {
   const { refreshToken } = getTokens();
   if (!refreshToken || isTokenExpired(refreshToken, 0)) {
     throw new Error('refresh_missing_or_expired');
@@ -49,7 +49,8 @@ async function refreshAccessToken() {
   const res = await fetch(`${API_BASE}/api/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken })
+    body: JSON.stringify({ refreshToken }),
+    signal,
   });
   if (!res.ok) throw new Error('refresh_failed');
   const data = await res.json();
@@ -58,10 +59,10 @@ async function refreshAccessToken() {
   return data.accessToken;
 }
 
-export async function ensureAccessToken() {
+export async function ensureAccessToken(signal) {
   let { accessToken } = getTokens();
   if (!accessToken || isTokenExpired(accessToken)) {
-    accessToken = await refreshAccessToken();
+    accessToken = await refreshAccessToken(signal);
   }
   return accessToken;
 }
