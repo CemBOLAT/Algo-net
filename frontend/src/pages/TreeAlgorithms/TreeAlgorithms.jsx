@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearTokens } from '../../utils/auth';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
+import TopBar from '../../components/TopBar';
+import FlashMessage from '../../components/FlashMessage';
 import Typography from '@mui/material/Typography';
-import ThemeToggle from '../../components/ThemeToggle';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 
 import { Box, Button, Container, FormControl, InputLabel, MenuItem, Paper, Select, Stack, TextField, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText, Divider } from '@mui/material';
@@ -166,6 +165,19 @@ export default function TreeAlgorithms() {
 		setFastPlaying(true);
 	};
 
+	const handleCanvas = () => {
+		navigate('/graph');
+	};
+
+	const handleArray = () => {
+		navigate('/array-algorithms');
+	};
+
+	const handleLogout = () => {
+		clearTokens();
+		navigate('/login');
+	};
+
 	// SVG sizes
 	const width = Math.max(600, positions.size * 80 + 100);
 	const height = Math.max(220, (Math.max(0, ...Array.from(positions.values()).map(p => p.y)) + 1) + 120);
@@ -176,21 +188,14 @@ export default function TreeAlgorithms() {
 
 	return (
 		<Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-			<AppBar position="static" color="inherit" elevation={1}>
-				<Container maxWidth="lg">
-					<Toolbar disableGutters sx={{ display: 'flex', gap: 2 }}>
-						<Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
-							Ağaç Algoritmaları
-						</Typography>
-						<Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-							<ThemeToggle sx={{ position: 'static', width: 36, height: 36 }} />
-							<Button variant="contained" onClick={() => navigate('/array-algorithms')}>Dizi</Button>
-							<Button variant="contained" onClick={() => navigate('/graph')}>Graph</Button>
-							<Button variant="contained" color="error" onClick={() => { clearTokens(); navigate('/login'); }}>Çıkış Yap</Button>
-						</Box>
-					</Toolbar>
-				</Container>
-			</AppBar>
+			<TopBar
+                title="Ağaç Algoritmaları"
+                actions={[
+                    { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
+                    { label: 'Dizi Algoritmaları', onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: 'Dizi Algoritmaları' },
+                    { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
+                ]}
+            />
 
 			<Container maxWidth="lg" sx={{ py: 3 }}>
 				<Paper sx={{ p: 2, mb: 2 }}>

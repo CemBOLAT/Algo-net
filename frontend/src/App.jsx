@@ -9,7 +9,7 @@ import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
 import ResetPassword from './pages/ForgotPassword/ResetPassword';
 import Graph from './pages/Graph/Graph';
 import PrivateRoute from './components/PrivateRoute';
-import TraditionalMethod from './pages/TraditionalMethod/TraditionalMethod';
+import GraphCreation from './pages/GraphCreation/GraphCreation';
 import ArrayAlgorithms from './pages/ArrayAlgorithms/ArrayAlgorithms';
 import TreeAlgorithms from './pages/TreeAlgorithms/TreeAlgorithms';
 
@@ -25,7 +25,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/graph" element={<PrivateRoute><Graph /></PrivateRoute>} />
-          <Route path="/traditional-method" element={<PrivateRoute><TraditionalMethod /></PrivateRoute>} />
+          <Route path="/graph-creation" element={<PrivateRoute><GraphCreation /></PrivateRoute>} />
           <Route path="/array-algorithms" element={<PrivateRoute><ArrayAlgorithms /></PrivateRoute>} />
           <Route path="/tree-algorithms" element={<PrivateRoute><TreeAlgorithms /></PrivateRoute>} />
           <Route path="/" element={<Login />} />

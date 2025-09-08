@@ -1,20 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearTokens } from '../../utils/auth';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
+import { Typography, Box, Container, TextField, Button, Paper, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ThemeToggle from '../../components/ThemeToggle';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import Paper from '@mui/material/Paper';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Alert from '@mui/material/Alert';
+import TopBar from '../../components/TopBar';
+import FlashMessage from '../../components/FlashMessage';
 import { linearSearchSteps } from './search/linearSearch';
 import { binarySearchSteps } from './search/binarySearch';
 // Sorting algorithms (already modularized)
@@ -57,7 +48,18 @@ const ArrayAlgorithms = () => {
         setArr(a => a.filter((_, idx) => idx !== i));
     };
 
-    // Stepped search algorithms handled via modules
+    const handleTree = () => {
+        navigate('/tree-algorithms');
+    };
+
+    const handleLogout = () => {
+        clearTokens();
+        navigate('/login');
+    };
+
+    const handleCanvas = () => {
+        navigate('/graph');
+    };
 
     const handleRun = () => {
         if (arr.length === 0) {
@@ -108,10 +110,18 @@ const ArrayAlgorithms = () => {
 
     // basic playback for steps
     const canStep = steps && steps.length > 0;
-    const play = () => { if (canStep) setPlaying(true); };
-    const fastFinish = () => { if (canStep) setFastPlaying(true); };
+    const play = () => {
+        if (canStep)
+            setPlaying(true);
+    };
+    const fastFinish = () => {
+        setStepIndex(0);
+        if (canStep)
+            setFastPlaying(true);
+    };
     const pause = () => setPlaying(false);
     const restart = () => { setPlaying(false); setStepIndex(0); };
+
     React.useEffect(() => {
         if (!playing) return;
         const id = setInterval(() => {
@@ -122,6 +132,7 @@ const ArrayAlgorithms = () => {
         }, 700);
         return () => clearInterval(id);
     }, [playing, steps.length]);
+    
     React.useEffect(() => {
         if (!fastPlaying) return;
         const id = setInterval(() => {
@@ -135,37 +146,147 @@ const ArrayAlgorithms = () => {
     const nextStep = () => setStepIndex((s) => Math.min(s + 1, Math.max(0, steps.length - 1)));
     const prevStep = () => setStepIndex((s) => Math.max(0, s - 1));
 
+    // Modular cell props calculator (rules-driven) and small ArrayCell component
+    // Replaces long chained if/else with a declarative rules array (predicate => props)
+    const computeCellProps = (s, i) => {
+        const compareIndices = [];
+        if (s?.type === 'compare') { ['i', 'j', 'j1'].forEach(k => { if (Number.isInteger(s[k])) compareIndices.push(s[k]); }); }
+        const isCompare = compareIndices.includes(i);
+        const isFound = s?.type === 'found' && s.index === i;
+        const isL = s?.l === i;
+        const isR = s?.r === i;
+        const isM = s?.m === i;
+
+        const isBubble = mode === 'sort' && algorithm === 'bubble';
+        const isBubbleSwap = isBubble && s?.type === 'swap' && (i === s.j || i === s.j1);
+        const isBubbleCompare = isBubble && s?.type === 'compare' && isCompare;
+        const bubbleWillSwap = isBubbleCompare ? Boolean(s?.willSwap) : false;
+
+        const isSelectionSwap = (mode === 'sort' && algorithm === 'selection') && s?.type === 'swap' && (i === s.i || i === s.minIdx);
+        const isShift = (mode === 'sort' && algorithm === 'insertion') && s?.type === 'shift' && (i === s.from || i === s.to);
+        const isInsert = (mode === 'sort' && algorithm === 'insertion') && s?.type === 'insert' && i === s.idx;
+
+        const isMerge = mode === 'sort' && algorithm === 'merge';
+        const inMergeRange = isMerge && Number.isInteger(s?.l) && Number.isInteger(s?.r) && i >= s.l && i <= s.r;
+        const isWriteBack = isMerge && s?.type === 'writeBack' && i === s.k;
+
+        const isQuick = mode === 'sort' && algorithm === 'quick';
+        const inQuickRange = isQuick && Number.isInteger(s?.l) && Number.isInteger(s?.r) && i >= s.l && i <= s.r;
+        const isQuickPivot = isQuick && Number.isInteger(s?.qPivotIdx) && i === s.qPivotIdx;
+        const isQuickScan = isQuick && ((s?.type === 'scanL' && i === s.i) || (s?.type === 'scanR' && i === s.j));
+        const isQuickSwap = isQuick && s?.type === 'swap' && (i === s.i || i === s.j);
+
+        const isHeapify = (mode === 'sort' && algorithm === 'heap') && s?.type === 'heapify' && i === s.i;
+        const isLeftChild = (mode === 'sort' && algorithm === 'heap') && (['heapify', 'compareL', 'compareR', 'choose'].includes(s?.type)) && i === s.l;
+        const isRightChild = (mode === 'sort' && algorithm === 'heap') && (['heapify', 'compareL', 'compareR', 'choose'].includes(s?.type)) && i === s.r;
+        const isHeapSwap = (mode === 'sort' && algorithm === 'heap') && s?.type === 'swap' && (i === s.i || i === s.j);
+        const isHeapChosen = (mode === 'sort' && algorithm === 'heap') && s?.type === 'choose' && i === s.largest;
+
+        const isShellKey = (mode === 'sort' && algorithm === 'shell') && s?.type === 'key' && i === s.i;
+        const isShellShift = (mode === 'sort' && algorithm === 'shell') && s?.type === 'shift' && (i === s.from || i === s.to);
+        const isShellInsert = (mode === 'sort' && algorithm === 'shell') && s?.type === 'insert' && i === s.idx;
+
+        // insertion prefix detection
+        let insertionPrefixEnd;
+        if (mode === 'sort' && algorithm === 'insertion') {
+            for (let k = Math.min(stepIndex, steps.length - 1); k >= 0; k--) {
+                const st = steps[k];
+                if (st?.type === 'sorted' && st.mode === 'prefix' && Number.isInteger(st.index)) { insertionPrefixEnd = st.index; break; }
+            }
+        }
+
+        // swap/shift animation predicate
+        const swapAnim = mode === 'sort' && (
+            (algorithm === 'bubble' && s?.type === 'swap' && (i === s.j || i === s.j1)) ||
+            (algorithm === 'selection' && s?.type === 'swap' && (i === s.i || i === s.minIdx)) ||
+            (algorithm === 'insertion' && s?.type === 'shift' && (i === s.from || i === s.to))
+        );
+
+        // transform predicate (what used to be a big OR list)
+        const needsLift = [isCompare, isM, isBubbleSwap, isSelectionSwap, isShift, isInsert, isWriteBack, isQuickSwap, isQuickScan, isQuickPivot, isHeapSwap, isHeapChosen, isShellKey, isShellShift, isShellInsert].some(Boolean);
+
+        // Declarative rules in precedence order. Each rule returns partial props.
+        const rules = [
+            { test: () => isFound, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isBubbleSwap || (isBubbleCompare && bubbleWillSwap), props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isBubbleCompare && !bubbleWillSwap, props: { bgcolor: 'error.light', boxShadow: 6 } },
+            { test: () => isSelectionSwap, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isShift, props: { bgcolor: 'warning.light', boxShadow: 6 } },
+            { test: () => isInsert, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isWriteBack, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isQuickSwap, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isQuickScan, props: { bgcolor: 'warning.light', boxShadow: 6 } },
+            { test: () => isQuickPivot, props: { bgcolor: '#FFCDD2', boxShadow: 6 } },
+            { test: () => isHeapSwap, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isHeapChosen, props: { bgcolor: '#C5E1A5', boxShadow: 6 } },
+            { test: () => isLeftChild, props: { bgcolor: '#BBDEFB', boxShadow: 6 } },
+            { test: () => isRightChild, props: { bgcolor: '#F8BBD0', boxShadow: 6 } },
+            { test: () => isHeapify, props: { bgcolor: 'action.hover', boxShadow: 6 } },
+            { test: () => isShellKey, props: { bgcolor: '#B2DFDB', boxShadow: 6 } },
+            { test: () => isShellShift, props: { bgcolor: 'warning.light', boxShadow: 6 } },
+            { test: () => isShellInsert, props: { bgcolor: 'success.light', boxShadow: 6 } },
+            { test: () => isCompare, props: { bgcolor: 'warning.light', boxShadow: 6 } },
+            { test: () => isM, props: { bgcolor: '#8D6E63', boxShadow: 6 } },
+            { test: () => isL, props: { bgcolor: '#F8BBD0', boxShadow: 6 } },
+            { test: () => isR, props: { bgcolor: '#90CAF9', boxShadow: 6 } },
+            { test: () => inMergeRange, props: { bgcolor: 'action.hover', boxShadow: 6 } },
+            { test: () => inQuickRange, props: { bgcolor: 'action.hover', boxShadow: 6 } },
+            { test: () => (insertionPrefixEnd !== undefined && i <= insertionPrefixEnd), props: { bgcolor: '#FFF8E1', boxShadow: 1 } }
+        ];
+
+        const match = rules.find(r => r.test());
+        const bgcolor = match ? match.props.bgcolor : 'background.paper';
+        const boxShadow = match ? (match.props.boxShadow ?? 1) : 1;
+
+        return { swapAnim, boxShadow, bgcolor, isFound, transform: needsLift ? 'translateY(-8px)' : 'translateY(0)' };
+    };
+
+    const ArrayCell = ({ v, i }) => {
+        const s = steps[stepIndex];
+        const { swapAnim, boxShadow, bgcolor, isFound, transform } = computeCellProps(s, i);
+        return (
+            <Box key={`${i}-box`} className={swapAnim ? 'swap-anim' : ''} sx={(theme) => ({
+                width: 56,
+                height: 56,
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow,
+                bgcolor,
+                color: isFound ? theme.palette.common.white : 'inherit',
+                transform,
+                transition: 'all 240ms ease'
+            })}>
+                <Typography sx={{ fontWeight: 600 }}>{String(v)}</Typography>
+            </Box>
+        );
+    };
+
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-            <style>{`
-        @keyframes pulseSwap { 0% { transform: translateY(-8px) scale(1); } 50% { transform: translateY(-12px) scale(1.06); } 100% { transform: translateY(-8px) scale(1); } }
-        .swap-anim { animation: pulseSwap 320ms ease-in-out; }
-      `}</style>
-            <AppBar position="static" color="inherit" elevation={1}>
-                <Container maxWidth="lg">
-                    <Toolbar disableGutters sx={{ display: 'flex', gap: 2 }}>
-                        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
-                            Dizi Algoritmaları
-                        </Typography>
-
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <ThemeToggle sx={{ position: 'static', width: 36, height: 36 }} />
-                            <Button variant="contained" onClick={() => navigate('/graph')}>Graph</Button>
-                            <Button variant="contained" onClick={() => navigate('/tree-algorithms')}>Ağaç</Button>
-                            <Button variant="contained" color="error" onClick={() => { clearTokens(); navigate('/login'); }}>Çıkış Yap</Button>
-                        </Box>
-                    </Toolbar>
-                </Container>
-            </AppBar>
+            <TopBar
+                title="Dizi Algoritmaları"
+                actions={[
+                    { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
+                    { label: 'Ağaç Algoritmaları', onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: 'Ağaç Algoritmaları' },
+                    { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
+                ]}
+            />
+                
 
             <Container maxWidth="lg" sx={{ py: 4 }}>
+                <FlashMessage severity="error" message={showEmptyError && 'Dizi Boş Olamaz.'} sx={{ mb: 2 }} />
+                <FlashMessage severity="error" message={showEmptyTargetError && 'Hedef Boş Olamaz.'} sx={{ mb: 2 }} />
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <TextField size="small" label="Değer (Enter ile ekle)" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addValue(); }} />
+                    <TextField size="small" label="Değer (Enter ile ekle)" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { setResultText(''); setSteps([]); addValue(); } }} />
                     <FormControl size="small" sx={{ minWidth: 160 }}>
                         <InputLabel>İşlem</InputLabel>
                         <Select value={mode} label="İşlem" onChange={(e) => {
                             const v = e.target.value;
                             setMode(v);
+                            setResultText('');
+                            setSteps([]);
                             setAlgorithm(v === 'search' ? 'linear-search' : 'bubble');
                         }}>
                             <MenuItem value="search">Arama</MenuItem>
@@ -177,12 +298,12 @@ const ArrayAlgorithms = () => {
                         <>
                             <FormControl size="small" sx={{ minWidth: 220 }}>
                                 <InputLabel>Arama Algoritması</InputLabel>
-                                <Select value={algorithm} label="Arama Algoritması" onChange={(e) => setAlgorithm(e.target.value)}>
+                                <Select value={algorithm} label="Arama Algoritması" onChange={(e) => { setResultText(''); setSteps([]); setAlgorithm(e.target.value); }}>
                                     <MenuItem value="linear-search">Linear Search</MenuItem>
                                     <MenuItem value="binary-search">Binary Search</MenuItem>
                                 </Select>
                             </FormControl>
-                            <TextField size="small" label="Hedef" value={target} onChange={(e) => setTarget(e.target.value)} />
+                            <TextField size="small" label="Hedef" value={target} onChange={(e) => { setResultText(''); setSteps([]); setTarget(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { handleRun(); } }} />
                         </>
                     )}
 
@@ -190,7 +311,7 @@ const ArrayAlgorithms = () => {
                         <>
                             <FormControl size="small" sx={{ minWidth: 220 }}>
                                 <InputLabel>Sıralama Algoritması</InputLabel>
-                                <Select value={algorithm} label="Sıralama Algoritması" onChange={(e) => setAlgorithm(e.target.value)}>
+                                <Select value={algorithm} label="Sıralama Algoritması" onChange={(e) => { setResultText(''); setSteps([]); setAlgorithm(e.target.value); }}>
                                     <MenuItem value="bubble">Bubble Sort</MenuItem>
                                     <MenuItem value="selection">Selection Sort</MenuItem>
                                     <MenuItem value="insertion">Insertion Sort</MenuItem>
@@ -204,7 +325,7 @@ const ArrayAlgorithms = () => {
                             </FormControl>
                             <FormControl size="small" sx={{ minWidth: 160 }}>
                                 <InputLabel>Sıra</InputLabel>
-                                <Select value={order} label="Sıra" onChange={(e) => setOrder(e.target.value)}>
+                                <Select value={order} label="Sıra" onChange={(e) => { setResultText(''); setSteps([]); setOrder(e.target.value); }}>
                                     <MenuItem value="asc">Artan</MenuItem>
                                     <MenuItem value="desc">Azalan</MenuItem>
                                 </Select>
@@ -214,32 +335,33 @@ const ArrayAlgorithms = () => {
                     <Button variant="contained" color="success" onClick={handleRun}>Çalıştır</Button>
                 </Box>
 
-                {showEmptyError && (
-                    <Alert severity="error" sx={{ mb: 2 }}>Dizi Boş Olamaz.</Alert>
-                )}
-
-                {showEmptyTargetError && (
-                    <Alert severity="error" sx={{ mb: 2 }}>Hedef Boş Olamaz.</Alert>
-                )}
-
                 <Paper sx={{ p: 2, mb: 2 }}>
                     <Typography variant="h6">Dizi</Typography>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
                         {arr.map((v, i) => (
                             <Box key={`${v}-${i}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Box sx={{ minWidth: 56, px: 1.5, py: 1, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1, textAlign: 'center' }}>
-                                    {String(v)}
+                                <Box sx={{ position: 'relative', minWidth: 56, px: 1.5, py: 1, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1, textAlign: 'center' }}>
+                                    <Typography sx={{ fontWeight: 600 }}>{String(v)}</Typography>
+                                    <Tooltip title="Sil" placement="top">
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => { setResultText(''); setSteps([]); removeAt(i); }}
+                                            aria-label={`Index ${i} sil`}
+                                            sx={(theme) => ({
+                                                position: 'absolute',
+                                                top: -8,
+                                                right: -8,
+                                                bgcolor: theme.palette.background.paper,
+                                                boxShadow: 1,
+                                                width: 28,
+                                                height: 28,
+                                                '&:hover': { bgcolor: theme.palette.action.hover }
+                                            })}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
                                 </Box>
-                                <Button
-                                    size="small"
-                                    variant="text"
-                                    onClick={() => removeAt(i)}
-                                    title="Sil"
-                                    aria-label={`Index ${i} sil`}
-                                    sx={{ mt: 0.5, minWidth: 0, px: 0.5, lineHeight: 1 }}
-                                >
-                                    🗑️
-                                </Button>
                             </Box>
                         ))}
                     </Box>
@@ -249,111 +371,9 @@ const ArrayAlgorithms = () => {
                     <Typography variant="h6">Sonuç</Typography>
                     {/* Boxes visualizer: show step snapshot if present, else show current array */}
                     <Box sx={{ mt: 2, display: 'flex', gap: 1, alignItems: 'flex-end', minHeight: 112 }}>
-                        {(steps[stepIndex]?.a ?? arr).map((v, i) => {
-                            const s = steps[stepIndex];
-                            // Compare indices for both search and sort steps
-                            const compareIndices = [];
-                            if (s?.type === 'compare') {
-                                if (Number.isInteger(s.i)) compareIndices.push(s.i);
-                                if (Number.isInteger(s.j)) compareIndices.push(s.j);
-                                if (Number.isInteger(s.j1)) compareIndices.push(s.j1);
-                            }
-                            const isCompare = compareIndices.includes(i);
-                            const isFound = s?.type === 'found' && s.index === i;
-                            const isL = s?.l === i; // binary
-                            const isR = s?.r === i;
-                            const isM = s?.m === i;
-                            // Bubble specific coloring: swap -> green, no-swap compare -> red
-                            const isBubble = mode === 'sort' && algorithm === 'bubble';
-                            const isBubbleSwap = isBubble && s?.type === 'swap' && (i === s.j || i === s.j1);
-                            const isBubbleCompare = isBubble && s?.type === 'compare' && isCompare;
-                            const bubbleWillSwap = isBubbleCompare ? Boolean(s?.willSwap) : false;
-                            // Selection specific
-                            const isSelection = mode === 'sort' && algorithm === 'selection';
-                            const isSelectionSwap = isSelection && s?.type === 'swap' && (i === s.i || i === s.minIdx);
-                            // Insertion specific
-                            const isInsertion = mode === 'sort' && algorithm === 'insertion';
-                            const isShift = isInsertion && s?.type === 'shift' && (i === s.from || i === s.to);
-                            const isInsert = isInsertion && s?.type === 'insert' && i === s.idx;
-                            // Apply swap/shift animation for bubble/selection/insertion
-                            const swapAnim = mode === 'sort' && (
-                                (algorithm === 'bubble' && s?.type === 'swap' && (i === s.j || i === s.j1)) ||
-                                (algorithm === 'selection' && s?.type === 'swap' && (i === s.i || i === s.minIdx)) ||
-                                (algorithm === 'insertion' && s?.type === 'shift' && (i === s.from || i === s.to))
-                            );
-                            // Insertion prefix background (cream) up to current sorted prefix
-                            let insertionPrefixEnd;
-                            if (mode === 'sort' && algorithm === 'insertion') {
-                                for (let k = Math.min(stepIndex, steps.length - 1); k >= 0; k--) {
-                                    const st = steps[k];
-                                    if (st?.type === 'sorted' && st.mode === 'prefix' && Number.isInteger(st.index)) { insertionPrefixEnd = st.index; break; }
-                                }
-                            }
-                            // Merge range highlighting
-                            const isMerge = mode === 'sort' && algorithm === 'merge';
-                            const inMergeRange = isMerge && Number.isInteger(s?.l) && Number.isInteger(s?.r) && i >= s.l && i <= s.r;
-                            const isWriteBack = isMerge && s?.type === 'writeBack' && i === s.k;
-                            // Quick sort highlighting
-                            const isQuick = mode === 'sort' && algorithm === 'quick';
-                            const inQuickRange = isQuick && Number.isInteger(s?.l) && Number.isInteger(s?.r) && i >= s.l && i <= s.r;
-                            const isQuickPivot = isQuick && Number.isInteger(s?.qPivotIdx) && i === s.qPivotIdx;
-                            const isQuickScan = isQuick && ((s?.type === 'scanL' && i === s.i) || (s?.type === 'scanR' && i === s.j));
-                            const isQuickSwap = isQuick && s?.type === 'swap' && (i === s.i || i === s.j);
-                            // Heap sort highlighting
-                            const isHeap = mode === 'sort' && algorithm === 'heap';
-                            // Shell sort highlighting
-                            const isShell = mode === 'sort' && algorithm === 'shell';
-                            const isShellKey = isShell && s?.type === 'key' && i === s.i;
-                            const isShellShift = isShell && s?.type === 'shift' && (i === s.from || i === s.to);
-                            const isShellInsert = isShell && s?.type === 'insert' && i === s.idx;
-                            const isHeapify = isHeap && s?.type === 'heapify' && i === s.i;
-                            const isLeftChild = isHeap && (['heapify', 'compareL', 'compareR', 'choose'].includes(s?.type)) && i === s.l;
-                            const isRightChild = isHeap && (['heapify', 'compareL', 'compareR', 'choose'].includes(s?.type)) && i === s.r;
-                            const isHeapSwap = isHeap && s?.type === 'swap' && (i === s.i || i === s.j);
-                            const isHeapChosen = isHeap && s?.type === 'choose' && i === s.largest;
-                            return (
-                                <Box key={`${i}-box`} className={swapAnim ? 'swap-anim' : ''} sx={(theme) => ({
-                                    width: 56,
-                                    height: 56,
-                                    borderRadius: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    boxShadow: (isFound || isBubbleSwap || isBubbleCompare || isSelectionSwap || isShift || isInsert || isWriteBack || isQuickSwap || isQuickScan || isQuickPivot || isHeapify || isLeftChild || isRightChild || isHeapChosen || isHeapSwap || isShellKey || isShellShift || isShellInsert || isL || isR || isM) ? 6 : 1,
-                                    bgcolor: isFound ? 'success.light' : (isBubbleSwap || (isBubbleCompare && bubbleWillSwap))
-                                            ? 'success.light' : (isBubbleCompare && !bubbleWillSwap)
-                                            ? 'error.light' : (isSelectionSwap)
-                                            ? 'success.light' : (isShift)
-                                            ? 'warning.light' : (isInsert)
-                                            ? 'success.light' : (isWriteBack)
-                                            ? 'success.light' : (isQuickSwap)
-                                            ? 'success.light' : (isQuickScan)
-                                            ? 'warning.light' : (isQuickPivot)
-                                            ? '#FFCDD2' : (isHeapSwap)
-                                            ? 'success.light' : (isHeapChosen)
-                                            ? '#C5E1A5' : (isLeftChild) 
-                                            ? '#BBDEFB' : (isRightChild)
-                                            ? '#F8BBD0' : (isHeapify)
-                                            ? 'action.hover' : (isShellKey)
-                                            ? '#B2DFDB' : (isShellShift)
-                                            ? 'warning.light' : (isShellInsert)
-                                            ? 'success.light' : isCompare
-                                            ? 'warning.light' : isM
-                                            ? '#8D6E63' : isL
-                                            ? '#F8BBD0' : isR
-                                            ? '#90CAF9' : inMergeRange
-                                            ? 'action.hover' : inQuickRange
-                                            ? 'action.hover'
-                                            : (insertionPrefixEnd !== undefined && i <= insertionPrefixEnd)
-                                            ? '#FFF8E1' : 'background.paper',
-                                    color: isFound ? theme.palette.common.white : 'inherit',
-                                    transform: (isCompare || isM || isBubbleSwap || isSelectionSwap || isShift || isInsert || isWriteBack || isQuickSwap || isQuickScan || isQuickPivot || isHeapSwap || isHeapChosen || isShellKey || isShellShift || isShellInsert) ? 'translateY(-8px)' : 'translateY(0)',
-                                    transition: 'all 240ms ease'
-                                })}>
-                                    <Typography sx={{ fontWeight: 600 }}>{String(v)}</Typography>
-                                </Box>
-                            );
-                        })}
+                        {(steps[stepIndex]?.a ?? arr).map((v, i) => (
+                            <ArrayCell key={`${i}-cell`} v={v} i={i} />
+                        ))}
                     </Box>
 
                     {/* Heap Sort tail indicator (extracted elements at the end) */}

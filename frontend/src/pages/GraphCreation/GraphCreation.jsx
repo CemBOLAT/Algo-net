@@ -1,38 +1,19 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearTokens } from '../../utils/auth';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
-import Alert from '@mui/material/Alert';
-import Tooltip from '@mui/material/Tooltip';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import Paper from '@mui/material/Paper';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Collapse from '@mui/material/Collapse';
+import { AppBar, Toolbar, Typography, Button, Box, Container, TextField, IconButton, Tooltip, List, ListItem, Paper, MenuItem, Select, FormControl, InputLabel, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Pagination, Switch, FormControlLabel } from '@mui/material';
+import FlashMessage from '../../components/FlashMessage';
+import TopBar from '../../components/TopBar';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
+import EditIcon from '@mui/icons-material/Edit';
 import ThemeToggle from '../../components/ThemeToggle';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Pagination from '@mui/material/Pagination';
-import './TraditionalMethod.css';
+import './GraphCreation.css';
 
-const TraditionalMethod = () => {
+const GraphCreation = () => {
     const navigate = useNavigate();
     const [graphName, setGraphName] = useState('');
 
@@ -45,12 +26,30 @@ const TraditionalMethod = () => {
     const [edgeFormOpen, setEdgeFormOpen] = useState(false);
     const [edgeFrom, setEdgeFrom] = useState('');
     const [edgeTo, setEdgeTo] = useState('');
-    const [edgeName, setEdgeName] = useState('');
+    const [edgeWeight, setEdgeWeight] = useState('');
+    const [edgeError, setEdgeError] = useState('');
     const [edgePage, setEdgePage] = useState(1);
     const edgesPerPage = 5;
 
     const [createError, setCreateError] = useState('');
     const [createSuccess, setCreateSuccess] = useState('');
+    const [directed, setDirected] = useState(true);
+    const [weighted, setWeighted] = useState(false);
+
+    const weightedMountedRef = useRef(false);
+    const weightedImportInProgressRef = useRef(false);
+    useEffect(() => {
+        if (!weightedMountedRef.current) { weightedMountedRef.current = true; return; }
+        if (weightedImportInProgressRef.current) { weightedImportInProgressRef.current = false; return; }
+        // Reset edges and form inputs when weighted flag toggles
+        setEdges([]);
+        setEdgePage(1);
+        setEdgeFrom('');
+        setEdgeTo('');
+        setEdgeWeight('');
+        setCreateSuccess(weighted ? 'Ağırlıklı moda geçildi — kenarlar sıfırlandı, lütfen tekrar ekleyin.' : 'Ağırlıklı mod kapandı — kenarlar sıfırlandı.');
+        setTimeout(() => setCreateSuccess(''), 2000);
+    }, [weighted]);
 
     // file upload preview
     const [filePreviewOpen, setFilePreviewOpen] = useState(false);
@@ -58,18 +57,35 @@ const TraditionalMethod = () => {
     const [fileName, setFileName] = useState('');
     const fileInputRef = useRef(null);
     const [fileModalOpen, setFileModalOpen] = useState(false);
+    const [weightedExampleModalOpen, setWeightedExampleModalOpen] = useState(false);
+    const [weightedImportRequested, setWeightedImportRequested] = useState(false);
 
     const vertexListRef = useRef(null);
     const edgeListRef = useRef(null);
+
+    const [weightEditDialogOpen, setWeightEditDialogOpen] = useState(false);
+    const [weightEditEdgeId, setWeightEditEdgeId] = useState(null);
+    const [weightEditValue, setWeightEditValue] = useState('');
+    const [weightEditError, setWeightEditError] = useState('');
 
     const handleLogout = () => {
         clearTokens();
         navigate('/login', { replace: true });
     };
 
-    const handleModern = () => {
+    const handleCanvas = () => {
         // go to graph - tokens kept as-is
         navigate('/graph');
+    };
+
+    const handleArray = () => {
+        // go to array algorithms - tokens kept as-is
+        navigate('/array-algorithms');
+    };
+
+    const handleTree = () => {
+        // go to tree algorithms - tokens kept as-is
+        navigate('/tree-algorithms');
     };
 
     const addVertex = () => {
@@ -78,12 +94,10 @@ const TraditionalMethod = () => {
             setVertexError('İsim boş olamaz');
             return;
         }
-        // enforce max 6 chars
         if (name.length > 6) {
             setVertexError('Düğüm adı en fazla 6 karakter olabilir');
             return;
         }
-        // prevent duplicates (case-insensitive)
         if (vertices.some((existing) => existing.toLowerCase() === name.toLowerCase())) {
             setVertexError('Aynı isimli düğüm zaten var');
             return;
@@ -91,7 +105,6 @@ const TraditionalMethod = () => {
         setVertices((v) => [...v, name]);
         setVertexName('');
         setVertexError('');
-        // scroll to end
         requestAnimationFrame(() => {
             if (vertexListRef.current) vertexListRef.current.scrollLeft = vertexListRef.current.scrollWidth;
         });
@@ -100,15 +113,21 @@ const TraditionalMethod = () => {
     const removeVertex = (index) => {
         const removedName = vertices[index];
         setVertices((v) => v.filter((_, i) => i !== index));
-        // also remove edges using this vertex
         setEdges((e) => e.filter((edge) => edge.from !== removedName && edge.to !== removedName));
     };
 
     const addEdge = () => {
         if (!edgeFrom || !edgeTo) return;
-        const name = edgeName.trim() || `${edgeFrom}-${edgeTo}`;
-        setEdges((e) => [...e, { id: Date.now(), name, from: edgeFrom, to: edgeTo, showDelete: false }]);
-        setEdgeName('');
+        if (weighted) {
+            if (edgeWeight === '' || edgeWeight === null || Number.isNaN(Number(edgeWeight))) {
+                setCreateError('Ağırlıklı graph için kenar ağırlığı gereklidir');
+                setTimeout(() => setCreateError(''), 2500);
+                return;
+            }
+        }
+        const name = `${edgeFrom}-${edgeTo}`;
+        setEdges((e) => [...e, { id: Date.now(), name, from: edgeFrom, to: edgeTo, showDelete: false, directed: directed, weight: weighted ? Number(edgeWeight) : undefined }]);
+        setEdgeWeight('');
         setEdgeFrom('');
         setEdgeTo('');
         setEdgeFormOpen(false);
@@ -125,6 +144,30 @@ const TraditionalMethod = () => {
         setEdges((e) => e.filter((edge) => edge.id !== id));
     };
 
+    const openWeightEditor = (edge) => {
+        setWeightEditEdgeId(edge.id);
+        setWeightEditValue(edge.weight !== undefined ? String(edge.weight) : '');
+        setWeightEditError('');
+        setWeightEditDialogOpen(true);
+    };
+
+    const closeWeightEditor = () => {
+        setWeightEditDialogOpen(false);
+        setWeightEditEdgeId(null);
+        setWeightEditValue('');
+        setWeightEditError('');
+    };
+
+    const saveWeightEdit = () => {
+        if (weightEditValue === '' || Number.isNaN(Number(weightEditValue))) {
+            setWeightEditError('Geçerli bir sayı girin');
+            return;
+        }
+        const w = Number(weightEditValue);
+        setEdges((e) => e.map(edge => edge.id === weightEditEdgeId ? { ...edge, weight: w } : edge));
+        closeWeightEditor();
+    };
+
     const scroll = (ref, dir = 'right') => {
         if (!ref?.current) return;
         const el = ref.current;
@@ -134,9 +177,9 @@ const TraditionalMethod = () => {
 
     const handleCreate = () => {
         setCreateError('');
-        // If edgeName provided, require from and to
-        if (edgeName && (!edgeFrom || !edgeTo)) {
-            setCreateError('Edge adı varsa hem From hem To seçili olmalı');
+        // If weighted graph, ensure any partial edge inputs won't create invalid edges (weight required on add)
+        if (weighted && edgeFormOpen && (edgeWeight === '' || edgeWeight === null)) {
+            setCreateError('Ağırlıklı graph için kenar ağırlığı gereklidir');
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
@@ -178,8 +221,8 @@ const TraditionalMethod = () => {
                 from: labelToId[e.from] || `node-1`,
                 to: labelToId[e.to] || `node-1`,
                 label: e.name || '',
-                weight: undefined,
-                directed: true,
+                weight: e.weight !== undefined ? e.weight : (weighted ? 1 : undefined),
+                directed: typeof e.directed === 'boolean' ? e.directed : directed,
             }));
 
             // navigate with router state
@@ -190,41 +233,106 @@ const TraditionalMethod = () => {
         }
     };
 
+    // parse content (simple or weighted) and load into vertices/edges
+    const parseAndLoad = (content) => {
+        const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) {
+            // close any modals and show error
+            setFileModalOpen(false);
+            setWeightedExampleModalOpen(false);
+            setCreateError('Dosya boş görünüyor');
+            setTimeout(() => setCreateError(''), 3000);
+            return;
+        }
+
+        const vertexRegex = /^[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}$/;
+        const edgeRegex = /^\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*:\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}(\s*,\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6})*\s*$/;
+        const weightedEdgeRegex = /^\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*:\s*\(\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*,\s*\d+\s*\)(\s*,\s*\(\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*,\s*\d+\s*\))*\s*$/;
+
+        let badLine = null;
+        for (let i = 0; i < lines.length; i++) {
+            const ln = lines[i];
+            if (vertexRegex.test(ln)) continue;
+            if (edgeRegex.test(ln)) continue;
+            if (weightedEdgeRegex.test(ln)) continue;
+            badLine = { index: i + 1, text: ln };
+            break;
+        }
+
+        if (badLine) {
+            // close modals and show error
+            setFileModalOpen(false);
+            setWeightedExampleModalOpen(false);
+            setCreateError(`Dosya formatı hatalı. Satır ${badLine.index}: "${badLine.text}"`);
+            setTimeout(() => setCreateError(''), 3000);
+            return;
+        }
+
+        const verticesSet = new Set();
+        const parsedEdges = [];
+        let idCounter = Date.now();
+        for (const ln of lines) {
+            if (weightedEdgeRegex.test(ln)) {
+                const [srcPart, targetsPart] = ln.split(':');
+                const src = srcPart.trim();
+                verticesSet.add(src);
+                const pairRegex = /\(\s*([A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6})\s*,\s*(\d+)\s*\)/g;
+                let m;
+                while ((m = pairRegex.exec(targetsPart)) !== null) {
+                    const t = m[1];
+                    const w = Number(m[2]);
+                    verticesSet.add(t);
+                    parsedEdges.push({ id: idCounter++, name: '', from: src, to: t, showDelete: false, directed: directed, weight: w });
+                }
+            } else if (edgeRegex.test(ln)) {
+                const [srcPart, targetsPart] = ln.split(':');
+                const src = srcPart.trim();
+                verticesSet.add(src);
+                const targets = targetsPart.split(',').map(t => t.trim()).filter(Boolean);
+                for (const t of targets) {
+                    verticesSet.add(t);
+                    parsedEdges.push({ id: idCounter++, name: '', from: src, to: t, showDelete: false, directed: directed, weight: undefined });
+                }
+            } else if (vertexRegex.test(ln)) {
+                verticesSet.add(ln);
+            }
+        }
+
+        const hasWeights = parsedEdges.some(pe => pe.weight !== undefined);
+        if (hasWeights && !weighted) {
+            // indicate an import is in progress so the weighted toggle effect doesn't clear these edges
+            weightedImportInProgressRef.current = true;
+            setWeighted(true);
+        }
+
+        setVertices(Array.from(verticesSet));
+        setEdges(parsedEdges);
+
+    // close modals and preview on success
+    setFileModalOpen(false);
+    setWeightedExampleModalOpen(false);
+    setCreateError('');
+    setCreateSuccess('Graph yüklendi');
+    setFilePreviewOpen(false);
+        try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch (err) { /* ignore */ }
+        setTimeout(() => setCreateSuccess(''), 3000);
+    };
+
     return (
         <Box className="tm-root" sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-            <AppBar position="static" color="inherit" elevation={1}>
-                <Container maxWidth="xl">
-                    <Toolbar disableGutters>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
-                            <div className="tm-header-art">
-                                <div className="tm-blob" aria-hidden>
-                                    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                                        <path d="M20,30 C30,10 70,10 80,30 C90,50 70,80 50,80 C30,80 10,50 20,30Z" fill="url(#g)" opacity="0.95" />
-                                        <defs>
-                                            <linearGradient id="g" x1="0" x2="1">
-                                                <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.22" />
-                                                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.12" />
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
-                                </div>
-                            </div>
-                            <Typography variant="h6" component="div" sx={{ fontWeight: 700 }}>Geleneksel Yöntem</Typography>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <ThemeToggle sx={{ position: 'static', top: 'auto', right: 'auto', zIndex: 'auto', width: 40, height: 40 }} />
-                            <Button variant="contained" color="primary" onClick={handleModern} aria-label="Modern Yöntem">Modern Yöntem</Button>
-                            <Button variant="contained" color="error" onClick={handleLogout} aria-label="Çıkış Yap">Çıkış Yap</Button>
-                        </Box>
-                    </Toolbar>
-                </Container>
-            </AppBar>
-
+            <TopBar
+                title="Graph Oluştur"
+                actions={[
+                    { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
+                    { label: 'Dizi Algoritmaları', onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: 'Dizi Algoritmaları' },
+                    { label: 'Ağaç Algoritmaları', onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: 'Ağaç Algoritmaları' },
+                    { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
+                ]}
+            />
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 {/* Graph name */}
-                {createError && <Alert sx={{ mb: 2 }} severity="error">{createError}</Alert>}
-                {createSuccess && <Alert sx={{ mb: 2 }} severity="success">{createSuccess}</Alert>}
+                <FlashMessage severity="error" message={createError} sx={{ mb: 2 }} />
+                <FlashMessage severity="success" message={createSuccess} sx={{ mb: 2 }} />
                 <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
                     <TextField
                         label="Graph Adı"
@@ -233,6 +341,10 @@ const TraditionalMethod = () => {
                         onChange={(e) => setGraphName(e.target.value)}
                         sx={{ flex: 1 }}
                     />
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <FormControlLabel control={<Switch checked={directed} onChange={(e) => setDirected(e.target.checked)} />} label="Yönlü (Directed)" />
+                        <FormControlLabel control={<Switch checked={weighted} onChange={(e) => setWeighted(e.target.checked)} />} label="Ağırlıklı (Weighted)" />
+                    </Box>
                 </Box>
 
                 {/* Two-column layout */}
@@ -251,7 +363,7 @@ const TraditionalMethod = () => {
                             />
                             <Button className="tm-modern-btn tm-modern-primary" startIcon={<AddIcon />} onClick={addVertex}>Ekle</Button>
                         </Box>
-                        {vertexError && <Alert severity="error" sx={{ mb: 2 }}>{vertexError}</Alert>}
+                        {<FlashMessage severity="error" message={vertexError} sx={{ mb: 2 }} />}
 
                         {/* Horizontal scrollable list */}
                         <Box sx={{ position: 'relative' }}>
@@ -319,7 +431,9 @@ const TraditionalMethod = () => {
                                     </Select>
                                 </FormControl>
 
-                                <TextField size="small" label="Kenar Adı (opsiyonel)" value={edgeName} onChange={(e) => setEdgeName(e.target.value)} />
+                                {weighted ? (
+                                    <TextField size="small" label="Kenar Ağırlığı" type="number" value={edgeWeight} onChange={(e) => setEdgeWeight(e.target.value)} />
+                                ) : null}
                                 <Button className="tm-modern-btn tm-modern-primary" onClick={addEdge} startIcon={<AddIcon />}>Ekle</Button>
                             </Box>
                         </Collapse>
@@ -343,7 +457,14 @@ const TraditionalMethod = () => {
                                             sx={{ minWidth: 220, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                                             secondaryAction={(
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Typography sx={{ mr: 1 }}>{edge.name ? edge.name : `${edge.from}→${edge.to}`}</Typography>
+                                                    <Typography sx={{ mr: 1 }}>{edge.name ? edge.name + ` (${edge.weight})` : `${edge.from}-${edge.to}${edge.weight !== undefined ? `-(${edge.weight})` : '31'}`}</Typography>
+                                                    {edge.weight !== undefined && (
+                                                        <Tooltip title="Ağırlığı düzenle">
+                                                            <IconButton size="small" onClick={() => openWeightEditor(edge)}>
+                                                                <EditIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
                                                     <Box sx={{ perspective: 600 }}>
                                                         <Box
                                                             sx={{
@@ -413,6 +534,26 @@ const TraditionalMethod = () => {
                             }
                             setFileName(f.name);
                             const text = await f.text();
+
+                            if (weightedImportRequested) {
+                                // reset the flag
+                                setWeightedImportRequested(false);
+                                // validate weighted format (must contain at least one weighted-edge line)
+                                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                const weightedEdgeRegex = /^\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*:\s*\(\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*,\s*\d+\s*\)(\s*,\s*\(\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*,\s*\d+\s*\))*\s*$/;
+                                const hasWeightedLine = lines.some(ln => weightedEdgeRegex.test(ln));
+                                if (!hasWeightedLine) {
+                                    setCreateError('Seçilen dosya ağırlıklı formatta değil');
+                                    setTimeout(() => setCreateError(''), 4000);
+                                    // reopen weighted example modal so user sees guidance
+                                    setWeightedExampleModalOpen(true);
+                                    return;
+                                }
+                                // parse and load immediately as weighted
+                                parseAndLoad(text);
+                                return;
+                            }
+
                             setFilePreviewContent(text);
                             setFilePreviewOpen(true);
                             // clear the input value so the same file can be selected again without page refresh
@@ -430,7 +571,7 @@ const TraditionalMethod = () => {
 
                 </Box>
                 <Dialog open={fileModalOpen} onClose={() => setFileModalOpen(false)} fullWidth maxWidth="sm">
-                    <DialogTitle>Dosya Ekle - Bilgilendirme</DialogTitle>
+                    <DialogTitle>Graph Ekle - Bilgilendirme</DialogTitle>
                     <DialogContent dividers>
                         <Typography variant="body1" gutterBottom>
                             Dosyanız aşağıdaki formatta olmalıdır:
@@ -457,12 +598,15 @@ const TraditionalMethod = () => {
                             <li><strong>L1:L2,L3,L4,L5</strong> → L1 düğümünden L2, L3, L4 ve L5’e giden kenarlar vardır.</li>
                             <li><strong>L2:L1,L3,L4</strong> → L2 düğümünden L1, L3 ve L4’e giden kenarlar vardır.</li>
                         </ul>
+                        
                         <Typography variant="body2" sx={{ mt: 1 }}>
                             Her satırda <code>Düğüm:Komşu1,Komşu2,...</code> formatı kullanılmalıdır.
                         </Typography>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setFileModalOpen(false)}>İptal</Button>
+                        <Button onClick={() => setWeightedExampleModalOpen(true)}>Ağırlıklı Örnek</Button>
+
                         <Button
                             onClick={() => {
                                 setFileModalOpen(false);
@@ -474,6 +618,74 @@ const TraditionalMethod = () => {
                         >
                             Dosya Seç
                         </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Weight edit dialog */}
+                <Dialog open={weightEditDialogOpen} onClose={closeWeightEditor} fullWidth maxWidth="xs">
+                    <DialogTitle>Kenar Ağırlığını Düzenle</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Ağırlık"
+                            type="number"
+                            fullWidth
+                            value={weightEditValue}
+                            onChange={(e) => { setWeightEditValue(e.target.value); if (weightEditError) setWeightEditError(''); }}
+                            error={!!weightEditError}
+                            helperText={weightEditError}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={closeWeightEditor}>İptal</Button>
+                        <Button onClick={saveWeightEdit} variant="contained">Kaydet</Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Weighted example dialog (mirrors file modal style) */}
+                <Dialog open={weightedExampleModalOpen} onClose={() => setWeightedExampleModalOpen(false)} fullWidth maxWidth="sm">
+                    <DialogTitle>Ağırlıklı Graph Ekle - Bilgilendirme</DialogTitle>
+                    <DialogContent dividers>
+                        <Typography variant="body1" gutterBottom>
+                            Aşağıdaki örnek, kenar ağırlıklarını içeren dosya formatını gösterir:
+                        </Typography>
+
+                        <Box
+                            component="pre"
+                            sx={(theme) => ({
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f5f5f5',
+                                color: theme.palette.text.primary,
+                                p: 2,
+                                borderRadius: 2,
+                                fontSize: 14,
+                                overflowX: 'auto'
+                            })}
+                        >
+                            {`L1:(L2, 3),(L3, 1),(L4, 2),(L5, 4)\nL2:(L1, 3),(L3, 5),(L4, 1)`}
+                        </Box>
+                        <Typography variant="body2" sx={{ mt: 2 }}>
+                            Bu format, yönlü graph’ı tanımlar:
+                        </Typography>
+                        <ul>
+                            <li><strong>L1:(L2, 3),(L3, 1),(L4, 2),(L5, 4)</strong> → L1 düğümünden L2’ye ağırlık 3, L3’e ağırlık 1, L4’e ağırlık 2 ve L5’e ağırlık 4 olan kenarlar vardır.</li>
+                            <li><strong>L2:(L1, 3),(L3, 5),(L4, 1)</strong> → L2 düğümünden L1’e ağırlık 3, L3’e ağırlık 5 ve L4’e ağırlık 1 olan kenarlar vardır.</li>
+                        </ul>
+
+                        <Typography variant="body2" sx={{ mt: 2 }}>
+                            Her satır <code>Düğüm:(Komşu, Ağırlık),(Komşu, Ağırlık),...</code> formatındadır.
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => { setWeightedExampleModalOpen(false); setWeightedImportRequested(false); }}>İptal</Button>
+                        <Button onClick={() => {
+                            // trigger weighted file picker: set flag so onChange knows to parse as weighted
+                            setWeightedImportRequested(true);
+                            weightedImportInProgressRef.current = true;
+                            setWeightedExampleModalOpen(false);
+                            try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch (err) { }
+                            fileInputRef.current?.click();
+                        }} variant="contained">Dosya Seç</Button>
                     </DialogActions>
                 </Dialog>
 
@@ -498,70 +710,7 @@ const TraditionalMethod = () => {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => { setFilePreviewOpen(false); try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch (err) { } }}>Kapat</Button>
-                        <Button onClick={() => {
-                            // validate file content
-                            const lines = filePreviewContent.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                            if (lines.length === 0) {
-                                setCreateError('Dosya boş görünüyor');
-                                setTimeout(() => setCreateError(''), 3000);
-                                setFilePreviewOpen(false);
-                                setFileModalOpen(true);
-                                return;
-                            }
-
-                            const vertexRegex = /^[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}$/;
-                            // allow lines like L1:L2,L3,L4 (source:comma-separated targets)
-                            const edgeRegex = /^\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*:\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}(\s*,\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6})*\s*$/;
-
-                            let badLine = null;
-                            for (let i = 0; i < lines.length; i++) {
-                                const ln = lines[i];
-                                if (vertexRegex.test(ln)) continue;
-                                if (edgeRegex.test(ln)) continue;
-                                badLine = { index: i + 1, text: ln };
-                                break;
-                            }
-
-                            if (badLine) {
-                                setCreateError(`Dosya formatı hatalı. Satır ${badLine.index}: "${badLine.text}"`);
-                                setTimeout(() => setCreateError(''), 3000);
-                                setFilePreviewOpen(false);
-                                setFileModalOpen(true);
-                                return;
-                            }
-
-                            // Parse file into vertices and edges, clear existing lists then add
-                            const verticesSet = new Set();
-                            const parsedEdges = [];
-                            let idCounter = Date.now();
-                            for (const ln of lines) {
-                                // ln matches edgeRegex like 'L1:L2,L3'
-                                if (edgeRegex.test(ln)) {
-                                    const [srcPart, targetsPart] = ln.split(':');
-                                    const src = srcPart.trim();
-                                    verticesSet.add(src);
-                                    const targets = targetsPart.split(',').map(t => t.trim()).filter(Boolean);
-                                    for (const t of targets) {
-                                        verticesSet.add(t);
-                                        parsedEdges.push({ id: idCounter++, name: '', from: src, to: t, showDelete: false });
-                                    }
-                                } else if (vertexRegex.test(ln)) {
-                                    verticesSet.add(ln);
-                                }
-                            }
-
-                            // Clear existing lists and set new ones
-                            setVertices(Array.from(verticesSet));
-                            setEdges(parsedEdges);
-
-                            setCreateError('');
-                            setCreateSuccess('Graph yüklendi');
-                            setFilePreviewOpen(false);
-                            // clear input so the same file can be reselected later
-                            try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch (err) { /* ignore */ }
-                            // clear success after 3s
-                            setTimeout(() => setCreateSuccess(''), 3000);
-                        }} variant="contained">Ekle</Button>
+                        <Button onClick={() => { parseAndLoad(filePreviewContent); }} variant="contained">Ekle</Button>
                     </DialogActions>
                 </Dialog>
 
@@ -570,5 +719,5 @@ const TraditionalMethod = () => {
     );
 };
 
-export default TraditionalMethod;
+export default GraphCreation;
 

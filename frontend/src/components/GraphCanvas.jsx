@@ -1,4 +1,14 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 
 const GraphCanvas = ({
   nodes,
@@ -30,6 +40,10 @@ const GraphCanvas = ({
   // Zooming
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const MIN_SCALE = 0.25; // 25%
+  const MAX_SCALE = 5;    // 500%
+  const [inputZoom, setInputZoom] = useState('100');
+  const EDGE_STROKE = 3; // default edge thickness
   
 
   const handleWheel = (e) => {
@@ -46,7 +60,7 @@ const GraphCanvas = ({
     const zoomCenterX = (mouseX - offset.x) / scale;
     const zoomCenterY = (mouseY - offset.y) / scale;
 
-    const newScale = Math.min(Math.max(scale * wheel, 0.2), 5);
+  const newScale = Math.min(Math.max(scale * wheel, MIN_SCALE), MAX_SCALE);
 
     // Adjust offset so zoom is centered on mouse
     const newOffsetX = mouseX - zoomCenterX * newScale;
@@ -55,6 +69,33 @@ const GraphCanvas = ({
     setScale(newScale);
     setOffset({ x: newOffsetX, y: newOffsetY });
   };
+
+  const zoomBy = (factor, centerX, centerY) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+
+    // centerX/centerY are in client coords; default to canvas center
+    const cx = centerX ?? (rect.left + rect.width / 2);
+    const cy = centerY ?? (rect.top + rect.height / 2);
+
+    const mouseX = cx - rect.left;
+    const mouseY = cy - rect.top;
+
+    const zoomCenterX = (mouseX - offset.x) / scale;
+    const zoomCenterY = (mouseY - offset.y) / scale;
+
+    const newScale = Math.min(Math.max(scale * factor, MIN_SCALE), MAX_SCALE);
+
+    const newOffsetX = mouseX - zoomCenterX * newScale;
+    const newOffsetY = mouseY - zoomCenterY * newScale;
+
+    setScale(newScale);
+    setOffset({ x: newOffsetX, y: newOffsetY });
+  };
+
+  const zoomIn = () => zoomBy(1.1);
+  const zoomOut = () => zoomBy(1 / 1.1);
 
   const getCanvasPos = (e) => {
     const canvas = canvasRef.current;
@@ -107,6 +148,8 @@ const GraphCanvas = ({
       setTempEdge(prev => ({ ...prev, x, y }));
     }
 
+  // ...existing code...
+
     if (draggingNode !== null) {
       const pos = getCanvasPos(e);
       setNodes(prevNodes =>
@@ -154,16 +197,29 @@ const GraphCanvas = ({
 
       if (!fromNode || !toNode) continue;
 
+      // compute actual edge start/end points based on node radii so hit testing matches rendering
       const fx = fromNode.x, fy = fromNode.y;
       const tx = toNode.x, ty = toNode.y;
+      const dx = tx - fx;
+      const dy = ty - fy;
+      const len = Math.hypot(dx, dy) || 1;
 
-      const dist = Math.abs((ty - fy) * x - (tx - fx) * y + tx * fy - ty * fx) /
-                  Math.hypot(tx - fx, ty - fy);
+      const fromOffset = fromNode.size || 15;
+      const toOffset = toNode.size || 15;
 
-      const minX = Math.min(fx, tx);
-      const maxX = Math.max(fx, tx);
-      const minY = Math.min(fy, ty);
-      const maxY = Math.max(fy, ty);
+      const startX = fx + (fromOffset * (dx / len));
+      const startY = fy + (fromOffset * (dy / len));
+      const endX = tx - (toOffset * (dx / len));
+      const endY = ty - (toOffset * (dy / len));
+
+      // distance from point to segment
+      const dist = Math.abs((endY - startY) * x - (endX - startX) * y + endX * startY - endY * startX) /
+                  Math.hypot(endX - startX, endY - startY);
+
+      const minX = Math.min(startX, endX);
+      const maxX = Math.max(startX, endX);
+      const minY = Math.min(startY, endY);
+      const maxY = Math.max(startY, endY);
 
       if (dist < 8 && x >= minX - 5 && x <= maxX + 5 && y >= minY - 5 && y <= maxY + 5) {
         return edge;
@@ -199,39 +255,65 @@ const GraphCanvas = ({
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const angle = Math.atan2(dy, dx);
-      const nodeOffset = from.size || 15;
+      const len = Math.hypot(dx, dy) || 1;
 
-      const startX = from.x + nodeOffset * Math.cos(angle);
-      const startY = from.y + nodeOffset * Math.sin(angle);
-      const endX = to.x - nodeOffset * Math.cos(angle);
-      const endY = to.y - nodeOffset * Math.sin(angle);
+      const fromOffset = from.size || 15;
+      const toOffset = to.size || 15;
 
-      // Draw line
+      const startX = from.x + (fromOffset * (dx / len));
+      const startY = from.y + (fromOffset * (dy / len));
+      const endX = to.x - (toOffset * (dx / len));
+      const endY = to.y - (toOffset * (dy / len));
+
+      // Draw line (thicker)
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
-      ctx.strokeStyle = "#888";
+    const isSelectedEdge = selectedEdge && selectedEdge.id === edge.id;
+    ctx.strokeStyle = '#888';
+      ctx.lineWidth = EDGE_STROKE;
       ctx.stroke();
+      ctx.lineWidth = 1; // reset
 
-      // Draw arrow if directed
+      // Draw arrow if directed — larger and high-contrast
       if (directed) {
-        const arrowSize = 8;
+        // arrow size scales with edge stroke and node size for clarity
+        const arrowSize = Math.max(10, Math.round(EDGE_STROKE * 3), Math.round(Math.min(toOffset, fromOffset) * 0.35));
+        const arrowAngle = 0.35;
+    const arrowColor = '#888';
+
         ctx.beginPath();
         ctx.moveTo(endX, endY);
-        ctx.lineTo(endX - arrowSize * Math.cos(angle - 0.3), endY - arrowSize * Math.sin(angle - 0.3));
-        ctx.lineTo(endX - arrowSize * Math.cos(angle + 0.3), endY - arrowSize * Math.sin(angle + 0.3));
+        ctx.lineTo(endX - arrowSize * Math.cos(angle - arrowAngle), endY - arrowSize * Math.sin(angle - arrowAngle));
+        ctx.lineTo(endX - arrowSize * Math.cos(angle + arrowAngle), endY - arrowSize * Math.sin(angle + arrowAngle));
         ctx.closePath();
-        ctx.fillStyle = "#888";
+        // fill with same color as stroke and add a subtle dark outline
+        ctx.fillStyle = arrowColor;
         ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#333';
+        ctx.stroke();
+        ctx.lineWidth = 1; // reset
       }
 
-      // Draw label and/or weight
-      if (label || weight !== undefined) {
+      // Draw label and/or weight at midpoint between actual start/end
+      const midX = (startX + endX) / 2;
+      const midY = (startY + endY) / 2;
+      if ((edge.showWeight ?? true) && weight !== undefined) {
         ctx.fillStyle = "#000";
         ctx.font = "12px sans-serif";
         ctx.textAlign = "center";
-        const text = `${label ? label + ' ' : ''}${weight !== undefined ? '(' + weight + ')' : ''}`.trim();
-        ctx.fillText(text, (from.x + to.x) / 2, (from.y + to.y) / 2 - 8);
+        const text = `(${weight})`;
+        ctx.fillText(text, midX, midY - 8);
+      } else {
+        // show from-to when weight display is disabled
+        const fromLabel = from.label || from.id;
+        const toLabel = to.label || to.id;
+        ctx.fillStyle = "#000";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        const text = `${fromLabel}-${toLabel}`;
+        ctx.fillText(text, midX, midY - 8);
       }
     });
 
@@ -254,10 +336,13 @@ const GraphCanvas = ({
       ctx.strokeStyle = "#000"; // Add a border to nodes
       ctx.lineWidth = 1;
       ctx.stroke();
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle"; // Center text vertically
-      ctx.fillText(node.label, node.x , node.y );
+  // Set font size proportional to node size so label scales with the vertex
+  const fontSize = Math.max(10, Math.round((node.size || 15) * 0.7));
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle"; // Center text vertically
+  ctx.fillText(node.label, node.x , node.y );
     });
 
     ctx.restore();
@@ -266,6 +351,37 @@ const GraphCanvas = ({
   useEffect(() => {
     draw();
   }, [draw]);
+
+  // ...existing code...
+
+  // Keep the zoom input in sync with actual scale
+  useEffect(() => {
+    setInputZoom(String(Math.round(scale * 100)));
+  }, [scale]);
+
+  const applyZoomFromInput = (valStr) => {
+    const parsed = parseFloat(valStr);
+    if (isNaN(parsed)) {
+      setInputZoom(String(Math.round(scale * 100)));
+      return;
+    }
+
+    const clampedPercent = Math.max(MIN_SCALE * 100, Math.min(MAX_SCALE * 100, parsed));
+    const newScale = clampedPercent / 100;
+
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      setScale(newScale);
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const factor = newScale / scale;
+    // Use zoomBy to preserve centering logic and clamping
+    zoomBy(factor, cx, cy);
+  };
 
   const hideMenus = () => {
     setContextMenuPos({ ...contextMenuPos, show: false });
@@ -289,7 +405,7 @@ const GraphCanvas = ({
     if (mode === 'add-edge' && tempEdge) {
       const targetNode = getNodeAt(x, y);
       if (targetNode && targetNode.id !== tempEdge.from.id) { // Fix here: use node IDs
-        setEdges(prev => [...prev, { from: tempEdge.from.id, to: targetNode.id, label: '', weight: 1, directed: false }]);
+  setEdges(prev => [...prev, { id: `edge-${prev.length + 1}`, from: tempEdge.from.id, to: targetNode.id, label: '', weight: 1, directed: false, showWeight: true }]);
       }
       setMode(null);
       setTempEdge(null);
@@ -358,7 +474,7 @@ const GraphCanvas = ({
 
 
   return (
-    <>
+    <Box sx={{ position: 'relative', display: 'inline-block' }}>
       <canvas
         id="graph-canvas"
         height="600"
@@ -373,8 +489,39 @@ const GraphCanvas = ({
         onWheel={handleWheel}
         style={{ cursor: draggingNode !== null ? 'grabbing' : 'default' }}
       ></canvas>
-      
-    </>
+      {/* Zoom controls */}
+      <Box sx={{ position: 'absolute', right: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Paper elevation={3} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.5, borderRadius: 1 }}>
+          <Tooltip title="Zoom in">
+            <IconButton size="small" onClick={zoomIn} aria-label="zoom-in">
+              <ZoomInIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom out">
+            <IconButton size="small" onClick={zoomOut} aria-label="zoom-out">
+              <ZoomOutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Paper>
+
+        <Paper elevation={6} sx={{ bgcolor: 'rgba(0,0,0,0.75)', color: '#fff', px: 1.25, py: 0.5, borderRadius: 1, display: 'flex', alignItems: 'center' }}>
+          <TextField
+            value={inputZoom}
+            onChange={(e) => setInputZoom(e.target.value)}
+            onBlur={(e) => applyZoomFromInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') applyZoomFromInput(e.target.value); }}
+            size="small"
+            variant="standard"
+            InputProps={{
+              endAdornment: <InputAdornment position="end">%</InputAdornment>,
+              sx: { color: '#fff', '& .MuiInput-input': { color: '#fff' } }
+            }}
+            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+            sx={{ width: 64 }}
+          />
+        </Paper>
+      </Box>
+    </Box>
   );
 };
 
