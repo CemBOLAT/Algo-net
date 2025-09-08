@@ -1,6 +1,7 @@
 package com.example.backend.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -24,6 +25,9 @@ public class User {
 
     @Column(name = "security_code")
     private String securityCode; // This is code for 2FA
+
+    @Column(name = "security_code_created_at")
+    private LocalDateTime securityCodeCreatedAt;
 
     public User() {}
 
@@ -51,4 +55,7 @@ public class User {
 
     public String getSecurityCode() { return securityCode; }
     public void setSecurityCode(String securityCode) { this.securityCode = securityCode; }
+
+    public LocalDateTime getSecurityCodeCreatedAt() { return securityCodeCreatedAt; }
+    public void setSecurityCodeCreatedAt(LocalDateTime securityCodeCreatedAt) { this.securityCodeCreatedAt = securityCodeCreatedAt; }
 }
