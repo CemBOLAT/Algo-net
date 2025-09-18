@@ -30,10 +30,10 @@ public class CorsConfig implements WebMvcConfigurer {
         return;
     }
 
-    // Parse comma-separated origins, trim and include renderOrigin
+    // Parse comma-separated origins, trim and include renderOrigin + local dev origins
     List<String> origins = Stream.concat(
             Arrays.stream((allowedOrigin == null ? "" : allowedOrigin).split(",")),
-            Stream.of(renderOrigin)
+            Stream.of(renderOrigin, "http://localhost:5173", "http://localhost:8080")
         )
         .map(String::trim)
         .filter(s -> !s.isEmpty())
