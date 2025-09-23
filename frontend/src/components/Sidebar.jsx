@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, Button, Stack, Box, TextField } from '@mui/material';
+import onCustom, { CustomFileInput } from "./CustomAlgo";
 
 const Sidebar = ({ onRun, onReset, graphName = 'Graph Name', setGraphName = () => {} }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
@@ -46,6 +47,9 @@ const Sidebar = ({ onRun, onReset, graphName = 'Graph Name', setGraphName = () =
       <Stack spacing={1}>
         <Button id="run-btn" variant="contained" color="primary" fullWidth onClick={() => onRun(selectedAlgorithm)}>
           Run
+        </Button>
+        <Button id="custom-btn" variant="contained" color="inherit" fullWidth onClick={onCustom}>
+          Custom
         </Button>
         <Button id="reset-btn" variant="outlined" color="inherit" fullWidth onClick={onReset}>
           Reset
