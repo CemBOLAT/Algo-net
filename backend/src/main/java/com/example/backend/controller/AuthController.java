@@ -44,6 +44,11 @@ public class AuthController {
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
 			return error(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "E-posta veya şifre hatalı.");
 		}
+
+		// prevent disabled users from logging in
+		if (user.isDisabled()) {
+			return error(HttpStatus.FORBIDDEN, "USER_DISABLED", "Hesabınız devre dışı bırakılmış.");
+		}
 		String access = jwtService.generateAccessToken(user.getId(), user.getEmail());
 		String refresh = jwtService.generateRefreshToken(user.getId());
 		Map<String, Object> body = new HashMap<>();
@@ -133,6 +138,26 @@ public class AuthController {
 			return ResponseEntity.ok(res);
 		} catch (Exception e) {
 			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Refresh token geçersiz veya süresi dolmuş");
+		}
+	}
+
+	@GetMapping("/is-admin")
+	public ResponseEntity<?> isAdmin(@RequestHeader(name = "Authorization", required = false) String authorization) {
+		if (authorization == null || !authorization.startsWith("Bearer ")) {
+			return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
+		}
+		String token = authorization.substring(7).trim();
+		try {
+			Map<String, Object> claims = jwtService.parseClaims(token);
+			Long userId = Long.parseLong((String) claims.get("sub"));
+			Optional<User> userOpt = userRepository.findById(userId);
+			if (userOpt.isEmpty()) return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+			User user = userOpt.get();
+			Map<String, Object> res = new HashMap<>();
+			res.put("isAdmin", user.isAdmin());
+			return ResponseEntity.ok(res);
+		} catch (Exception e) {
+			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
 		}
 	}
 
