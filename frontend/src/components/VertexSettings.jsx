@@ -14,6 +14,18 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
     }
   }, [selectedNode]);
 
+  // Prevent Enter key from activating focused buttons/controls when vertex settings are open
+  useEffect(() => {
+    const handleKeyDownCapture = (e) => {
+      if (selectedNode && e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDownCapture, true);
+    return () => window.removeEventListener('keydown', handleKeyDownCapture, true);
+  }, [selectedNode]);
+
   const handleChange = (setter, key, value) => {
     setter(value);
     setNodes(prevNodes =>
@@ -37,7 +49,7 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
   if (!selectedNode) return null;
 
   return (
-    <Paper id="vertex-settings" sx={{ position: 'absolute', top: 16, right: 16, width: 280, p: 2 }} elevation={6}>
+    <Paper id="vertex-settings" sx={{ position: 'absolute', top: 16, right: 16, width: 280, p: 2 }} elevation={6} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }}>
       <Typography variant="h6" gutterBottom>Vertex Settings</Typography>
 
       <TextField
@@ -46,6 +58,7 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
         size="small"
         fullWidth
         onChange={(e) => handleChange(setLabel, 'label', e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }}
         sx={{ mb: 2 }}
       />
 
@@ -55,6 +68,7 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
         min={5}
         max={40}
         onChange={(e, v) => handleChange(setSize, 'size', v)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }}
         sx={{ mb: 2 }}
       />
 
@@ -66,11 +80,12 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
           style={{ width: '100%', height: 40, border: 'none', background: 'transparent' }}
           value={color}
           onChange={(e) => handleChange(setColor, 'color', e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }}
         />
       </Box>
 
-      <Button variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeleteVertex}>Delete</Button>
-      <Button variant="outlined" fullWidth onClick={handleClose}>Close</Button>
+      <Button type="button" variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeleteVertex}>Delete</Button>
+      <Button type="button" variant="outlined" fullWidth onClick={handleClose}>Close</Button>
     </Paper>
   );
 };
