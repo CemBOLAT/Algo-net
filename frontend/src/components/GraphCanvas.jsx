@@ -509,7 +509,6 @@ const GraphCanvas = ({
             value={inputZoom}
             onChange={(e) => setInputZoom(e.target.value)}
             onBlur={(e) => applyZoomFromInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') applyZoomFromInput(e.target.value); }}
             size="small"
             variant="standard"
             InputProps={{
