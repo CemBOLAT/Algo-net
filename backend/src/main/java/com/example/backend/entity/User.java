@@ -29,6 +29,13 @@ public class User {
     @Column(name = "security_code_created_at")
     private LocalDateTime securityCodeCreatedAt;
 
+    // new fields
+    @Column(name = "is_admin")
+    private boolean isAdmin = false;
+
+    @Column(name = "disabled")
+    private boolean disabled = false;
+
     public User() {}
 
     public User(String email, String password, String firstName, String lastName) {
@@ -58,4 +65,10 @@ public class User {
 
     public LocalDateTime getSecurityCodeCreatedAt() { return securityCodeCreatedAt; }
     public void setSecurityCodeCreatedAt(LocalDateTime securityCodeCreatedAt) { this.securityCodeCreatedAt = securityCodeCreatedAt; }
+
+    public boolean isAdmin() { return isAdmin; }
+    public void setAdmin(boolean admin) { isAdmin = admin; }
+
+    public boolean isDisabled() { return disabled; }
+    public void setDisabled(boolean disabled) { this.disabled = disabled; }
 }
