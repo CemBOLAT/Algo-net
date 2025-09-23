@@ -1,6 +1,6 @@
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 import React, { useState } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Alert, Stack} from '@mui/material';
+import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack } from '@mui/material';
 import { Email, Lock, Visibility, VisibilityOff, Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -50,15 +50,35 @@ const Register = () => {
             return;
         }
 
+        // require at least first name and last name (two tokens)
+        const parts = formData.name.trim().split(/\s+/);
+        if (parts.length < 2) {
+            setError('Lütfen en az isim ve soyisim girin.');
+            return;
+        }
+
+        // split name: allow two-word last names. If 3+ tokens, last two tokens become lastName.
+        let firstName = '';
+        let lastName = '';
+        if (parts.length === 2) {
+            firstName = parts[0];
+            lastName = parts[1];
+        } else {
+            // 3 or more tokens -> assume last two tokens form a compound last name
+            lastName = parts.slice(-2).join(' ');
+            firstName = parts.slice(0, -2).join(' ');
+        }
+
         try {
-            const res = await fetch(`${API_BASE}/api/users`, {
+
+            const res = await fetch(`${API_BASE}/api/create-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: formData.email,
                     password: formData.password,
-                    firstName: formData.name.split(' ')[0] || formData.name,
-                    lastName: formData.name.split(' ').slice(1).join(' ') || ''
+                    firstName,
+                    lastName
                 })
             });
 
@@ -68,7 +88,6 @@ const Register = () => {
                 return;
             }
 
-            // Başarılıysa şimdilik login sayfasına yönlendir
             setSuccessMsg('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...');
             setTimeout(() => {
                 navigate('/login');
