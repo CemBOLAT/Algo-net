@@ -4,7 +4,7 @@ import { Email, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
-import { setTokens, clearTokens } from '../../utils/auth';
+import { setTokens, clearTokens, http } from '../../utils/auth';
 
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
@@ -27,21 +27,10 @@ const AdminLogin = () => {
     try {
       setIsLoading(true);
 
-      // Authenticate to get tokens
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, password: formData.password })
-      });
+      // Authenticate to get tokens (no auth header)
+      const data = await http.post('/api/auth/login', { email: formData.email, password: formData.password }, { auth: false })
+        .catch(err => { throw err; });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.message || 'Giriş başarısız');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json().catch(() => ({}));
       if (data?.accessToken && data?.refreshToken) {
         setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
       } else {
@@ -50,26 +39,16 @@ const AdminLogin = () => {
         return;
       }
 
-      // Ensure the token belongs to an admin by calling server endpoint
+      // Ensure the token belongs to an admin
       try {
-        const checkRes = await fetch(`${API_BASE}/api/auth/is-admin`, {
-          headers: { Authorization: `Bearer ${data.accessToken}` }
-        });
-        if (!checkRes.ok) {
-          clearTokens();
-          const vdata = await checkRes.json().catch(() => ({}));
-          setError(vdata?.message || 'Yetkili admin değil');
-          setIsLoading(false);
-          return;
-        }
-        const check = await checkRes.json().catch(() => ({}));
+        const check = await http.get('/api/auth/is-admin');
         if (!check || check.isAdmin !== true) {
           clearTokens();
           setError('Yetkili admin değil');
           setIsLoading(false);
           return;
         }
-      } catch (err) {
+      } catch {
         clearTokens();
         setError('Yetkili admin değil');
         setIsLoading(false);
@@ -83,7 +62,7 @@ const AdminLogin = () => {
       return;
     } catch (err) {
       clearTokens();
-      setError('Sunucuya ulaşılamıyor.');
+      setError(err.data?.message || 'Sunucuya ulaşılamıyor.');
     } finally { setIsLoading(false); }
   };
 

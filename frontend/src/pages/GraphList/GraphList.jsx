@@ -23,7 +23,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
-import { clearTokens } from '../../utils/auth';
+import { clearTokens, http } from '../../utils/auth';
 import FlashMessage from '../../components/FlashMessage';
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
@@ -46,37 +46,16 @@ const GraphList = () => {
     fetchGraphs();
   }, []);
 
- const fetchGraphs = async () => {
-  try {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setError('No access token found');
-      setLoading(false);
-      return;
-    }
-
-    const response = await fetch(`${API_BASE}/api/graphs/user`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Fetched user graphs:', data);
+  const fetchGraphs = async () => {
+    try {
+      const data = await http.get('/api/graphs/user');
       setGraphs(data);
-    } else {
-      const errorText = await response.text();
-      console.error('Fetch graphs error:', response.status, response.statusText);
-      console.error('Fetch graphs error body:', errorText);
-      setError(`Failed to fetch graphs: ${response.status} ${response.statusText}`);
+    } catch (err) {
+      setError(`Failed to fetch graphs: ${err.status || ''} ${err.data?.message || err.message}`);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    setError('Error fetching graphs: ' + err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleDelete = async (graphId) => {
     setGraphToDelete(graphId);
@@ -85,21 +64,11 @@ const GraphList = () => {
 
   const confirmSingleDelete = async () => {
     setSingleDeleteDialogOpen(false);
-    const token = localStorage.getItem('accessToken');
-    
     try {
-      const response = await fetch(`${API_BASE}/api/graphs/${graphToDelete}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-  
-      if (response.ok) {
-        setGraphs(graphs.filter(g => g.id !== graphToDelete));
-      } else {
-        setError('Graph silinirken hata oluştu');
-      }
+      await http.delete(`/api/graphs/${graphToDelete}`);
+      setGraphs(graphs.filter(g => g.id !== graphToDelete));
     } catch (err) {
-      setError('Graph silme hatası: ' + err.message);
+      setError('Graph silinirken hata oluştu');
     } finally {
       setGraphToDelete(null);
     }
@@ -148,38 +117,16 @@ const GraphList = () => {
   const confirmBulkDelete = async () => {
     setDeleteDialogOpen(false);
     setIsDeleting(true);
-    const token = localStorage.getItem('accessToken');
-    
     try {
-      const response = await fetch(`${API_BASE}/api/graphs/bulk`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(selectedGraphs)
-      });
-
-      if (response.ok) {
-        setGraphs(graphs.filter(g => !selectedGraphs.includes(g.id)));
-        setSelectedGraphs([]);
-        const data = await response.json();
-        setFeedbackSeverity('success');
-        setFeedbackMessage(data.message || 'Graphlar başarıyla silindi');
-        setFeedbackOpen(true);
-      } else {
-        let msg = 'Toplu silme işlemi başarısız';
-        try {
-          const errorData = await response.json();
-          msg = errorData.message || msg;
-        } catch (_) { /* ignore parse errors */ }
-        setFeedbackSeverity('error');
-        setFeedbackMessage(msg);
-        setFeedbackOpen(true);
-      }
+      const data = await http.delete('/api/graphs/bulk', { body: selectedGraphs });
+      setGraphs(graphs.filter(g => !selectedGraphs.includes(g.id)));
+      setSelectedGraphs([]);
+      setFeedbackSeverity('success');
+      setFeedbackMessage(data?.message || 'Graphlar başarıyla silindi');
+      setFeedbackOpen(true);
     } catch (err) {
       setFeedbackSeverity('error');
-      setFeedbackMessage('Toplu silme hatası: ' + err.message);
+      setFeedbackMessage(err.data?.message || 'Toplu silme işlemi başarısız');
       setFeedbackOpen(true);
     } finally {
       setIsDeleting(false);
