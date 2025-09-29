@@ -12,6 +12,7 @@ import PrivateRoute from './components/PrivateRoute';
 import GraphCreation from './pages/GraphCreation/GraphCreation';
 import ArrayAlgorithms from './pages/ArrayAlgorithms/ArrayAlgorithms';
 import TreeAlgorithms from './pages/TreeAlgorithms/TreeAlgorithms';
+import GraphList from './pages/GraphList/GraphList';
 import Admin from './pages/Admin/Admin';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminPrivateRoute from './components/AdminPrivateRoute';
@@ -29,6 +30,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/graph" element={<PrivateRoute><Graph /></PrivateRoute>} />
+          <Route path="/graph-list" element={<PrivateRoute><GraphList /></PrivateRoute>} />
           <Route path="/graph-creation" element={<PrivateRoute><GraphCreation /></PrivateRoute>} />
           <Route path="/array-algorithms" element={<PrivateRoute><ArrayAlgorithms /></PrivateRoute>} />
           <Route path="/tree-algorithms" element={<PrivateRoute><TreeAlgorithms /></PrivateRoute>} />

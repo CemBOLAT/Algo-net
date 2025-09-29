@@ -59,7 +59,6 @@ public class AuthController {
 		return ResponseEntity.ok(body);
 	}
 
-	@PostMapping("/forgot-password")
 	public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
 		Optional<User> opt = userRepository.findByEmail(request.getEmail());
         // if there no user exists return error code.
@@ -141,6 +140,39 @@ public class AuthController {
 		}
 	}
 
+	@GetMapping("/me")
+	public ResponseEntity<?> me(@RequestHeader(name = "Authorization", required = false) String authorization) {
+		if (authorization == null || !authorization.startsWith("Bearer ")) {
+			return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
+		}
+		String token = authorization.substring(7).trim();
+		try {
+			Map<String, Object> claims = jwtService.parseClaims(token);
+
+			// ✅ sub her zaman String bekleniyor
+			String sub = (String) claims.get("sub");
+			if (sub == null) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "sub claim eksik");
+			}
+			Long userId = Long.parseLong(sub);
+
+			Optional<User> userOpt = userRepository.findById(userId);
+			if (userOpt.isEmpty()) return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+
+			User user = userOpt.get();
+			Map<String, Object> res = new HashMap<>();
+			res.put("id", user.getId());
+			res.put("email", user.getEmail());
+			res.put("firstName", user.getFirstName());
+			res.put("lastName", user.getLastName());
+			res.put("isAdmin", user.isAdmin());
+			return ResponseEntity.ok(res);
+
+		} catch (Exception e) {
+			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
+		}
+	}
+
 	@GetMapping("/is-admin")
 	public ResponseEntity<?> isAdmin(@RequestHeader(name = "Authorization", required = false) String authorization) {
 		if (authorization == null || !authorization.startsWith("Bearer ")) {
@@ -149,17 +181,27 @@ public class AuthController {
 		String token = authorization.substring(7).trim();
 		try {
 			Map<String, Object> claims = jwtService.parseClaims(token);
-			Long userId = Long.parseLong((String) claims.get("sub"));
+
+			// ✅ sub her zaman String bekleniyor
+			String sub = (String) claims.get("sub");
+			if (sub == null) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "sub claim eksik");
+			}
+			Long userId = Long.parseLong(sub);
+
 			Optional<User> userOpt = userRepository.findById(userId);
 			if (userOpt.isEmpty()) return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+
 			User user = userOpt.get();
 			Map<String, Object> res = new HashMap<>();
 			res.put("isAdmin", user.isAdmin());
 			return ResponseEntity.ok(res);
+
 		} catch (Exception e) {
 			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
 		}
 	}
+
 
 	private ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {
 		Map<String, Object> res = new HashMap<>();
