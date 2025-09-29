@@ -23,6 +23,7 @@ const GraphCanvas = ({
   setMode,
   tempEdge,
   setTempEdge,
+  disabled = false,
 }) => {
   const canvasRef = useRef(null);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0, show: false, type: null });
@@ -109,6 +110,7 @@ const GraphCanvas = ({
 
   // Dragging graph 
   const handleMouseDown = (e) => {
+    if (disabled) return; // Don't allow interactions when disabled
     if (mode === 'add-edge') return;
 
     const pos = getCanvasPos(e);
@@ -336,13 +338,13 @@ const GraphCanvas = ({
       ctx.strokeStyle = "#000"; // Add a border to nodes
       ctx.lineWidth = 1;
       ctx.stroke();
-  // Set font size proportional to node size so label scales with the vertex
-  const fontSize = Math.max(10, Math.round((node.size || 15) * 0.7));
-  ctx.font = `${fontSize}px sans-serif`;
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle"; // Center text vertically
-  ctx.fillText(node.label, node.x , node.y );
+    // Set font size proportional to node size so label scales with the vertex
+      const fontSize = Math.max(10, Math.round((node.size || 15) * 0.7));
+      ctx.font = `${fontSize}px sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle"; // Center text vertically
+      ctx.fillText(node.label, node.x , node.y );
     });
 
     ctx.restore();
@@ -388,6 +390,8 @@ const GraphCanvas = ({
   };
 
   const handleClick = (e) => {
+    if (disabled) return; // Don't allow interactions when disabled
+    
     hideMenus();
     if (justDraggedRef.current) return; // skip click after drag
     const { x, y } = getCanvasPos(e);
@@ -417,7 +421,6 @@ const GraphCanvas = ({
     const clickedEdge = getEdgeAt(x, y);
 
     console.log(clickedEdge);
-    console.log("Hellooo");
 
     if (clickedNode) {
       setSelectedNode(clickedNode);
@@ -449,6 +452,8 @@ const GraphCanvas = ({
   };
 
   const handleContextMenu = (e) => {
+    if (disabled) return; // Don't allow interactions when disabled
+    
     e.preventDefault();
     hideMenus();
     const { x, y } = getCanvasPos(e);

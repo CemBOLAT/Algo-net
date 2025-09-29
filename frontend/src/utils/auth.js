@@ -66,27 +66,3 @@ export async function ensureAccessToken(signal) {
   }
   return accessToken;
 }
-
-export async function authorizedFetch(input, init = {}) {
-  try {
-    const token = await ensureAccessToken();
-    const headers = new Headers(init.headers || {});
-    headers.set('Authorization', `Bearer ${token}`);
-    let res = await fetch(input, { ...init, headers });
-    if (res.status === 401) {
-      // try refresh once
-      const newToken = await refreshAccessToken();
-      headers.set('Authorization', `Bearer ${newToken}`);
-      res = await fetch(input, { ...init, headers });
-    }
-    if (res.status === 401) throw new Error('unauthorized');
-    return res;
-  } catch (e) {
-    // On any auth failure, clear and redirect to login
-    clearTokens();
-    if (typeof window !== 'undefined') {
-      window.location.replace('/login');
-    }
-    throw e;
-  }
-}
