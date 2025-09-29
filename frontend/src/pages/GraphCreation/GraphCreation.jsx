@@ -1,19 +1,23 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearTokens } from '../../utils/auth';
-import { Typography, Button, Box, Container, TextField, IconButton, Tooltip, Paper, MenuItem, Select, FormControl, InputLabel, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Switch, FormControlLabel } from '@mui/material';
+import { Button, Box, Container } from '@mui/material';
 import FlashMessage from '../../components/FlashMessage';
 import TopBar from '../../components/TopBar';
 import AddIcon from '@mui/icons-material/Add';
-import { createFullGraph, edgeExists } from './utils/graphGenerator';
+import { createFullGraph, edgeExists, createTreeGraph, createStarGraph, createRingGraph, createFullBipartiteGraph } from './utils/graphGenerator';
 import './GraphCreation.css';
-import EdgeList from './components/EdgeList';
-import VertexList from './components/VertexList';
 import WeightEditDialog from './components/WeightEditDialog';
 import FileInfoDialog from './components/FileInfoDialog';
 import WeightedExampleDialog from './components/WeightedExampleDialog';
 import FilePreviewDialog from './components/FilePreviewDialog';
 import QuickGraphDialog from './components/QuickGraphDialog';
+
+// New small components
+import GraphNameOptions from './components/GraphNameOptions';
+import VerticesPanel from './components/VerticesPanel';
+import EdgesPanel from './components/EdgesPanel';
+import BottomActions from './components/BottomActions';
 
 const GraphCreation = () => {
     const navigate = useNavigate();
@@ -29,7 +33,6 @@ const GraphCreation = () => {
     const [edgeFrom, setEdgeFrom] = useState('');
     const [edgeTo, setEdgeTo] = useState('');
     const [edgeWeight, setEdgeWeight] = useState('');
-    const [edgeError, setEdgeError] = useState('');
     const [edgePage, setEdgePage] = useState(1);
     const edgesPerPage = 5;
 
@@ -237,7 +240,7 @@ const GraphCreation = () => {
             return;
         }
 
-        // Prepare nodes/edges and navigate to modern Graph canvas
+        // Prepare nodes/edges (no navigation)
         try {
             // dedupe edges before preparing payload
             const uniqueEdges = dedupeEdges(edges, directed);
@@ -267,12 +270,13 @@ const GraphCreation = () => {
                 from: labelToId[e.from] || `node-1`,
                 to: labelToId[e.to] || `node-1`,
                 label: e.name || '',
-                weight: e.weight !== undefined ? e.weight : (weighted ? 1 : undefined),
+                weight: e.weight !== undefined ? e.weight : undefined,
                 directed: typeof e.directed === 'boolean' ? e.directed : directed,
+                showWeight: e.weight !== undefined
             }));
 
-            // navigate with router state
-            navigate('/graph', { state: { nodes: preparedNodes, edges: preparedEdges, name: graphName } });
+            navigate('/graph', { state: { nodes: preparedNodes, edges: preparedEdges, name: graphName.trim() } });
+        
         } catch (err) {
             setCreateError('Graph oluşturulurken hata oluştu');
             setTimeout(() => setCreateError(''), 3000);
@@ -379,28 +383,135 @@ const GraphCreation = () => {
         setTimeout(() => setCreateSuccess(''), 2000);
     };
 
-    const handleQuickGraphCreate = () => {
-        if (quickGraphNodeCount < 2 || quickGraphNodeCount > 20) {
-            setQuickGraphError('Node sayısı 2-20 arasında olmalıdır');
-            return;
-        }
+    const handleQuickGraphCreate = (spec) => {
+        // spec payload from QuickGraphDialog
         if (weighted) {
             skipWeightedResetRef.current = true; // prevent effect reset
             setWeighted(false);
         }
         setDirected(false);
-        const { vertices: newVertices, edges: newEdges } = createFullGraph(
-            quickGraphNodeCount,
-            false,
-            false,
-            quickGraphLayout
-        );
-        setVertices(newVertices);
-        setEdges(newEdges);
-        setQuickGraphModalOpen(false);
-        setQuickGraphError('');
-        setCreateSuccess(`Tam graph oluşturuldu (${quickGraphNodeCount} düğüm, ${newEdges.length} kenar)`);
-        setTimeout(() => setCreateSuccess(''), 3000);
+
+        let result = null;
+        const type = spec?.quickGraphType;
+
+        try {
+            switch (type) {
+                case 'full':
+                    result = createFullGraph(
+                        Number(spec.quickGraphNodeCount || 0),
+                        false,
+                        false,
+                        spec.quickGraphLayout || 'circular'
+                    );
+                    break;
+                case 'tree':
+                    result = createTreeGraph(
+                        Number(spec.quickGraphNodeCount || 0),
+                        Number(spec.treeChildCount || 2)
+                    );
+                    break;
+                case 'star':
+                    result = createStarGraph(
+                        Number(spec.quickGraphNodeCount || 0),
+                        Number(spec.starCenterCount || 1)
+                    );
+                    break;
+                case 'ring':
+                    result = createRingGraph(
+                        Number(spec.quickGraphNodeCount || 0)
+                    );
+                    break;
+                case 'bipartite':
+                    result = createFullBipartiteGraph(
+                        Number(spec.bipartiteA || 0),
+                        Number(spec.bipartiteB || 0)
+                    );
+                    break;
+                default:
+                    setQuickGraphError('Desteklenmeyen graph tipi');
+                    return;
+            }
+
+            console.log('Quick graph generated:', result);
+
+            const { vertices: newVertices, edges: newEdges, positions } = result || { vertices: [], edges: [], positions: [] };
+            // Fill form lists (optional UX parity)
+            setVertices(newVertices);
+            setEdges(newEdges);
+            setQuickGraphModalOpen(false);
+            setQuickGraphError('');
+
+            // Build canvas nodes/edges with x,y from util positions
+            const nodesForCanvas = newVertices.map((label, idx) => ({
+                id: label,
+                label,
+                x: positions[idx]?.x ?? 0,
+                y: positions[idx]?.y ?? 0,
+                size: 20,
+                color: '#1976d2'
+            }));
+
+            const edgesForCanvas = newEdges.map((e) => {
+                const hasWeight = e.weight !== undefined && e.weight !== null;
+                return {
+                    id: String(e.id),
+                    from: e.from,
+                    to: e.to,
+                    weight: hasWeight ? e.weight : undefined,
+                    directed: !!e.directed,
+                    showWeight: hasWeight
+                };
+            });
+
+            // Suggested name BEFORE localStorage
+            let name = 'Graph';
+            if (type === 'full') {
+                name = `Complete Graph (n=${newVertices.length})`;
+            } else if (type === 'tree') {
+                name = `Tree (n=${newVertices.length}, k=${spec.treeChildCount})`;
+            } else if (type === 'star') {
+                name = `Star (n=${newVertices.length}, c=${spec.starCenterCount})`;
+            } else if (type === 'ring') {
+                name = `Ring (n=${newVertices.length})`;
+            } else if (type === 'bipartite') {
+                name = `K(${spec.bipartiteA}, ${spec.bipartiteB})`;
+            }
+
+            // Persist (fallback) and navigate with state so Graph.jsx definitely gets x/y
+            try {
+                localStorage.setItem('algoNetQuickGraph', JSON.stringify({
+                    nodes: nodesForCanvas,
+                    edges: edgesForCanvas,
+                    name
+                }));
+            } catch {}
+
+            // NEW: navigate with state (immediate, not depending on localStorage)
+            navigate('/graph', { state: { nodes: nodesForCanvas, edges: edgesForCanvas, name } });
+
+            // Success message per type
+            const nodeCount = newVertices.length;
+            const edgeCount = newEdges.length;
+            let msg = '';
+            if (type === 'full') {
+                msg = `Tam graph oluşturuldu (${nodeCount} düğüm, ${edgeCount} kenar)`;
+            } else if (type === 'tree') {
+                msg = `Ağaç oluşturuldu (n=${nodeCount}, k=${spec.treeChildCount})`;
+            } else if (type === 'star') {
+                msg = `Star oluşturuldu (n=${nodeCount}, merkez sayısı=${spec.starCenterCount})`;
+            } else if (type === 'ring') {
+                if (nodeCount === 1) msg = 'Ring oluşturuldu (1 düğüm, 1 self-loop)';
+                else if (nodeCount === 2) msg = 'Ring oluşturuldu (2 düğüm, aralarında 2 paralel kenar)';
+                else msg = `Ring oluşturuldu (n=${nodeCount}, kenar=${edgeCount})`;
+            } else if (type === 'bipartite') {
+                msg = `Tam bipartite oluşturuldu (A=${spec.bipartiteA}, B=${spec.bipartiteB}, toplam=${nodeCount}, kenar=${edgeCount})`;
+            }
+            setCreateSuccess(msg);
+            setTimeout(() => setCreateSuccess(''), 3000);
+        } catch (e) {
+            setQuickGraphError('Hızlı graph oluşturulurken hata oluştu');
+            setTimeout(() => setQuickGraphError(''), 3000);
+        }
     };
 
     const handleFileChange = (e) => {
@@ -440,131 +551,59 @@ const GraphCreation = () => {
                 ]}
             />
             <Container maxWidth="lg" sx={{ py: 4 }}>
-                {/* Graph name */}
                 <FlashMessage severity="error" message={createError} sx={{ mb: 2 }} />
                 <FlashMessage severity="success" message={createSuccess} sx={{ mb: 2 }} />
-                <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <TextField
-                        label="Graph Adı"
-                        variant="outlined"
-                        value={graphName}
-                        onChange={(e) => setGraphName(e.target.value)}
-                        sx={{ flex: 1 }}
-                    />
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <FormControlLabel control={<Switch checked={directed} onChange={(e) => setDirected(e.target.checked)} />} label="Yönlü (Directed)" />
-                        <FormControlLabel control={<Switch checked={weighted} onChange={(e) => setWeighted(e.target.checked)} />} label="Ağırlıklı (Weighted)" />
-                    </Box>
-                </Box>
 
-                {/* Two-column layout */}
+                <GraphNameOptions
+                    graphName={graphName}
+                    setGraphName={setGraphName}
+                    directed={directed}
+                    setDirected={setDirected}
+                    weighted={weighted}
+                    setWeighted={setWeighted}
+                />
+
                 <Box sx={{ display: 'flex', gap: 3 }}>
-                    {/* Left: Vertices */}
-                    <Paper className="tm-glass" sx={{ flex: 1, p: 2 }} elevation={2}>
-                        <Typography variant="h6" sx={{ mb: 1 }}>Düğümler (Vertex)</Typography>
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                            <TextField
-                                size="small"
-                                label="Yeni Düğüm"
-                                value={vertexName}
-                                onChange={(e) => { setVertexName(e.target.value); if (vertexError) setVertexError(''); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter') addVertex(); }}
-                            />
-                            <Button className="tm-modern-btn tm-modern-primary" startIcon={<AddIcon />} onClick={addVertex}>Ekle</Button>
-                        </Box>
-                        {<FlashMessage severity="error" message={vertexError} sx={{ mb: 2 }} />}
-                        <VertexList
-                            vertices={vertices}
-                            removeVertex={removeVertex}
-                            vertexListRef={vertexListRef}
-                        />
-                    </Paper>
+                    <VerticesPanel
+                        vertexName={vertexName}
+                        setVertexName={(v) => { setVertexName(v); if (vertexError) setVertexError(''); }}
+                        vertexError={vertexError}
+                        addVertex={addVertex}
+                        vertices={vertices}
+                        removeVertex={removeVertex}
+                        vertexListRef={vertexListRef}
+                    />
 
-                    {/* Right: Edges */}
-                    <Paper className="tm-glass" sx={{ flex: 1, p: 2 }} elevation={2}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="h6">Kenarlar (Edges)</Typography>
-                            <Box>
-                                <Tooltip title={edgeFormOpen ? 'Kapat' : 'Kenar Ekle'}>
-                                    <IconButton
-                                        onClick={() => setEdgeFormOpen((s) => !s)}
-                                        sx={{ transform: edgeFormOpen ? 'rotate(45deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}
-                                    >
-                                        <AddIcon />
-                                    </IconButton>
-                                </Tooltip>
-                            </Box>
-                        </Box>
-
-                        <Collapse in={edgeFormOpen}>
-                            <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
-                                <FormControl size="small" sx={{ minWidth: 140 }}>
-                                    <InputLabel>From</InputLabel>
-                                    <Select value={edgeFrom} label="From" onChange={(e) => setEdgeFrom(e.target.value)}>
-                                        {vertices.map((v) => (
-                                            <MenuItem key={`from-${v}`} value={v}>{v}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl size="small" sx={{ minWidth: 140 }}>
-                                    <InputLabel>To</InputLabel>
-                                    <Select value={edgeTo} label="To" onChange={(e) => setEdgeTo(e.target.value)}>
-                                        {vertices.map((v) => (
-                                            <MenuItem key={`to-${v}`} value={v}>{v}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                {weighted ? (
-                                    <TextField size="small" label="Kenar Ağırlığı" type="number" value={edgeWeight} onChange={(e) => setEdgeWeight(e.target.value)} />
-                                ) : null}
-                                <Button className="tm-modern-btn tm-modern-primary" onClick={addEdge} startIcon={<AddIcon />}>Ekle</Button>
-                            </Box>
-                        </Collapse>
-
-                        <EdgeList
-                            edges={edges}
-                            edgePage={edgePage}
-                            setEdgePage={setEdgePage}
-                            edgesPerPage={edgesPerPage}
-                            openWeightEditor={openWeightEditor}
-                            toggleEdgeDelete={toggleEdgeDelete}
-                            deleteEdge={deleteEdge}
-                        />
-                    </Paper>
+                    <EdgesPanel
+                        vertices={vertices}
+                        edges={edges}
+                        edgePage={edgePage}
+                        setEdgePage={setEdgePage}
+                        edgesPerPage={edgesPerPage}
+                        weighted={weighted}
+                        edgeFormOpen={edgeFormOpen}
+                        setEdgeFormOpen={setEdgeFormOpen}
+                        edgeFrom={edgeFrom}
+                        setEdgeFrom={setEdgeFrom}
+                        edgeTo={edgeTo}
+                        setEdgeTo={setEdgeTo}
+                        edgeWeight={edgeWeight}
+                        setEdgeWeight={setEdgeWeight}
+                        addEdge={addEdge}
+                        openWeightEditor={openWeightEditor}
+                        toggleEdgeDelete={toggleEdgeDelete}
+                        deleteEdge={deleteEdge}
+                    />
                 </Box>
 
-                {/* Bottom actions: Quick Graph, Reset, File, Create */}
-                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button 
-                            className="tm-modern-btn" 
-                            sx={{ border: '1px solid rgba(59, 130, 246, 0.3)', color: 'primary.main' }}
-                            onClick={() => setQuickGraphModalOpen(true)}
-                        >
-                            Hızlı Graph
-                        </Button>
-                        <Button 
-                            className="tm-modern-btn" 
-                            sx={{ border: '1px solid rgba(239, 68, 68, 0.3)', color: 'error.main' }}
-                            onClick={handleReset}
-                        >
-                            Reset
-                        </Button>
-                    </Box>
+                <BottomActions
+                    onOpenQuickGraph={() => setQuickGraphModalOpen(true)}
+                    onReset={handleReset}
+                    onOpenFile={() => setFileModalOpen(true)}
+                    onCreate={handleCreate}
+                />
 
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button className="tm-modern-btn" sx={{ border: '1px solid rgba(255,255,255,0.06)' }} onClick={() => setFileModalOpen(true)}>
-                            Dosya Ekle
-                        </Button>
-
-                        <Button className="tm-modern-btn tm-modern-success" onClick={() => handleCreate()}>
-                            Oluştur
-                        </Button>
-                    </Box>
-                </Box>
-
+                {/* ...existing dialogs unchanged... */}
                 <FileInfoDialog
                     open={fileModalOpen}
                     onClose={() => setFileModalOpen(false)}
@@ -615,7 +654,6 @@ const GraphCreation = () => {
                     setQuickGraphError={setQuickGraphError}
                     onCreate={handleQuickGraphCreate}
                 />
-
             </Container>
         </Box>
     );
