@@ -49,14 +49,33 @@ const Graph = () => {
 		}
 	}, [navigate]);
 
-
-	// Initialize graph from router state when navigating from GraphCreation
+	// Bootstrap from localStorage first (quick graphs generated in utils)
 	useEffect(() => {
-		const { nodes: incomingNodes, edges: incomingEdges, name } = location.state;
-		if (Array.isArray(incomingNodes) && incomingNodes.length) setNodes(incomingNodes);
+		try {
+			const raw = localStorage.getItem('algoNetQuickGraph');
+			if (!raw) return;
+			const saved = JSON.parse(raw);
+			console.log('Loaded nodes from saved', saved);
+			if (Array.isArray(saved?.nodes) && saved.nodes.length) {
+				setNodes(saved.nodes);
+				if (Array.isArray(saved?.edges)) setEdges(saved.edges);
+				if (saved?.name) setGraphName(saved.name);
+			}
+			localStorage.removeItem('algoNetQuickGraph');
+		} catch {
+			// ignore parse errors
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
+	// Initialize graph from router state if nodes/edges provided
+	useEffect(() => {
+		if (!location?.state) return;
+		const { nodes: incomingNodes, edges: incomingEdges, name } = location.state || {};
+		if (Array.isArray(incomingNodes) && incomingNodes.length) setNodes(incomingNodes);
 		if (Array.isArray(incomingEdges) && incomingEdges.length) setEdges(incomingEdges);
 		if (name) setGraphName(name);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	// Load graph from database if ID provided in URL
@@ -103,14 +122,17 @@ const Graph = () => {
 				})) || [];
 				
 				// Convert edges from backend format
-				const loadedEdges = graph.edges?.map(edge => ({
-					id: edge.edgeId,
-					from: edge.fromNode,
-					to: edge.toNode,
-					weight: edge.weight || 1.0,
-					directed: edge.isDirected || false,
-					showWeight: edge.showWeight !== undefined ? edge.showWeight : true
-				})) || [];
+				const loadedEdges = graph.edges?.map(edge => {
+					const hasWeight = edge.weight !== null && edge.weight !== undefined;
+					return {
+						id: edge.edgeId,
+						from: edge.fromNode,
+						to: edge.toNode,
+						weight: hasWeight ? edge.weight : undefined,
+						directed: edge.isDirected ?? false,
+						showWeight: edge.showWeight !== undefined ? edge.showWeight : hasWeight
+					};
+				}) || [];
 				
 				setNodes(loadedNodes);
 				setEdges(loadedEdges);
@@ -186,9 +208,9 @@ const Graph = () => {
 				edgeId: edge.id,
 				fromNode: edge.from,
 				toNode: edge.to,
-				weight: edge.weight || 1.0,
-				isDirected: edge.directed || false,
-				showWeight: edge.showWeight !== undefined ? edge.showWeight : true
+				weight: edge.weight !== undefined ? edge.weight : null,
+				isDirected: edge.directed ?? false,
+				showWeight: edge.showWeight !== undefined ? edge.showWeight : (edge.weight !== undefined)
 			}));
 
 			const requestBody = {
@@ -196,6 +218,8 @@ const Graph = () => {
 				nodes: nodesData,
 				edges: edgesData
 			};
+
+			console.log("Prepared graph data for saving:", JSON.stringify(requestBody));
 
 			// Use PUT for update, POST for new
 			const method = graphId ? 'PUT' : 'POST';
