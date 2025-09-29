@@ -49,6 +49,12 @@ public class AuthController {
 		if (user.isDisabled()) {
 			return error(HttpStatus.FORBIDDEN, "USER_DISABLED", "Hesabınız devre dışı bırakılmış.");
 		}
+		/*
+		 Token süreleri (JwtService içinde ayarlanır):
+		 - Access token: 15 dakika (typ=access, exp = now + 15m)
+		 - Refresh token: 1 gün (typ=refresh, exp = now + 1d)
+		 Not: Bu süreler generateAccessToken(...) ve generateRefreshToken(...) içinde exp claim olarak set edilmelidir.
+		*/
 		String access = jwtService.generateAccessToken(user.getId(), user.getEmail());
 		String refresh = jwtService.generateRefreshToken(user.getId());
 		Map<String, Object> body = new HashMap<>();
@@ -59,6 +65,8 @@ public class AuthController {
 		return ResponseEntity.ok(body);
 	}
 
+	// Expose forgot password endpoint
+	@PostMapping("/forgot-password")
 	public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
 		Optional<User> opt = userRepository.findByEmail(request.getEmail());
         // if there no user exists return error code.
@@ -93,7 +101,7 @@ public class AuthController {
 
 		// 15 dk geçerlilik kontrolü
 		LocalDateTime createdAt = user.getSecurityCodeCreatedAt();
-		if (createdAt == null || LocalDateTime.now().isAfter(createdAt.plusMinutes(15))) {
+		if (createdAt == null || LocalDateTime.now().isAfter(createdAt.plusMinutes(1))) {
 			user.setSecurityCode(null);
 			user.setSecurityCodeCreatedAt(null);
 			userRepository.save(user);
@@ -125,12 +133,30 @@ public class AuthController {
 			if (!"refresh".equals(typ)) {
 				return error(HttpStatus.BAD_REQUEST, "INVALID_TOKEN", "Geçersiz token tipi");
 			}
+
+			// 1 gün kontrolü (exp claim’i doğrula)
+			Object expObj = claims.get("exp");
+			if (expObj == null) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Refresh token geçersiz veya süresi dolmuş");
+			}
+			long expSec = (expObj instanceof Number) ? ((Number) expObj).longValue() : Long.parseLong(String.valueOf(expObj));
+			long nowSec = System.currentTimeMillis() / 1000L;
+			if (nowSec >= expSec) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Refresh token geçersiz veya süresi dolmuş");
+			}
+
 			Long userId = Long.parseLong((String) claims.get("sub"));
 			Optional<User> userOpt = userRepository.findById(userId);
 			if (userOpt.isEmpty()) {
 				return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
 			}
 			User user = userOpt.get();
+			/*
+			 Refresh akışı:
+			 - İstemci geçerli (typ=refresh) refresh token gönderir.
+			 - Sunucu typ=refresh ve exp doğrular (1 gün kontrolü).
+			 - 15 dakika geçerli yeni access token üretir ve döner.
+			*/
 			String access = jwtService.generateAccessToken(user.getId(), user.getEmail());
 			Map<String, Object> res = new HashMap<>();
 			res.put("accessToken", access);

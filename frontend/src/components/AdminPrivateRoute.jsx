@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { ensureAccessToken, clearTokens } from '../utils/auth';
-
-const API_BASE = import.meta?.env?.VITE_API_BASE || '';
+import { http, clearTokens } from '../utils/auth';
 
 const AdminPrivateRoute = ({ children }) => {
   const navigate = useNavigate();
@@ -13,29 +11,10 @@ const AdminPrivateRoute = ({ children }) => {
     let mounted = true;
     (async () => {
       try {
-        const token = await ensureAccessToken();
-        if (!token) {
-          if (mounted) navigate('/admin-login', { replace: true });
-          return;
-        }
-        const res = await fetch(`${API_BASE}/api/auth/is-admin`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) {
-          // invalid or expired token
-          clearTokens();
-          if (mounted) navigate('/admin-login', { replace: true });
-          return;
-        }
-        const data = await res.json().catch(() => ({}));
-        if (!data || data.isAdmin !== true) {
-          // not an admin - go to normal login
-          clearTokens();
-          if (mounted) navigate('/login', { replace: true });
-          return;
-        }
+        await http.get('/api/auth/is-admin');
         if (mounted) setOk(true);
-      } catch (err) {
+      } catch {
+        clearTokens();
         if (mounted) navigate('/admin-login', { replace: true });
       }
     })();
@@ -49,3 +28,4 @@ const AdminPrivateRoute = ({ children }) => {
 AdminPrivateRoute.propTypes = { children: PropTypes.node };
 
 export default AdminPrivateRoute;
+        

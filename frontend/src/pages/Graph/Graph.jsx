@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { clearTokens, getTokens, isTokenExpired } from '../../utils/auth';
+import { clearTokens, getTokens, isTokenExpired, http } from '../../utils/auth';
 import GraphCanvas from '../../components/GraphCanvas';
 import Sidebar from '../../components/Sidebar';
 import VertexSettings from '../../components/VertexSettings';
@@ -91,66 +91,49 @@ const Graph = () => {
 	const loadGraph = async (id) => {
 		setIsLoading(true);
 		try {
-			const { accessToken } = getTokens();
-			if (!accessToken || isTokenExpired(accessToken)) {
-				clearTokens();
-				navigate('/login', { replace: true });
-				return;
-			}
+			const graph = await http.get(`/api/graphs/${id}`);
 
-			const response = await fetch(`/api/graphs/${id}`, {
-				headers: {
-					'Authorization': `Bearer ${accessToken}`
-				}
-			});
-
-			if (response.ok) {
-				const graph = await response.json();
-				
-				// Load graph data
-				setGraphId(graph.id);
-				setGraphName(graph.name);
-				
-				// Convert nodes from backend format
-				const loadedNodes = graph.nodes?.map(node => ({
-					id: node.nodeId,
-					label: node.label,
-					x: node.positionX || Math.random() * 800,
-					y: node.positionY || Math.random() * 600,
-					size: node.size || 20,
-					color: node.color || '#1976d2'
-				})) || [];
-				
-				// Convert edges from backend format
-				const loadedEdges = graph.edges?.map(edge => {
-					const hasWeight = edge.weight !== null && edge.weight !== undefined;
-					return {
-						id: edge.edgeId,
-						from: edge.fromNode,
-						to: edge.toNode,
-						weight: hasWeight ? edge.weight : undefined,
-						directed: edge.isDirected ?? false,
-						showWeight: edge.showWeight !== undefined ? edge.showWeight : hasWeight
-					};
-				}) || [];
-				
-				setNodes(loadedNodes);
-				setEdges(loadedEdges);
-				
-				showSuccess('Graph başarıyla yüklendi!');
-			} else if (response.status === 404) {
+			// Load graph data
+			setGraphId(graph.id);
+			setGraphName(graph.name);
+			
+			// Convert nodes from backend format
+			const loadedNodes = graph.nodes?.map(node => ({
+				id: node.nodeId,
+				label: node.label,
+				x: node.positionX || Math.random() * 800,
+				y: node.positionY || Math.random() * 600,
+				size: node.size || 20,
+				color: node.color || '#1976d2'
+			})) || [];
+			
+			// Convert edges from backend format
+			const loadedEdges = graph.edges?.map(edge => {
+				const hasWeight = edge.weight !== null && edge.weight !== undefined;
+				return {
+					id: edge.edgeId,
+					from: edge.fromNode,
+					to: edge.toNode,
+					weight: hasWeight ? edge.weight : undefined,
+					directed: edge.isDirected ?? false,
+					showWeight: edge.showWeight !== undefined ? edge.showWeight : hasWeight
+				};
+			}) || [];
+			
+			setNodes(loadedNodes);
+			setEdges(loadedEdges);
+			
+			showSuccess('Graph başarıyla yüklendi!');
+		} catch (error) {
+			if (error.status === 404) {
 				showError('Graph bulunamadı');
 				navigate('/graph-list');
-			} else if (response.status === 403) {
+			} else if (error.status === 403) {
 				showError('Bu graph\'a erişim yetkiniz yok');
 				navigate('/graph-list');
 			} else {
-				const errorText = await response.text();
-				showError('Graph yüklenirken hata oluştu: ' + errorText);
+				showError('Graph yüklenirken hata oluştu');
 			}
-		} catch (error) {
-			console.error('Load graph error:', error);
-			showError('Graph yüklenirken bir hata oluştu');
 		} finally {
 			setIsLoading(false);
 		}
@@ -186,13 +169,6 @@ const Graph = () => {
 		
 		setIsSaving(true);
 		try {
-			const { accessToken } = getTokens();
-			if (!accessToken || isTokenExpired(accessToken)) {
-				clearTokens();
-				navigate('/login', { replace: true });
-				return;
-			}
-
 			// Prepare nodes data for backend
 			const nodesData = nodes.map(node => ({
 				nodeId: node.id,
@@ -227,41 +203,19 @@ const Graph = () => {
 			
 			console.log(`Saving graph via ${method} to ${url}`);
 
-			const response = await fetch(url, {
-				method: method,
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${accessToken}`
-				},
-				body: JSON.stringify(requestBody)
-			});
+			const data = graphId
+				? await http.put(`/api/graphs/${graphId}`, requestBody)
+				: await http.post('/api/graphs/save', requestBody);
 
-			if (response.ok) {
-				const data = await response.json();
-				if (!graphId) {
-					setGraphId(data.graphId);
-					// Update URL to include the new graph ID
-					window.history.replaceState({}, '', `/graph?id=${data.graphId}`);
-				}
-				showSuccess(`Graph başarıyla ${graphId ? 'güncellendi' : 'kaydedildi'}!`);
-			} else {
-				const errorText = await response.text();
-				console.error('Save error response:', response.status, response.statusText);
-				console.error('Save error body:', errorText);
-				
-				let errorMessage = 'Bilinmeyen hata';
-				try {
-					const errorData = JSON.parse(errorText);
-					errorMessage = errorData.message || errorMessage;
-				} catch (e) {
-					errorMessage = errorText || errorMessage;
-				}
-				
-				showError(`Kaydetme hatası: ${errorMessage}`);
+			if (!graphId) {
+				setGraphId(data.graphId);
+				// Update URL to include the new graph ID
+				window.history.replaceState({}, '', `/graph?id=${data.graphId}`);
 			}
+			showSuccess(`Graph başarıyla ${graphId ? 'güncellendi' : 'kaydedildi'}!`);
 		} catch (error) {
-			console.error('Save graph error:', error);
-			showError('Graph kaydedilirken bir hata oluştu.');
+			const msg = error.data?.message || 'Graph kaydedilirken bir hata oluştu.';
+			showError(`Kaydetme hatası: ${msg}`);
 		} finally {
 			setIsSaving(false);
 		}
