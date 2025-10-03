@@ -427,6 +427,51 @@ const GraphCreation = () => {
                         Number(spec.bipartiteB || 0)
                     );
                     break;
+                case 'grid': {
+                    const rows = Math.max(1, Number(spec.gridRows || 0));
+                    const cols = Math.max(1, Number(spec.gridCols || 0));
+                    const w = spec.gridWeight !== undefined ? Number(spec.gridWeight) : undefined;
+
+                    const vertices = [];
+                    const positions = [];
+                    const edges = [];
+
+                    const spacing = 80;
+                    const offsetX = 100;
+                    const offsetY = 100;
+                    const idxAt = (r, c) => r * cols + c;
+
+                    // create vertices and positions
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const idx = idxAt(r, c);
+                            const label = `v${idx + 1}`;
+                            vertices.push(label);
+                            positions.push({
+                                x: offsetX + c * spacing,
+                                y: offsetY + r * spacing
+                            });
+                        }
+                    }
+
+                    // connect right and bottom neighbors (undirected)
+                    let eid = 1;
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const fromIdx = idxAt(r, c);
+                            const from = vertices[fromIdx];
+                            if (c + 1 < cols) {
+                                edges.push({ id: eid++, from, to: vertices[idxAt(r, c + 1)], directed: false, weight: w });
+                            }
+                            if (r + 1 < rows) {
+                                edges.push({ id: eid++, from, to: vertices[idxAt(r + 1, c)], directed: false, weight: w });
+                            }
+                        }
+                    }
+
+                    result = { vertices, edges, positions };
+                    break;
+                }
                 default:
                     setQuickGraphError('Desteklenmeyen graph tipi');
                     return;
@@ -475,6 +520,8 @@ const GraphCreation = () => {
                 name = `Ring (n=${newVertices.length})`;
             } else if (type === 'bipartite') {
                 name = `K(${spec.bipartiteA}, ${spec.bipartiteB})`;
+            } else if (type === 'grid') {
+                name = `Grid (${Number(spec.gridRows)}x${Number(spec.gridCols)}, w=${Number(spec.gridWeight)})`;
             }
 
             // Persist (fallback) and navigate with state so Graph.jsx definitely gets x/y
@@ -505,6 +552,8 @@ const GraphCreation = () => {
                 else msg = `Ring oluşturuldu (n=${nodeCount}, kenar=${edgeCount})`;
             } else if (type === 'bipartite') {
                 msg = `Tam bipartite oluşturuldu (A=${spec.bipartiteA}, B=${spec.bipartiteB}, toplam=${nodeCount}, kenar=${edgeCount})`;
+            } else if (type === 'grid') {
+                msg = `Grid oluşturuldu (m=${spec.gridRows}, n=${spec.gridCols}, toplam=${nodeCount}, kenar=${edgeCount}, w=${spec.gridWeight})`;
             }
             setCreateSuccess(msg);
             setTimeout(() => setCreateSuccess(''), 3000);
