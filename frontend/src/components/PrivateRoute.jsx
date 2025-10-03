@@ -16,6 +16,7 @@ export default function PrivateRoute({ children }) {
           setAllowed(false);
           return;
         }
+        // Access token süresi dolmuş olsa bile burada yenilenir
         await ensureAccessToken();
         setAllowed(true);
       } catch {
@@ -32,3 +33,6 @@ export default function PrivateRoute({ children }) {
   if (!allowed) return <Navigate to="/login" replace state={{ from: location }} />;
   return children;
 }
+
+// eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIyOCIsImlzcyI6ImFsZ28tbmV0IiwiaWF0IjoxNzU5MTg4NjY4LCJleHAiOjE3NTkxOTA0NjgsImVtYWlsIjoiY2VtYWxib2xhdDIwMDNAb3V0bG9vay5jb20iLCJ0eXAiOiJhY2Nlc3MifQ.G7aBcTN_02nUPPoGdeGR_TGFJhERVsj_xX6BXJHqixJySXUA2F0TIbCWOglgwemye7hfehIU6br9ODCa4xVIFw
+// 
