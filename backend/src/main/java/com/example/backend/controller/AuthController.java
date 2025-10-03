@@ -44,6 +44,17 @@ public class AuthController {
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
 			return error(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "E-posta veya şifre hatalı.");
 		}
+
+		// prevent disabled users from logging in
+		if (user.isDisabled()) {
+			return error(HttpStatus.FORBIDDEN, "USER_DISABLED", "Hesabınız devre dışı bırakılmış.");
+		}
+		/*
+		 Token süreleri (JwtService içinde ayarlanır):
+		 - Access token: 15 dakika (typ=access, exp = now + 15m)
+		 - Refresh token: 1 gün (typ=refresh, exp = now + 1d)
+		 Not: Bu süreler generateAccessToken(...) ve generateRefreshToken(...) içinde exp claim olarak set edilmelidir.
+		*/
 		String access = jwtService.generateAccessToken(user.getId(), user.getEmail());
 		String refresh = jwtService.generateRefreshToken(user.getId());
 		Map<String, Object> body = new HashMap<>();
@@ -54,6 +65,7 @@ public class AuthController {
 		return ResponseEntity.ok(body);
 	}
 
+	// Expose forgot password endpoint
 	@PostMapping("/forgot-password")
 	public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
 		Optional<User> opt = userRepository.findByEmail(request.getEmail());
@@ -89,7 +101,7 @@ public class AuthController {
 
 		// 15 dk geçerlilik kontrolü
 		LocalDateTime createdAt = user.getSecurityCodeCreatedAt();
-		if (createdAt == null || LocalDateTime.now().isAfter(createdAt.plusMinutes(15))) {
+		if (createdAt == null || LocalDateTime.now().isAfter(createdAt.plusMinutes(1))) {
 			user.setSecurityCode(null);
 			user.setSecurityCodeCreatedAt(null);
 			userRepository.save(user);
@@ -121,12 +133,30 @@ public class AuthController {
 			if (!"refresh".equals(typ)) {
 				return error(HttpStatus.BAD_REQUEST, "INVALID_TOKEN", "Geçersiz token tipi");
 			}
+
+			// 1 gün kontrolü (exp claim’i doğrula)
+			Object expObj = claims.get("exp");
+			if (expObj == null) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Refresh token geçersiz veya süresi dolmuş");
+			}
+			long expSec = (expObj instanceof Number) ? ((Number) expObj).longValue() : Long.parseLong(String.valueOf(expObj));
+			long nowSec = System.currentTimeMillis() / 1000L;
+			if (nowSec >= expSec) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Refresh token geçersiz veya süresi dolmuş");
+			}
+
 			Long userId = Long.parseLong((String) claims.get("sub"));
 			Optional<User> userOpt = userRepository.findById(userId);
 			if (userOpt.isEmpty()) {
 				return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
 			}
 			User user = userOpt.get();
+			/*
+			 Refresh akışı:
+			 - İstemci geçerli (typ=refresh) refresh token gönderir.
+			 - Sunucu typ=refresh ve exp doğrular (1 gün kontrolü).
+			 - 15 dakika geçerli yeni access token üretir ve döner.
+			*/
 			String access = jwtService.generateAccessToken(user.getId(), user.getEmail());
 			Map<String, Object> res = new HashMap<>();
 			res.put("accessToken", access);
@@ -135,6 +165,69 @@ public class AuthController {
 			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Refresh token geçersiz veya süresi dolmuş");
 		}
 	}
+
+	@GetMapping("/me")
+	public ResponseEntity<?> me(@RequestHeader(name = "Authorization", required = false) String authorization) {
+		if (authorization == null || !authorization.startsWith("Bearer ")) {
+			return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
+		}
+		String token = authorization.substring(7).trim();
+		try {
+			Map<String, Object> claims = jwtService.parseClaims(token);
+
+			// ✅ sub her zaman String bekleniyor
+			String sub = (String) claims.get("sub");
+			if (sub == null) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "sub claim eksik");
+			}
+			Long userId = Long.parseLong(sub);
+
+			Optional<User> userOpt = userRepository.findById(userId);
+			if (userOpt.isEmpty()) return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+
+			User user = userOpt.get();
+			Map<String, Object> res = new HashMap<>();
+			res.put("id", user.getId());
+			res.put("email", user.getEmail());
+			res.put("firstName", user.getFirstName());
+			res.put("lastName", user.getLastName());
+			res.put("isAdmin", user.isAdmin());
+			return ResponseEntity.ok(res);
+
+		} catch (Exception e) {
+			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
+		}
+	}
+
+	@GetMapping("/is-admin")
+	public ResponseEntity<?> isAdmin(@RequestHeader(name = "Authorization", required = false) String authorization) {
+		if (authorization == null || !authorization.startsWith("Bearer ")) {
+			return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
+		}
+		String token = authorization.substring(7).trim();
+		try {
+			Map<String, Object> claims = jwtService.parseClaims(token);
+
+			// ✅ sub her zaman String bekleniyor
+			String sub = (String) claims.get("sub");
+			if (sub == null) {
+				return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "sub claim eksik");
+			}
+			Long userId = Long.parseLong(sub);
+
+			Optional<User> userOpt = userRepository.findById(userId);
+			if (userOpt.isEmpty()) return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+
+			User user = userOpt.get();
+			Map<String, Object> res = new HashMap<>();
+			res.put("isAdmin", user.isAdmin());
+			return ResponseEntity.ok(res);
+
+		} catch (Exception e) {
+			return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
+		}
+	}
+
 
 	private ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {
 		Map<String, Object> res = new HashMap<>();

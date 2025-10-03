@@ -1,7 +1,10 @@
 package com.example.backend.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "users")
@@ -28,6 +31,17 @@ public class User {
 
     @Column(name = "security_code_created_at")
     private LocalDateTime securityCodeCreatedAt;
+
+    // new fields
+    @Column(name = "is_admin")
+    private Boolean isAdmin = false;
+
+    @Column(name = "disabled")
+    private Boolean disabled = false;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Graph> graphs = new ArrayList<>();
 
     public User() {}
 
@@ -58,4 +72,17 @@ public class User {
 
     public LocalDateTime getSecurityCodeCreatedAt() { return securityCodeCreatedAt; }
     public void setSecurityCodeCreatedAt(LocalDateTime securityCodeCreatedAt) { this.securityCodeCreatedAt = securityCodeCreatedAt; }
+
+    public boolean isAdmin() {
+        return Boolean.TRUE.equals(isAdmin);
+    }
+    public void setAdmin(Boolean admin) { this.isAdmin = admin; }
+
+    public boolean isDisabled() {
+        return Boolean.TRUE.equals(disabled);
+    }
+    public void setDisabled(Boolean disabled) { this.disabled = disabled; }
+
+    public List<Graph> getGraphs() { return graphs; }
+    public void setGraphs(List<Graph> graphs) { this.graphs = graphs; }
 }
