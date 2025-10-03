@@ -1,4 +1,10 @@
 // Simple JWT and token storage helpers
+/*
+ Token lifetimes (server contract):
+ - access token: 15 minutes
+ - refresh token: 1 day
+ ensureAccessToken() refreshes the access token when expired using /api/auth/refresh.
+*/
 
 const STORAGE_KEYS = {
   access: 'accessToken',
@@ -41,22 +47,33 @@ export function isTokenExpired(token, skewSec = 30) {
 
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
+// Deduplicate parallel refresh calls
+let refreshInFlight = null;
+
 async function refreshAccessToken(signal) {
-  const { refreshToken } = getTokens();
-  if (!refreshToken || isTokenExpired(refreshToken, 0)) {
-    throw new Error('refresh_missing_or_expired');
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const { refreshToken } = getTokens();
+    if (!refreshToken || isTokenExpired(refreshToken, 0)) {
+      throw new Error('refresh_missing_or_expired');
+    }
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+      signal,
+    });
+    if (!res.ok) throw new Error('refresh_failed');
+    const data = await res.json();
+    if (!data?.accessToken) throw new Error('refresh_response_invalid');
+    setTokens({ accessToken: data.accessToken, refreshToken });
+    return data.accessToken;
+  })();
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
   }
-  const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-    signal,
-  });
-  if (!res.ok) throw new Error('refresh_failed');
-  const data = await res.json();
-  if (!data?.accessToken) throw new Error('refresh_response_invalid');
-  setTokens({ accessToken: data.accessToken, refreshToken });
-  return data.accessToken;
 }
 
 export async function ensureAccessToken(signal) {
@@ -67,26 +84,92 @@ export async function ensureAccessToken(signal) {
   return accessToken;
 }
 
-export async function authorizedFetch(input, init = {}) {
+// Helper: fetch with auth, retry once on 401 after a refresh
+export async function fetchWithAuth(input, init = {}) {
+  const signal = init.signal;
+  let accessToken = await ensureAccessToken(signal);
+
+  const headers = new Headers(init.headers || {});
+  if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${accessToken}`);
+
+  const url =
+    typeof input === 'string' && !/^https?:\/\//i.test(input)
+      ? `${API_BASE}${input}`
+      : input;
+
+  const doFetch = () => fetch(url, { ...init, headers });
+
+  let res = await doFetch();
+  if (res.status === 401) {
+    try {
+      accessToken = await refreshAccessToken(signal);
+      headers.set('Authorization', `Bearer ${accessToken}`);
+      res = await doFetch();
+    } catch {
+      clearTokens();
+      throw new Error('unauthorized');
+    }
+  }
+  return res;
+}
+
+function buildUrl(input) {
+  return typeof input === 'string' && !/^https?:\/\//i.test(input) ? `${API_BASE}${input}` : input;
+}
+
+async function parseResponse(res) {
+  const text = await res.text();
+  if (!text) return null;
   try {
-    const token = await ensureAccessToken();
-    const headers = new Headers(init.headers || {});
-    headers.set('Authorization', `Bearer ${token}`);
-    let res = await fetch(input, { ...init, headers });
-    if (res.status === 401) {
-      // try refresh once
-      const newToken = await refreshAccessToken();
-      headers.set('Authorization', `Bearer ${newToken}`);
-      res = await fetch(input, { ...init, headers });
-    }
-    if (res.status === 401) throw new Error('unauthorized');
-    return res;
-  } catch (e) {
-    // On any auth failure, clear and redirect to login
-    clearTokens();
-    if (typeof window !== 'undefined') {
-      window.location.replace('/login');
-    }
-    throw e;
+    return JSON.parse(text);
+  } catch {
+    return text;
   }
 }
+
+// Axios-like helper
+export const http = {
+  async request(input, opts = {}) {
+    const {
+      method = 'GET',
+      headers,
+      body,
+      json = true,
+      auth = true,
+      signal,
+    } = opts;
+
+    const url = buildUrl(input);
+    const init = { method, signal };
+    const h = new Headers(headers || {});
+    if (json && body !== undefined && body !== null) {
+      if (!h.has('Content-Type')) h.set('Content-Type', 'application/json');
+      init.body = typeof body === 'string' ? body : JSON.stringify(body);
+    } else if (body !== undefined) {
+      init.body = body;
+    }
+    init.headers = h;
+
+    const res = auth ? await fetchWithAuth(url, init) : await fetch(url, init);
+    if (!res.ok) {
+      const errBody = await parseResponse(res);
+      const err = new Error((errBody && errBody.message) || `request_failed_${res.status}`);
+      err.status = res.status;
+      err.data = errBody;
+      throw err;
+    }
+    return await parseResponse(res);
+  },
+  get(url, opts) {
+    return this.request(url, { ...(opts || {}), method: 'GET' });
+  },
+  post(url, body, opts) {
+    return this.request(url, { ...(opts || {}), method: 'POST', body });
+  },
+  put(url, body, opts) {
+    return this.request(url, { ...(opts || {}), method: 'PUT', body });
+  },
+  delete(url, opts) {
+    return this.request(url, { ...(opts || {}), method: 'DELETE' });
+  },
+};
