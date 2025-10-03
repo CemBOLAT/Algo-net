@@ -32,6 +32,9 @@ const QuickGraphDialog = ({
   const [starCenterCount, setStarCenterCount] = useState(1);
   const [bipartiteA, setBipartiteA] = useState(2);
   const [bipartiteB, setBipartiteB] = useState(2);
+  const [gridRows, setGridRows] = useState(2);
+  const [gridCols, setGridCols] = useState(2);
+  const [gridWeight, setGridWeight] = useState(1);
 
   const handleNodeCountChange = (e) => {
     setQuickGraphNodeCount(Number(e.target.value));
@@ -47,8 +50,9 @@ const QuickGraphDialog = ({
 
   const totalNodes = useMemo(() => {
     if (quickGraphType === 'bipartite') return Number(bipartiteA || 0) + Number(bipartiteB || 0);
+    if (quickGraphType === 'grid') return Number(gridRows || 0) * Number(gridCols || 0);
     return Number(quickGraphNodeCount || 0);
-  }, [quickGraphType, quickGraphNodeCount, bipartiteA, bipartiteB]);
+  }, [quickGraphType, quickGraphNodeCount, bipartiteA, bipartiteB, gridRows, gridCols]);
 
   const edgeSummary = useMemo(() => {
     const n = totalNodes;
@@ -66,12 +70,14 @@ const QuickGraphDialog = ({
         return `Ring: ${n} düğüm, ${n} kenar (cycle)`;
       case 'bipartite':
         return `Tam iki parça: A=${bipartiteA}, B=${bipartiteB}, toplam ${Number(bipartiteA)+Number(bipartiteB)} düğüm, kenar=${Number(bipartiteA)*Number(bipartiteB)}`;
+      case 'grid':
+        return `Grid: ${gridRows}x${gridCols} (${gridRows * gridCols} düğüm), kenar=${((gridRows - 1) * gridCols + (gridCols - 1) * gridRows)}, kenar ağırlığı=${gridWeight}`;
       case 'random':
         return 'Random: öneriler gösterilir, oluşturma kapalı.';
       default:
         return '';
     }
-  }, [quickGraphType, totalNodes, treeChildCount, starCenterCount, bipartiteA, bipartiteB]);
+  }, [quickGraphType, totalNodes, treeChildCount, starCenterCount, bipartiteA, bipartiteB, gridRows, gridCols, gridWeight]);
 
   const handleCreate = () => {
     // basic validations
@@ -86,17 +92,29 @@ const QuickGraphDialog = ({
       const c = Number(starCenterCount || 1);
       if (c < 1 || c >= n) return setQuickGraphError?.(`Merkez sayısı 1..${Math.max(1, n - 1)} aralığında olmalı.`);
     }
+    if (quickGraphType === 'grid') {
+      if (Number(gridRows) < 1 || Number(gridCols) < 1) return setQuickGraphError?.('Grid için satır ve sütun sayısı en az 1 olmalı.');
+      if (Number(gridWeight) < 1) return setQuickGraphError?.('Grid için kenar ağırlığı en az 1 olmalı.');
+    }
     if (quickGraphType === 'random') return;
 
     // Pass only spec; generation happens in GraphCreation utils
     onCreate?.({
       quickGraphType,
       quickGraphLayout: quickGraphType === 'full' ? (quickGraphLayout || 'circular') : 'auto',
-      quickGraphNodeCount: quickGraphType === 'bipartite' ? Number(bipartiteA) + Number(bipartiteB) : Number(quickGraphNodeCount),
+      quickGraphNodeCount:
+        quickGraphType === 'bipartite'
+          ? Number(bipartiteA) + Number(bipartiteB)
+          : quickGraphType === 'grid'
+          ? Number(gridRows) * Number(gridCols)
+          : Number(quickGraphNodeCount),
       treeChildCount: quickGraphType === 'tree' ? Number(treeChildCount) : undefined,
       starCenterCount: quickGraphType === 'star' ? Number(starCenterCount) : undefined,
       bipartiteA: quickGraphType === 'bipartite' ? Number(bipartiteA) : undefined,
-      bipartiteB: quickGraphType === 'bipartite' ? Number(bipartiteB) : undefined
+      bipartiteB: quickGraphType === 'bipartite' ? Number(bipartiteB) : undefined,
+      gridRows: quickGraphType === 'grid' ? Number(gridRows) : undefined,
+      gridCols: quickGraphType === 'grid' ? Number(gridCols) : undefined,
+      gridWeight: quickGraphType === 'grid' ? Number(gridWeight) : undefined
     });
   };
 
@@ -117,6 +135,7 @@ const QuickGraphDialog = ({
               <MenuItem value="star">Star (n, merkez)</MenuItem>
               <MenuItem value="ring">Ring (n)</MenuItem>
               <MenuItem value="bipartite">Tam İki Parça (a, b)</MenuItem>
+              <MenuItem value="grid">Grid (m, n, w)</MenuItem>
               <MenuItem value="random">Random (öneri)</MenuItem>
             </Select>
           </FormControl>
@@ -137,7 +156,7 @@ const QuickGraphDialog = ({
           )}
 
           {/* n input for non-bipartite and non-random */}
-          {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && (
+          {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && quickGraphType !== 'grid' && (
             <TextField
               label="Düğüm Sayısı (n)"
               type="number"
@@ -170,6 +189,35 @@ const QuickGraphDialog = ({
               onChange={(e) => { setStarCenterCount(Number(e.target.value)); setQuickGraphError?.(''); }}
               inputProps={{ min: 1, max: Math.max(1, Number(quickGraphNodeCount || 1) - 1) }}
             />
+          )}
+
+          {quickGraphType === 'grid' && (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Satır Sayısı (m)"
+                type="number"
+                fullWidth
+                value={gridRows}
+                onChange={(e) => { setGridRows(Number(e.target.value)); setQuickGraphError?.(''); }}
+                inputProps={{ min: 1, max: 20 }}
+              />
+              <TextField
+                label="Sütun Sayısı (n)"
+                type="number"
+                fullWidth
+                value={gridCols}
+                onChange={(e) => { setGridCols(Number(e.target.value)); setQuickGraphError?.(''); }}
+                inputProps={{ min: 1, max: 20 }}
+              />
+              <TextField
+                label="Kenar Ağırlığı (w)"
+                type="number"
+                fullWidth
+                value={gridWeight}
+                onChange={(e) => { setGridWeight(Number(e.target.value)); setQuickGraphError?.(''); }}
+                inputProps={{ min: 1, max: 100 }}
+              />
+            </Box>
           )}
 
           {quickGraphType === 'bipartite' && (
@@ -214,7 +262,7 @@ const QuickGraphDialog = ({
             </Box>
           )}
           
-          <Typography variant="caption" color="textSecondary">
+          <Typography variant="caption" color="text.secondary">
             {edgeSummary}
           </Typography>
         </Box>
