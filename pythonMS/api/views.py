@@ -51,11 +51,22 @@ def run_python(request):
         if process.returncode != 0:
             return Response({"error": stderr}, status=500)
 
+        # Split stdout using the delimiter
+        parts = stdout.split("$$$")
+        if len(parts) > 1:
+            # Take everything after the first $$$ as the actual result
+            script_output = parts[1].strip()
+        else:
+            script_output = stdout.strip()  # fallback if $$$ not present
+
+        if process.returncode != 0:
+            return Response({"error": stderr}, status=500)
+
         # --- 4. Parse script output (dict expected) ---
         try:
-            result = json.loads(stdout.strip())
+            result = json.loads(script_output)
         except json.JSONDecodeError:
-            result = {"raw_output": stdout.strip()}
+            result = {"raw_output": script_output}
 
         # --- 5. Cleanup ---
         os.remove(script_path)
