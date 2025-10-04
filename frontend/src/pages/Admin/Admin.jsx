@@ -4,9 +4,8 @@ import { Box, Card, CardContent, Typography, Button, Table, TableHead, TableBody
 import DeleteIcon from '@mui/icons-material/Delete';
 import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
-import { ensureAccessToken, clearTokens } from '../../utils/auth';
+import { http, clearTokens } from '../../utils/auth';
 
-const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 const PAGE_SIZE = 10;
 
 const Admin = () => {
@@ -23,31 +22,18 @@ const Admin = () => {
     (async () => {
       try {
         setLoading(true);
-        const token = await ensureAccessToken();
-        if (!token) {
-          navigate('/admin-login', { replace: true });
-          return;
-        }
-        const res = await fetch(`${API_BASE}/api/users?page=${page}&size=${PAGE_SIZE}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.status === 401 || res.status === 403) {
-          clearTokens();
-          navigate('/admin-login', { replace: true });
-          return;
-        }
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}));
-          if (mounted) setError(d?.message || 'Kullanıcılar alınamadı');
-          return;
-        }
-        const data = await res.json().catch(() => ({}));
+        const data = await http.get(`/api/users?page=${page}&size=${PAGE_SIZE}`);
         if (mounted) {
           setUsers(data.users || []);
           setTotal(Number.isFinite(data.total) ? data.total : (data.users || []).length);
         }
       } catch (err) {
-        if (mounted) setError('Sunucuya ulaşılamıyor.');
+        if (err.status === 401 || err.status === 403) {
+          clearTokens();
+          navigate('/admin-login', { replace: true });
+          return;
+        }
+        if (mounted) setError(err.data?.message || 'Kullanıcılar alınamadı');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -72,22 +58,15 @@ const Admin = () => {
     try {
       setError('');
       setProcessing(id, true);
-      const token = await ensureAccessToken();
-      if (!token) { navigate('/admin-login', { replace: true }); return; }
-      const res = await fetch(`${API_BASE}/api/set/${id}/disable`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ disabled: !current })
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setError(d?.message || 'İşlem başarısız');
-        return;
-      }
-      const d = await res.json().catch(() => ({}));
+      const d = await http.put(`/api/set/${id}/disable`, { disabled: !current });
       setUsers(prev => prev.map(u => (u.id === id ? { ...u, disabled: d.disabled ?? !current } : u)));
     } catch (err) {
-      setError('Sunucuya ulaşılamıyor.');
+      if (err.status === 401 || err.status === 403) {
+        clearTokens();
+        navigate('/admin-login', { replace: true });
+        return;
+      }
+      setError(err.data?.message || 'İşlem başarısız');
     } finally { setProcessing(id, false); }
   };
 
@@ -96,26 +75,17 @@ const Admin = () => {
     try {
       setError('');
       setProcessing(id, true);
-      const token = await ensureAccessToken();
-      if (!token) { navigate('/admin-login', { replace: true }); return; }
-      const res = await fetch(`${API_BASE}/api/delete-user/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (res.status === 401 || res.status === 403) {
+      await http.delete(`/api/delete-user/${id}`);
+      const remaining = total - 1;
+      const maxPage = Math.max(0, Math.ceil(remaining / PAGE_SIZE) - 1);
+      setPage(p => Math.min(p, maxPage));
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
         clearTokens();
         navigate('/admin-login', { replace: true });
         return;
       }
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setError(d?.message || 'Silme işlemi başarısız');
-        return;
-      }
-      // refresh current page: if last item removed move back one page if needed
-      const remaining = total - 1;
-      const maxPage = Math.max(0, Math.ceil(remaining / PAGE_SIZE) - 1);
-      setPage(p => Math.min(p, maxPage));
-      // refetch by toggling page state (effect will run)
-    } catch (err) {
-      setError('Sunucuya ulaşılamıyor.');
+      setError(err.data?.message || 'Silme işlemi başarısız');
     } finally { setProcessing(id, false); }
   };
 

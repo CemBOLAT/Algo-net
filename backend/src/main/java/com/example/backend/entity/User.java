@@ -1,7 +1,10 @@
 package com.example.backend.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "users")
@@ -35,6 +38,13 @@ public class User {
 
     @Column(name = "disabled")
     private Boolean disabled = false;
+<<<<<<< HEAD
+=======
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Graph> graphs = new ArrayList<>();
+>>>>>>> b56634bb3c8248c693cf0a053022da9387360ad2
 
     public User() {}
 
@@ -66,10 +76,25 @@ public class User {
     public LocalDateTime getSecurityCodeCreatedAt() { return securityCodeCreatedAt; }
     public void setSecurityCodeCreatedAt(LocalDateTime securityCodeCreatedAt) { this.securityCodeCreatedAt = securityCodeCreatedAt; }
 
+<<<<<<< HEAD
     public Boolean isAdmin() { return isAdmin; }
     public void setAdmin(Boolean admin) { isAdmin = admin; }
 
     public Boolean isDisabled() { return disabled; }
 
     public void setDisabled(Boolean disabled) { this.disabled = disabled; }
+=======
+    public boolean isAdmin() {
+        return Boolean.TRUE.equals(isAdmin);
+    }
+    public void setAdmin(Boolean admin) { this.isAdmin = admin; }
+
+    public boolean isDisabled() {
+        return Boolean.TRUE.equals(disabled);
+    }
+    public void setDisabled(Boolean disabled) { this.disabled = disabled; }
+
+    public List<Graph> getGraphs() { return graphs; }
+    public void setGraphs(List<Graph> graphs) { this.graphs = graphs; }
+>>>>>>> b56634bb3c8248c693cf0a053022da9387360ad2
 }
