@@ -60,6 +60,7 @@ const TopBar = ({ title = '', actions = [], sx = {} }) => {
                                     color={act.color || 'primary'}
                                     onClick={() => handleAction(act)}
                                     aria-label={act.ariaLabel || act.label}
+                                    disabled={act.disabled || false}
                                 >
                                     {act.label}
                                 </Button>
@@ -84,10 +85,13 @@ const TopBar = ({ title = '', actions = [], sx = {} }) => {
                             <ListItem key={`drawer-act-${idx}`} disablePadding>
                                 <ListItemButton
                                     onClick={() => {
-                                        setOpen(false);
-                                        // small delay so drawer animation starts
-                                        setTimeout(() => handleAction(act), 120);
+                                        if (!act.disabled) {
+                                            setOpen(false);
+                                            // small delay so drawer animation starts
+                                            setTimeout(() => handleAction(act), 120);
+                                        }
                                     }}
+                                    disabled={act.disabled || false}
                                 >
                                     <ListItemText primary={act.label} />
                                 </ListItemButton>

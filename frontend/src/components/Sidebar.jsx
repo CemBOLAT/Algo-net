@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, Button, Stack, Box, TextField } from '@mui/material';
 import CustomAlgoButton from "./CustomAlgo";
 
-const Sidebar = ({ onRun, onReset, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, edges }) => {
+
+const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, edges }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
   const [localName, setLocalName] = useState(graphName);
@@ -54,8 +55,15 @@ const Sidebar = ({ onRun, onReset, graphName = 'Graph Name', setGraphName = () =
         <Button id="reset-btn" variant="outlined" color="inherit" fullWidth onClick={onReset}>
           Reset
         </Button>
-        <Button id="save-btn" variant="contained" color="secondary" fullWidth onClick={() => alert('Save not implemented yet') }>
-          Save
+        <Button 
+          id="save-btn" 
+          variant="contained" 
+          color="secondary" 
+          fullWidth 
+          onClick={onSave}
+          disabled={isSaving}
+        >
+          {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
         </Button>
       </Stack>
     </Paper>
