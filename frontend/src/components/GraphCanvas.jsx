@@ -117,7 +117,6 @@ const GraphCanvas = ({
     );
 
     if (clickedNode) {
-      console.log("Dragging node:", clickedNode);
       setDraggingNode(clickedNode.id);
       setDragOffset({
         x: pos.x - clickedNode.x,
@@ -183,6 +182,7 @@ const GraphCanvas = ({
 
   const getNodeAt = useCallback((x, y) => {
     
+    console.log(nodes);
     return nodes.find(n => Math.hypot((n.x) - x, (n.y) - y) <= n.size);
   }, [nodes]);
 
@@ -415,9 +415,6 @@ const GraphCanvas = ({
 
     const clickedNode = getNodeAt(x, y);
     const clickedEdge = getEdgeAt(x, y);
-
-    console.log(clickedEdge);
-    console.log("Hellooo");
 
     if (clickedNode) {
       setSelectedNode(clickedNode);

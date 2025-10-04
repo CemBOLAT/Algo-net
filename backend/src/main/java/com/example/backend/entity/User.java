@@ -31,10 +31,10 @@ public class User {
 
     // new fields
     @Column(name = "is_admin")
-    private boolean isAdmin = false;
+    private Boolean isAdmin = false;
 
     @Column(name = "disabled")
-    private boolean disabled = false;
+    private Boolean disabled = false;
 
     public User() {}
 
@@ -66,9 +66,10 @@ public class User {
     public LocalDateTime getSecurityCodeCreatedAt() { return securityCodeCreatedAt; }
     public void setSecurityCodeCreatedAt(LocalDateTime securityCodeCreatedAt) { this.securityCodeCreatedAt = securityCodeCreatedAt; }
 
-    public boolean isAdmin() { return isAdmin; }
-    public void setAdmin(boolean admin) { isAdmin = admin; }
+    public Boolean isAdmin() { return isAdmin; }
+    public void setAdmin(Boolean admin) { isAdmin = admin; }
 
-    public boolean isDisabled() { return disabled; }
-    public void setDisabled(boolean disabled) { this.disabled = disabled; }
+    public Boolean isDisabled() { return disabled; }
+
+    public void setDisabled(Boolean disabled) { this.disabled = disabled; }
 }

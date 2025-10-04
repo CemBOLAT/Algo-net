@@ -83,7 +83,7 @@ const Graph = () => {
 
 			<Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
 				<Box sx={{ borderColor: 'divider' }}>
-					<Sidebar onRun={handleRunAlgorithm} onReset={handleResetGraph} graphName={graphName} setGraphName={setGraphName} />
+					<Sidebar onRun={handleRunAlgorithm} onReset={handleResetGraph} graphName={graphName} setGraphName={setGraphName} setNodes={setNodes} nodes={nodes} edges={edges}/>
 				</Box>
 
 				<Box component="main" sx={{ flex: 1, position: 'relative', p: 2 }}>
