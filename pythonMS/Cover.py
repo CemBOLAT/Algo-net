@@ -55,28 +55,31 @@ def DistanceNeighbors(u, t):
 
 
 
-Types = ["T1", "T2", "T3"]
-Type_distances = { "T1": 10, "T2": 15, "T3" : 8}
-Type_colors = {"T1": "red", "T2": "yellow", "T3": "green"}
+
+
+Types = ["R", "T1", "T2", "T3"]
+Type_distances = { "T1": 10, "T2": 15, "T3" : 7}
+Type_colors = {"R": "white", "T1": "red", "T2": "yellow", "T3": "green"}
+
+# Prepared distance-neighboor sets.
+S = { (v,t) : [u for u in Nodes if u != v and Weights[u][v] <= Type_distances[t]] for v in Nodes for t in ["T1", "T2", "T3"] }
 
 model = pulp.LpProblem("Cover", pulp.LpMaximize)
 
-Xt = pulp.LpVariable.dicts("Xt", [ (v, t) for v in Nodes for t in Types], cat = "Binary")
-Xr = pulp.LpVariable.dicts("Xr", [ v for v in Nodes], cat="Binary")
+Xt = { (v, t) : pulp.LpVariable(f"x_{v}_{t}", cat=pulp.LpBinary) for v in Nodes for t in Types }
 
 
-model += sum(Xr[v] for v in Nodes) , "Objective"
+model += pulp.lpSum(Xt[v, "R"] for v in Nodes) , "Objective"
 
 # Constraint for every vertex can be only one type of container
 for v in Nodes:
-    model += sum(Xt[v, t] for t in Types) + Xr[v] == 1
+    model += pulp.lpSum(Xt[v, t] for t in Types)== 1
 
 # Constraint for every residental type vertex has a open neighborhood which union of types of adjacent vertices is all types
 # Checking types of neihgbor vertices by type-distance relation
 for v in Nodes:
-    for t in Types:
-        model += sum(Xt[u, t] for u in DistanceNeighbors(v, t)) >= Xr[v] 
-
+    for t in list(set(Types) - {"R"}):
+        model += sum(Xt[u, t] for u in S[(v,t)]) >= Xt[v, "R"] 
 model.solve()
 
 
@@ -85,7 +88,7 @@ model.solve()
 def display_res():
     print("       R   |  T1   |  T2   |  T3")
     for v in Nodes:
-        print(v, "   ", Xr[v].value(), "    ", end="")
+        print(v, "   ", end="")
         for t in Types:
             print(Xt[v, t].value(), "    ", end="")
         print("")
@@ -95,13 +98,9 @@ display_res()
 vertex_colors = {vertex['id'] : "" for vertex in vertices}
 
 for v in Nodes:
-    if Xr[v].value() == 1.0:
-        vertex_colors[v] = "white"
-
-    else : 
-        for t in Types:
-            if Xt[v, t]:
-                vertex_colors[v] = Type_colors[t]
+    for t in Types:
+        if Xt[v, t]:
+            vertex_colors[v] = Type_colors[t]
 
 print("$$$")
 print(json.dumps(vertex_colors))
