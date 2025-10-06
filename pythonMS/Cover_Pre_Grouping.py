@@ -64,44 +64,12 @@ Type_colors = {"R": "white", "T1": "red", "T2": "yellow", "T3": "green"}
 # Prepared distance-neighboor sets.
 S = { (v,t) : [u for u in Nodes if u != v and Weights[u][v] <= Type_distances[t]] for v in Nodes for t in ["T1", "T2", "T3"] }
 
-alpha = 1
-
 model = pulp.LpProblem("Cover", pulp.LpMaximize)
 
 Xt = { (v, t) : pulp.LpVariable(f"x_{v}_{t}", cat=pulp.LpBinary) for v in Nodes for t in Types }
 
-# --- Initialize dictionary for Z variables ---
-Z = {}
 
-for t in [tt for tt in Types if tt != "R"]:
-    for v1 in Nodes:
-        for v2 in Nodes:
-            if v1 >= v2:  # ensure unique unordered pairs
-                continue
-
-            # Define Z[v1, v2, t]
-            Z[v1, v2, t] = pulp.LpVariable(f"Z_{v1}_{v2}_{t}", cat="Binary")
-
-            # Linearization constraints
-            model += Z[v1, v2, t] <= Xt[v1, t]
-            model += Z[v1, v2, t] <= Xt[v2, t]
-            model += Z[v1, v2, t] >= Xt[v1, t] + Xt[v2, t] - 1
-
-
-
-objective1 = pulp.lpSum(Xt[v, "R"] for v in Nodes)
-
-
-
-objective2 = pulp.lpSum(
-    Weights[v1][v2] * Z[v1, v2, t]
-    for t in [tt for tt in Types if tt != "R"]
-    for v1 in Nodes for v2 in Nodes
-    if v1 < v2
-)
-
-
-model += objective1 - alpha * objective2  , "Objective"
+model += pulp.lpSum(Xt[v, "R"] for v in Nodes) , "Objective"
 
 # Constraint for every vertex can be only one type of container
 for v in Nodes:
