@@ -14,9 +14,11 @@ edges = json.loads(edges_json)
 
 # Getting vertex ID's as a list
 Nodes = [vertex["id"] for vertex in vertices]
+Pos = {vertex["id"] : (vertex["x"], vertex["y"]) for vertex in vertices}
 
 # Getting edges as a weight matrix 
 Weights = { id : { id : 0 for id in Nodes} for id in Nodes}
+Fly = { id : { id : 0 for id in Nodes} for id in Nodes}
 
 for edge in edges:
     Weights[edge['from']][edge['to']] = edge['weight']
@@ -31,6 +33,7 @@ for outer in Nodes:
 for k in Nodes:
     for outer in Nodes:
         for inner in Nodes:
+            Fly[outer][inner] = np.sqrt(np.square(Pos[outer][0] - Pos[inner][0]) + np.square(Pos[outer][1] - Pos[inner][1]))
             if Weights[outer][inner] > Weights[outer][k] + Weights[k][inner]:
                 Weights[outer][inner] = Weights[outer][k] + Weights[k][inner]
 
@@ -48,6 +51,19 @@ for key in Weights.keys():
         print(f"{Weights[key][key_inner]}", end=" - ")
     print("") 
 
+
+# Printing the final matrix table
+print("")
+print("       ", end="")
+for key in Fly.keys():
+    print(key, end=" - ")
+print("")
+
+for key in Fly.keys():
+    print(f"{key} -> ", end="  ")
+    for key_inner in Fly.keys():
+        print(f"{Fly[key][key_inner]}", end=" - ")
+    print("")
 
 # The function for getting cardinal S the set consist of available adjacent vertices per selected type limit distance
 def DistanceNeighbors(u, t):
@@ -94,7 +110,7 @@ objective1 = pulp.lpSum(Xt[v, "R"] for v in Nodes)
 
 
 objective2 = pulp.lpSum(
-    Weights[v1][v2] * Z[v1, v2, t]
+    Fly[v1][v2] * Z[v1, v2, t]
     for t in [tt for tt in Types if tt != "R"]
     for v1 in Nodes for v2 in Nodes
     if v1 < v2
