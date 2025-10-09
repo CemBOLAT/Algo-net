@@ -22,7 +22,7 @@ const Admin = () => {
     (async () => {
       try {
         setLoading(true);
-        const data = await http.get(`/api/users?page=${page}&size=${PAGE_SIZE}`);
+        const data = await http.get(`/api/users?page=${page}&size=${PAGE_SIZE}`, { auth: true });
         if (mounted) {
           setUsers(data.users || []);
           setTotal(Number.isFinite(data.total) ? data.total : (data.users || []).length);
@@ -58,7 +58,7 @@ const Admin = () => {
     try {
       setError('');
       setProcessing(id, true);
-      const d = await http.put(`/api/set/${id}/disable`, { disabled: !current });
+      const d = await http.put(`/api/set/${id}/disable`, { disabled: !current }, { auth: true });
       setUsers(prev => prev.map(u => (u.id === id ? { ...u, disabled: d.disabled ?? !current } : u)));
     } catch (err) {
       if (err.status === 401 || err.status === 403) {

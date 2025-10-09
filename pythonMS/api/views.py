@@ -1,78 +1,22 @@
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-import subprocess, tempfile, os, json
+from rest_framework.parsers import MultiPartParser, FormParser
+from .serializers import RunPythonSerializer
+from .services import run_python_script, ScriptExecutionError
 
 @api_view(["POST"])
-@parser_classes([MultiPartParser, FormParser, JSONParser])
+@parser_classes([MultiPartParser, FormParser])
 def run_python(request):
-    """
-    Frontend sends:
-      - file: Python script (.py)
-      - vertices: JSON string
-      - edges: JSON string
-    """
+    serializer = RunPythonSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    file = serializer.validated_data["file"]
+    vertices = serializer.validated_data["vertices"]
+    edges = serializer.validated_data["edges"]
+
     try:
-        # --- 1. Get uploaded Python file ---
-        uploaded_file = request.FILES.get("file")
-        if not uploaded_file:
-            return Response({"error": "Python file is required"}, status=400)
-
-        # Save Python file to a temp dir
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as tmp_file:
-            for chunk in uploaded_file.chunks():
-                tmp_file.write(chunk)
-            script_path = tmp_file.name
-
-        print(f"script_path : {script_path}")
-        # --- 2. Get vertices & edges JSON ---
-        vertices_json = request.data.get("Vertices")
-        edges_json = request.data.get("Edges")
-        
-        # Validate JSON strings
-        try:
-            vertices = json.loads(vertices_json)
-            edges = json.loads(edges_json)
-        except json.JSONDecodeError as e:
-            return Response({"error": f"Invalid JSON: {str(e)}"}, status=400)
-
-        print(f"vertices : {vertices}")
-        print(f"edges : {edges}", end="\n\n")
-
-        # --- 3. Run Python script with subprocess ---
-        process = subprocess.Popen(
-            ["python", script_path, json.dumps(vertices), json.dumps(edges)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        stdout, stderr = process.communicate()
-        print(f"out : {stdout}")
-        if process.returncode != 0:
-            return Response({"error": stderr}, status=500)
-
-        # Split stdout using the delimiter
-        parts = stdout.split("$$$")
-        if len(parts) > 1:
-            # Take everything after the first $$$ as the actual result
-            script_output = parts[1].strip()
-        else:
-            script_output = stdout.strip()  # fallback if $$$ not present
-
-        if process.returncode != 0:
-            return Response({"error": stderr}, status=500)
-
-        # --- 4. Parse script output (dict expected) ---
-        try:
-            result = json.loads(script_output)
-        except json.JSONDecodeError:
-            result = {"raw_output": script_output}
-
-        # --- 5. Cleanup ---
-        os.remove(script_path)
-
-        print(f"result : {result}")
-        return Response({"result": result})
-
-    except Exception as e:
+        result = run_python_script(file, vertices, edges)
+    except ScriptExecutionError as e:
         return Response({"error": str(e)}, status=500)
+
+    return Response({"result": result})

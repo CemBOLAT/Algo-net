@@ -41,6 +41,17 @@ const Graph = () => {
 		}, 2000); // Show success for 2 seconds
 	};
 
+	// Generic notifier (use for custom durations)
+	const notify = (type, message, durationMs = 2000) => {
+		if (type === 'success') {
+			setSuccessMessage(message);
+			setTimeout(() => setSuccessMessage(''), durationMs);
+		} else {
+			setErrorMessage(message);
+			setTimeout(() => setErrorMessage(''), durationMs);
+		}
+	};
+
 	useEffect(() => {
 		const { refreshToken } = getTokens();
 		if (!refreshToken || isTokenExpired(refreshToken, 0)) {
@@ -91,7 +102,7 @@ const Graph = () => {
 	const loadGraph = async (id) => {
 		setIsLoading(true);
 		try {
-			const graph = await http.get(`/api/graphs/${id}`);
+			const graph = await http.get(`/api/graphs/${id}`, { auth: true });
 
 			// Load graph data
 			setGraphId(graph.id);
@@ -204,8 +215,8 @@ const Graph = () => {
 			console.log(`Saving graph via ${method} to ${url}`);
 
 			const data = graphId
-				? await http.put(`/api/graphs/${graphId}`, requestBody)
-				: await http.post('/api/graphs/save', requestBody);
+				? await http.put(`/api/graphs/${graphId}`, requestBody, { auth: true })
+				: await http.post('/api/graphs/save', requestBody, { auth: true });
 
 			if (!graphId) {
 				setGraphId(data.graphId);
@@ -322,6 +333,11 @@ const Graph = () => {
 						setNodes={setNodes}
 						nodes={nodes}
 						edges={edges}
+						// pass loading controls to sidebar
+						isLoading={isLoading}
+						setIsLoading={setIsLoading}
+						// pass notifier to show 2s error on custom button failure
+						notify={notify}
 					/>
 				</Box>
 
