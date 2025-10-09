@@ -11,7 +11,7 @@ const AdminPrivateRoute = ({ children }) => {
     let mounted = true;
     (async () => {
       try {
-        await http.get('/api/auth/is-admin');
+        await http.get('/api/auth/is-admin', { auth: true });
         if (mounted) setOk(true);
       } catch {
         clearTokens();

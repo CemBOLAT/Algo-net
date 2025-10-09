@@ -252,7 +252,7 @@ const GraphCreation = () => {
                 const x = 100 + (idx % cols) * spacing;
                 const y = 100 + Math.floor(idx / cols) * spacing;
                 return {
-                    id: `node-${idx + 1}`,
+                    id: `${idx + 1}`,
                     x,
                     y,
                     label,
@@ -267,8 +267,8 @@ const GraphCreation = () => {
 
             const preparedEdges = uniqueEdges.map((e, i) => ({
                 id: `edge-${i + 1}`,
-                from: labelToId[e.from] || `node-1`,
-                to: labelToId[e.to] || `node-1`,
+                from: labelToId[e.from] || `1`,
+                to: labelToId[e.to] || `1`,
                 label: e.name || '',
                 weight: e.weight !== undefined ? e.weight : undefined,
                 directed: typeof e.directed === 'boolean' ? e.directed : directed,

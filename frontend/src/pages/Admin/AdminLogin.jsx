@@ -41,7 +41,7 @@ const AdminLogin = () => {
 
       // Ensure the token belongs to an admin
       try {
-        const check = await http.get('/api/auth/is-admin');
+        const check = await http.get('/api/auth/is-admin', { auth: true });
         if (!check || check.isAdmin !== true) {
           clearTokens();
           setError('Yetkili admin değil');

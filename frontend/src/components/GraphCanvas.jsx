@@ -199,7 +199,7 @@ const GraphCanvas = ({
       setNodes(prev => [
         ...prev,
         {
-          id: 'node-' + (prev.length + 1),
+          id: `${prev.length + 1}`,
           x: p.x,
           y: p.y,
           label: `V${prev.length + 1}`,
@@ -489,7 +489,7 @@ const GraphCanvas = ({
                   setEdges(prev => [
                     ...prev,
                     {
-                      id: `edge-${prev.length + 1}`,
+                      id: `${prev.length + 1}`,
                       from: tempEdge.from.id,
                       to: node.id,
                       label: '',
@@ -515,7 +515,7 @@ const GraphCanvas = ({
                   setEdges(prev => [
                     ...prev,
                     {
-                      id: `edge-${prev.length + 1}`,
+                      id: `${prev.length + 1}`,
                       from: tempEdge.from.id,
                       to: node.id,
                       label: '',

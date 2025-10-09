@@ -48,7 +48,7 @@ const GraphList = () => {
 
   const fetchGraphs = async () => {
     try {
-      const data = await http.get('/api/graphs/user');
+      const data = await http.get('/api/graphs/user', { auth: true });
       setGraphs(data);
     } catch (err) {
       setError(`Failed to fetch graphs: ${err.status || ''} ${err.data?.message || err.message}`);

@@ -3,7 +3,7 @@ import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, Button, S
 import CustomAlgoButton from "./CustomAlgo";
 
 
-const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, edges }) => {
+const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, edges, isLoading = false, setIsLoading = () => {}, notify = () => {} }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
   const [localName, setLocalName] = useState(graphName);
@@ -50,7 +50,14 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           Run
         </Button>
         
-        <CustomAlgoButton setNodes={setNodes} nodes={nodes} edges={edges}/>
+        <CustomAlgoButton
+          setNodes={setNodes}
+          nodes={nodes}
+          edges={edges}
+          isLoading={isLoading}
+          setIsLoading={setIsLoading}
+          notify={notify}
+        />
         
         <Button id="reset-btn" variant="outlined" color="inherit" fullWidth onClick={onReset}>
           Reset
