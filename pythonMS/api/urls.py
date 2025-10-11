@@ -16,8 +16,11 @@ Including another URLconf
 """
 
 from django.urls import path
-from .views import run_python
+from .views import run_python, run_algorithm_color, run_algorithm_search, run_algorithm_path
 
 urlpatterns = [
     path("run/", run_python, name="run_python"),
+    path("coloring/", run_algorithm_color, name = "color_graph"),
+    path("searching/", run_algorithm_search, name = "search_graph"),
+    path("pathfinding/", run_algorithm_path, name = "path_graph")
 ]

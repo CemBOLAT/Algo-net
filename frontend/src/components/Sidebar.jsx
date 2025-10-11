@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, Button, Stack, Box, TextField } from '@mui/material';
 import CustomAlgoButton from "./CustomAlgo";
+import RunGraphAlgorithms from "./RunGraphAlgorithms";
 
 
-const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, edges, isLoading = false, setIsLoading = () => {}, notify = () => {} }) => {
+const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, setEdges ,edges, isLoading = false, setIsLoading = () => {}, notify = () => {} }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
   const [localName, setLocalName] = useState(graphName);
@@ -40,15 +41,23 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           onChange={handleAlgorithmChange}
         >
           <MenuItem value="dfs">Depth-First Search</MenuItem>
-          <MenuItem value="bfs">Breadth-First Search</MenuItem>
           <MenuItem value="dijkstra">Dijkstra's Algorithm</MenuItem>
+          <MenuItem value="ordered_coloring">Ordered Coloring </MenuItem>
         </Select>
       </FormControl>
 
       <Stack spacing={1}>
-        <Button id="run-btn" variant="contained" color="primary" fullWidth onClick={() => onRun(selectedAlgorithm)}>
-          Run
-        </Button>
+        
+        <RunGraphAlgorithms
+          setNodes={setNodes}
+          nodes= {nodes}
+          setEdges = {setEdges}
+          edges = {edges}
+          selectedAlgo = {selectedAlgorithm}
+          isLoading = {isLoading}
+          setIsLoading = {setIsLoading}
+          notify = {notify}
+        />
         
         <CustomAlgoButton
           setNodes={setNodes}
