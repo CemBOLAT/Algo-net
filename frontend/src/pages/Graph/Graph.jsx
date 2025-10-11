@@ -9,6 +9,7 @@ import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
 import { Box, Container, Grid, Paper } from '@mui/material';
 
+
 const Graph = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -148,10 +149,6 @@ const Graph = () => {
 		} finally {
 			setIsLoading(false);
 		}
-	};
-
-	const handleRunAlgorithm = (algorithm) => {
-		showSuccess(`${algorithm} algoritması çalıştırıldı! (Mantık henüz uygulanmadı)`);
 	};
 
 	const handleResetGraph = () => {
@@ -324,7 +321,6 @@ const Graph = () => {
 			<Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
 				<Box sx={{ borderColor: 'divider' }}>
 					<Sidebar 
-						onRun={handleRunAlgorithm} 
 						onReset={handleResetGraph} 
 						onSave={handleSaveGraph}
 						isSaving={isSaving}
@@ -332,6 +328,7 @@ const Graph = () => {
 						setGraphName={setGraphName} 
 						setNodes={setNodes}
 						nodes={nodes}
+						setEdges={setEdges}
 						edges={edges}
 						// pass loading controls to sidebar
 						isLoading={isLoading}
