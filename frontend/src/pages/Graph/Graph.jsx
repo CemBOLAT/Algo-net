@@ -9,6 +9,7 @@ import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
 import { Box, Container, Grid, Paper } from '@mui/material';
 
+
 const Graph = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -39,6 +40,17 @@ const Graph = () => {
 		setTimeout(() => {
 			setSuccessMessage('');
 		}, 2000); // Show success for 2 seconds
+	};
+
+	// Generic notifier (use for custom durations)
+	const notify = (type, message, durationMs = 2000) => {
+		if (type === 'success') {
+			setSuccessMessage(message);
+			setTimeout(() => setSuccessMessage(''), durationMs);
+		} else {
+			setErrorMessage(message);
+			setTimeout(() => setErrorMessage(''), durationMs);
+		}
 	};
 
 	useEffect(() => {
@@ -91,7 +103,7 @@ const Graph = () => {
 	const loadGraph = async (id) => {
 		setIsLoading(true);
 		try {
-			const graph = await http.get(`/api/graphs/${id}`);
+			const graph = await http.get(`/api/graphs/${id}`, { auth: true });
 
 			// Load graph data
 			setGraphId(graph.id);
@@ -137,10 +149,6 @@ const Graph = () => {
 		} finally {
 			setIsLoading(false);
 		}
-	};
-
-	const handleRunAlgorithm = (algorithm) => {
-		showSuccess(`${algorithm} algoritması çalıştırıldı! (Mantık henüz uygulanmadı)`);
 	};
 
 	const handleResetGraph = () => {
@@ -204,8 +212,8 @@ const Graph = () => {
 			console.log(`Saving graph via ${method} to ${url}`);
 
 			const data = graphId
-				? await http.put(`/api/graphs/${graphId}`, requestBody)
-				: await http.post('/api/graphs/save', requestBody);
+				? await http.put(`/api/graphs/${graphId}`, requestBody, { auth: true })
+				: await http.post('/api/graphs/save', requestBody, { auth: true });
 
 			if (!graphId) {
 				setGraphId(data.graphId);
@@ -313,12 +321,20 @@ const Graph = () => {
 			<Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
 				<Box sx={{ borderColor: 'divider' }}>
 					<Sidebar 
-						onRun={handleRunAlgorithm} 
 						onReset={handleResetGraph} 
 						onSave={handleSaveGraph}
 						isSaving={isSaving}
 						graphName={graphName} 
 						setGraphName={setGraphName} 
+						setNodes={setNodes}
+						nodes={nodes}
+						setEdges={setEdges}
+						edges={edges}
+						// pass loading controls to sidebar
+						isLoading={isLoading}
+						setIsLoading={setIsLoading}
+						// pass notifier to show 2s error on custom button failure
+						notify={notify}
 					/>
 				</Box>
 
