@@ -62,8 +62,6 @@ CORS_ALLOWED_ORIGINS = [
     os.getenv("FRONTEND_URL", "http://localhost:5173")
 ]
 
-print("CORS_ALLOWED_ORIGINS:", CORS_ALLOWED_ORIGINS)
-
 ROOT_URLCONF = 'pythonMS.urls'
 
 TEMPLATES = [

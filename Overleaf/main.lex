@@ -42,28 +42,34 @@ The input variables define the problem structure. $V$ and $T$ describe the possi
 \[
 X_{v,t} =
 \begin{cases}
-1, & \text{if vertex } v \in V \text{ is assigned container type } t \in T,\\[4pt]
+1, & \text{if vertex } v \in V \text{ is assigned container type } t \in T,\\[2pt]
 0, & \text{otherwise.}
 \end{cases}
 \quad \forall v \in V, \forall t \in T.
 \]
 
-\textbf{Explanation:}  
-The binary decision variable $X_{v,t}$ determines whether the vertex $v$ is used for container type $t$.  
-Each vertex can have at most one type assigned.
-
 \[
 Z_{u,v,t} = 
 \begin{cases}
-1, & \text {if $x_{u,t}$ = 1 and $x_{v,t}$ = 1} \\[4pt]
+1, & \text {if $X_{u,t} = 1$ and $X_{v,t} = 1$}, \\[2pt]
 0, & \text{otherwise.}
 \end{cases}
 \quad \forall u, v \in V \; with \;\; u < v, \; \forall t \in T \setminus \{r\} 
 \]
 
-\textbf{Explanation:}
-The binary decision variable $Z_{u,v,t}$ determines whether the vertex $u$ and $v$ are of both same type $t$. 
-This decision variable is used to minimize the distance between same type vertices.
+\[
+Y_{u,v,t} =
+\begin{cases}
+1, & \text{if residential vertex $u$ is assigned to container $v$ of type $t$},\\
+0, & \text{otherwise}
+\end{cases}
+\quad \forall u,v \in V, \; u \neq v, \; \forall t \in T \setminus \{r\}
+\]
+
+\textbf{Explanation:}  
+$X_{v,t}$ determines the type assigned to vertex $v$.  
+$Z_{u,v,t}$ checks if two vertices share the same type to minimize distance between similar types.  
+$Y_{u,v,t}$ represents the assignment of residential vertices to container types for demand control.
 
 \section{Objective Function}
 
@@ -118,20 +124,29 @@ The objective aims to maximize the number of residential-type containers placed 
     
     If both $X_{u,t}$ and $X_{v,t}$ are equal to 1, that means that both vertices are container type $t$
 
-    \item \textbf{Demand Constraint:} \\
-    Each container of type $t \in T \setminus \{r\}$ can cover at most $Demand_t$ residential vertices:
+    \item \textbf{Demand Constraint (Assignment-based):}
     \[
-    \sum_{u \in S_{v,t}} X_{u,r} \le Demand_t + M_v (1 - X_{v,t}) \quad \forall v \in V, \forall t \in T \setminus \{r\}
+    \sum_{u \in V \setminus \{v\}} Y_{u,v,t} \le Demand_t + M_v (1 - X_{v,t}) 
+    \quad \forall v \in V, \forall t \in T \setminus \{r\}
     \]
-    where $M_v = |S_{v,t}|$ is a big-M constant to relax the constraint if $v$ is not assigned type $t$.
+    where $M_v = |V|-1$ is a big-M constant to relax the constraint if $v$ is not assigned type $t$.
+
+    \item \textbf{Residential Assignment Constraint:}
+    \[
+    \sum_{v \in V \setminus \{u\}} Y_{u,v,t} \le 1 \quad \forall u \in V, \forall t \in T \setminus \{r\}
+    \]
+    Each residential vertex can be assigned to at most one container for each type $t$.
 \end{enumerate}
 
 \textbf{Explanation:}  
-These constraints ensure logical feasibility:  
-(1) no vertex hosts multiple containers,  
-(2) residential areas are supported by diverse neighboring types, 
-(3) variables are strictly binary, and  
-(4) checking that multiple vertex type is linearized.
-(5) ensures that each container of type $t$ can cover at most $Demand_t$ residential vertices.
+These constraints ensure:
+\begin{itemize}
+    \item Each vertex hosts at most one container type.
+    \item Residential vertices have neighboring coverage for all non-residential types.
+    \item All decision variables are binary.
+    \item Linearization ensures correct modeling of $Z_{u,v,t}$.
+    \item Demand is now **assignment-based**: each container type covers at most the number of residential vertices assigned to it.
+    \item Each residential vertex is assigned to at most one container per type.
+\end{itemize}
 
 \end{document}
