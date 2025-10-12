@@ -1,5 +1,8 @@
 # Algo-net
 
+[![DOI](https://zenodo.org/badge/1030922488.svg)](https://doi.org/10.5281/zenodo.17333020)
+
+
 Etkileşimli graph düzenleyici ve algoritma çalıştırma platformu.
 
 - Frontend: React (Vite), MUI, react-konva
