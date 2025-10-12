@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from os import environ
+import os
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -22,13 +22,13 @@ load_dotenv(BASE_DIR / '.env')  # .env dosyasını oku
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
     
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = environ.get("SECRET_KEY", "error-secret-key-not-found")
+SECRET_KEY = os.getenv("SECRET_KEY", "error-secret-key-not-found")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = environ.get("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 
-ALLOWED_HOSTS = environ.get("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 
 # Application definition
@@ -59,8 +59,10 @@ MIDDLEWARE = [
 # Allow your frontend origin
 CORS_ALLOWED_ORIGINS = [
     # Put Environment Variable Here
-    environ.get("FRONTEND_URL", "http://localhost:5173")
+    os.getenv("FRONTEND_URL", "http://localhost:5173")
 ]
+
+print("CORS_ALLOWED_ORIGINS:", CORS_ALLOWED_ORIGINS)
 
 ROOT_URLCONF = 'pythonMS.urls'
 
