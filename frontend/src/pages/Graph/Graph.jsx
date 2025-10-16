@@ -7,6 +7,7 @@ import VertexSettings from '../../components/VertexSettings';
 import EdgeSettings from '../../components/EdgeSettings';
 import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
+import LegendPanel from '../../components/LegendPanel';
 import { Box, Container, Grid, Paper } from '@mui/material';
 
 
@@ -25,6 +26,8 @@ const Graph = () => {
 	const [graphId, setGraphId] = useState(null);
 	const [successMessage, setSuccessMessage] = useState('');
 	const [errorMessage, setErrorMessage] = useState('');
+	const [hasLegend, setHasLegend] = useState(false);
+	const [legendEntries, setLegendEntries] = useState([]);
 
 	// Helper function to show error messages
 	const showError = (message) => {
@@ -135,6 +138,22 @@ const Graph = () => {
 			setNodes(loadedNodes);
 			setEdges(loadedEdges);
 			
+			// Legend (if backend returns)
+			if (graph.hasLegend && Array.isArray(graph.legendEntries)) {
+				setHasLegend(true);
+				// normalize keys
+				setLegendEntries(graph.legendEntries.map(le => ({
+					name: le.name,
+					color: le.color,
+					capacity: le.capacity,
+					distance: le.distance,
+					unitDistance: le.unitDistance,
+				})));
+			} else {
+				setHasLegend(false);
+				setLegendEntries([]);
+			}
+
 			showSuccess('Graph başarıyla yüklendi!');
 		} catch (error) {
 			if (error.status === 404) {
@@ -200,7 +219,10 @@ const Graph = () => {
 			const requestBody = {
 				name: graphName.trim(),
 				nodes: nodesData,
-				edges: edgesData
+				edges: edgesData,
+				// include legend if present
+				hasLegend: hasLegend && legendEntries.length > 0,
+				legendEntries: (hasLegend ? legendEntries : []),
 			};
 
 			console.log("Prepared graph data for saving:", JSON.stringify(requestBody));
@@ -310,10 +332,7 @@ const Graph = () => {
 
 			<TopBar title="Graph Simulator"
 				actions={[
-					{ label: 'Graphlarım', onClick: () => { if (!isSaving) navigate('/graph-list'); }, variant: 'contained', color: 'primary', ariaLabel: 'Graphlarım', disabled: isSaving },
-					{ label: 'Graph Oluştur', onClick: () => { if (!isSaving) navigate('/graph-creation'); }, variant: 'contained', color: 'primary', ariaLabel: 'Geleneksel Yöntem', disabled: isSaving },
-					{ label: 'Dizi Algoritmaları', onClick: () => { if (!isSaving) navigate('/array-algorithms'); }, variant: 'contained', color: 'primary', ariaLabel: 'Dizi Algoritmaları', disabled: isSaving },
-					{ label: 'Ağaç Algoritmaları', onClick: () => { if (!isSaving) navigate('/tree-algorithms'); }, variant: 'contained', color: 'primary', ariaLabel: 'Ağaç Algoritmaları', disabled: isSaving },
+					{ label: 'Profile', onClick: () => { if (!isSaving) navigate('/profile'); }, variant: 'contained', color: 'primary', ariaLabel: 'Profile', disabled: isSaving },
 					{ label: 'Çıkış Yap', onClick: () => { if (!isSaving) { clearTokens(); navigate('/login'); } }, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap', disabled: isSaving }
 				]}
 			/>
@@ -335,6 +354,11 @@ const Graph = () => {
 						setIsLoading={setIsLoading}
 						// pass notifier to show 2s error on custom button failure
 						notify={notify}
+						// legend pass-through
+						hasLegend={hasLegend}
+						setHasLegend={setHasLegend}
+						legendEntries={legendEntries}
+						setLegendEntries={setLegendEntries}
 					/>
 				</Box>
 
@@ -354,6 +378,13 @@ const Graph = () => {
 						setTempEdge={setTempEdge}
 						disabled={isSaving}
 					/>
+
+					{/* Legend overlay */}
+					{hasLegend && legendEntries.length > 0 && (
+						<Box sx={{ position: 'absolute', left: 16, bottom: 16 }}>
+							<LegendPanel entries={legendEntries} />
+						</Box>
+					)}
 
 					{selectedNode && (
 						<VertexSettings

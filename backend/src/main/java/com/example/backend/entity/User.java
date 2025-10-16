@@ -39,6 +39,9 @@ public class User {
     @Column(name = "disabled")
     private Boolean disabled = false;
 
+    @Column(name = "notifications_enabled")
+    private Boolean notificationsEnabled = false;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<Graph> graphs = new ArrayList<>();
@@ -82,6 +85,13 @@ public class User {
         return Boolean.TRUE.equals(disabled);
     }
     public void setDisabled(Boolean disabled) { this.disabled = disabled; }
+
+    public boolean isNotificationsEnabled() {
+        return Boolean.TRUE.equals(notificationsEnabled);
+    }
+    public void setNotificationsEnabled(Boolean notificationsEnabled) {
+        this.notificationsEnabled = notificationsEnabled;
+    }
 
     public List<Graph> getGraphs() { return graphs; }
     public void setGraphs(List<Graph> graphs) { this.graphs = graphs; }

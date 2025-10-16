@@ -16,6 +16,7 @@ import GraphList from './pages/GraphList/GraphList';
 import Admin from './pages/Admin/Admin';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminPrivateRoute from './components/AdminPrivateRoute';
+import Profile from './pages/Profile/Profile';
 
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
           <Route path="/array-algorithms" element={<PrivateRoute><ArrayAlgorithms /></PrivateRoute>} />
           <Route path="/tree-algorithms" element={<PrivateRoute><TreeAlgorithms /></PrivateRoute>} />
           <Route path="/admin" element={<AdminPrivateRoute><Admin /></AdminPrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
