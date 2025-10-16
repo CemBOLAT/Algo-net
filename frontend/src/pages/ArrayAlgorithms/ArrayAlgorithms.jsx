@@ -269,6 +269,7 @@ const ArrayAlgorithms = () => {
                 title="Dizi Algoritmaları"
                 actions={[
                     { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
+                    { label: 'Profil', onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: 'Profil' },
                     { label: 'Ağaç Algoritmaları', onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: 'Ağaç Algoritmaları' },
                     { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
                 ]}

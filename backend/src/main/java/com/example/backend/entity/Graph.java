@@ -31,11 +31,18 @@ public class Graph {
     @JsonManagedReference
     private List<Edge> edges = new ArrayList<>();
 
+    @OneToMany(mappedBy = "graph", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    @JsonManagedReference
+    private List<LegendEntry> legendEntries = new ArrayList<>();
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "has_legend")
+    private Boolean hasLegend = false;
 
     public Graph() {}
 
@@ -71,9 +78,15 @@ public class Graph {
     public List<Edge> getEdges() { return edges; }
     public void setEdges(List<Edge> edges) { this.edges = edges; }
 
+    public List<LegendEntry> getLegendEntries() { return legendEntries; }
+    public void setLegendEntries(List<LegendEntry> legendEntries) { this.legendEntries = legendEntries; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public boolean isHasLegend() { return Boolean.TRUE.equals(hasLegend); }
+    public void setHasLegend(Boolean hasLegend) { this.hasLegend = hasLegend; }
 }

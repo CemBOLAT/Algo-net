@@ -4,6 +4,7 @@ import com.example.backend.entity.Graph;
 import com.example.backend.entity.Node;
 import com.example.backend.entity.Edge;
 import com.example.backend.entity.User;
+import com.example.backend.entity.LegendEntry;
 import com.example.backend.repository.GraphRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.JwtService;
@@ -43,6 +44,9 @@ public class GraphController {
         private String name;
         private List<NodeDTO> nodes;
         private List<EdgeDTO> edges;
+        // legend fields
+        private Boolean hasLegend;
+        private List<LegendEntryDTO> legendEntries;
 
         // Getters and setters
         public String getName() { return name; }
@@ -51,6 +55,10 @@ public class GraphController {
         public void setNodes(List<NodeDTO> nodes) { this.nodes = nodes; }
         public List<EdgeDTO> getEdges() { return edges; }
         public void setEdges(List<EdgeDTO> edges) { this.edges = edges; }
+        public Boolean getHasLegend() { return hasLegend; }
+        public void setHasLegend(Boolean hasLegend) { this.hasLegend = hasLegend; }
+        public List<LegendEntryDTO> getLegendEntries() { return legendEntries; }
+        public void setLegendEntries(List<LegendEntryDTO> legendEntries) { this.legendEntries = legendEntries; }
     }
 
     public static class NodeDTO {
@@ -99,6 +107,25 @@ public class GraphController {
         public void setShowWeight(Boolean showWeight) { this.showWeight = showWeight; }
     }
 
+    public static class LegendEntryDTO {
+        private String name;
+        private String color;
+        private Double capacity;
+        private Double distance;
+        private Double unitDistance;
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getColor() { return color; }
+        public void setColor(String color) { this.color = color; }
+        public Double getCapacity() { return capacity; }
+        public void setCapacity(Double capacity) { this.capacity = capacity; }
+        public Double getDistance() { return distance; }
+        public void setDistance(Double distance) { this.distance = distance; }
+        public Double getUnitDistance() { return unitDistance; }
+        public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; }
+    }
+
     @PostMapping("/save")
     public ResponseEntity<?> saveGraph(
             @RequestHeader(name = "Authorization", required = false) String authorization,
@@ -145,6 +172,22 @@ public class GraphController {
                     edge.setIsDirected(edgeDTO.getIsDirected() != null ? edgeDTO.getIsDirected() : false);
                     edge.setShowWeight(edgeDTO.getShowWeight() != null ? edgeDTO.getShowWeight() : true);
                     graph.getEdges().add(edge);
+                }
+            }
+
+            // legend
+            graph.setHasLegend(Boolean.TRUE.equals(request.getHasLegend()) && request.getLegendEntries() != null && !request.getLegendEntries().isEmpty());
+            if (graph.isHasLegend()) {
+                for (LegendEntryDTO dto : request.getLegendEntries()) {
+                    if (dto == null) continue;
+                    LegendEntry le = new LegendEntry();
+                    le.setGraph(graph);
+                    le.setName(dto.getName());
+                    le.setColor(dto.getColor());
+                    le.setCapacity(dto.getCapacity());
+                    le.setDistance(dto.getDistance());
+                    le.setUnitDistance(dto.getUnitDistance());
+                    graph.getLegendEntries().add(le);
                 }
             }
 
@@ -414,6 +457,33 @@ public class GraphController {
                 edge.setIsDirected(edgeDTO.getIsDirected() != null ? edgeDTO.getIsDirected() : false);
                 edge.setShowWeight(edgeDTO.getShowWeight() != null ? edgeDTO.getShowWeight() : true);
                 graph.getEdges().add(edge);
+            }
+
+            // legend: hard-delete then re-add
+            if (graph.getLegendEntries() != null) {
+                var itL = graph.getLegendEntries().iterator();
+                while (itL.hasNext()) {
+                    LegendEntry l = itL.next();
+                    itL.remove();
+                    entityManager.remove(l);
+                }
+            }
+            entityManager.flush();
+
+            boolean hasLegend = Boolean.TRUE.equals(request.getHasLegend()) && request.getLegendEntries() != null && !request.getLegendEntries().isEmpty();
+            graph.setHasLegend(hasLegend);
+            if (hasLegend) {
+                for (LegendEntryDTO dto : request.getLegendEntries()) {
+                    if (dto == null) continue;
+                    LegendEntry le = new LegendEntry();
+                    le.setGraph(graph);
+                    le.setName(dto.getName());
+                    le.setColor(dto.getColor());
+                    le.setCapacity(dto.getCapacity());
+                    le.setDistance(dto.getDistance());
+                    le.setUnitDistance(dto.getUnitDistance());
+                    graph.getLegendEntries().add(le);
+                }
             }
 
             Graph updatedGraph = graphRepository.save(graph);
