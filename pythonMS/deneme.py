@@ -6,9 +6,11 @@ import random
 
 vertices_json = sys.argv[1]
 edges_json = sys.argv[2]
+entrys_json = sys.argv[3] if len(sys.argv) > 3 else "[]"
 
 vertices = json.loads(vertices_json)
 edges = json.loads(edges_json)
+entries = json.loads(entrys_json)
 
 # Define a list of colors to assign
 colors_list = ["red", "blue", "green", "yellow", "purple", "orange"]

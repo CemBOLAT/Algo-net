@@ -4,7 +4,7 @@ import CustomAlgoButton from "./CustomAlgo";
 import RunGraphAlgorithms from "./RunGraphAlgorithms";
 
 
-const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, setEdges ,edges, isLoading = false, setIsLoading = () => {}, notify = () => {} }) => {
+const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph Name', setGraphName = () => {}, setNodes, nodes, setEdges ,edges, isLoading = false, setIsLoading = () => {}, notify = () => {}, hasLegend = false, setHasLegend = () => {}, legendEntries = [], setLegendEntries = () => {} }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
   const [localName, setLocalName] = useState(graphName);
@@ -43,6 +43,7 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           <MenuItem value="dfs">Depth-First Search</MenuItem>
           <MenuItem value="dijkstra">Dijkstra's Algorithm</MenuItem>
           <MenuItem value="ordered_coloring">Ordered Coloring </MenuItem>
+          <MenuItem value="layout_planning">Layout Planning</MenuItem>
         </Select>
       </FormControl>
 
@@ -57,6 +58,7 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           isLoading = {isLoading}
           setIsLoading = {setIsLoading}
           notify = {notify}
+          onLegendChange={(entries) => { setLegendEntries(entries || []); setHasLegend(!!(entries && entries.length)); }}
         />
         
         <CustomAlgoButton

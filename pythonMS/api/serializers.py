@@ -55,3 +55,23 @@ class SearchSerializer(serializers.Serializer):
         attrs["vertices"] = vertices
         attrs["edges"] = edges
         return attrs
+
+class LayoutPlanningSerializer(serializers.Serializer):
+    selectedAlgo = serializers.CharField(required=False)
+    Vertices = serializers.CharField(required=True)
+    Edges = serializers.CharField(required=True)
+    entries = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate(self, attrs):
+        try:
+            vertices = json.loads(attrs["Vertices"])
+            edges = json.loads(attrs["Edges"])
+            entries_raw = attrs.get("entries")
+            entries = json.loads(entries_raw) if entries_raw else []
+        except (TypeError, ValueError) as e:
+            raise serializers.ValidationError(f"Invalid JSON: {e}")
+
+        attrs["vertices"] = vertices
+        attrs["edges"] = edges
+        attrs["entries"] = entries if isinstance(entries, list) else []
+        return attrs

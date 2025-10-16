@@ -16,7 +16,6 @@ import {
     useTheme
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import ThemeToggle from './ThemeToggle';
 
 /**
  * TopBar
@@ -47,7 +46,6 @@ const TopBar = ({ title = '', actions = [], sx = {} }) => {
                     </Box>  
 
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', pr: 1 }}>
-                        <ThemeToggle position="inline" sx={{ width: 40, height: 40 }} />
                         {isSmall ? (
                             <IconButton aria-label="menu" onClick={() => setOpen(true)}>
                                 <MenuIcon />
@@ -76,11 +74,6 @@ const TopBar = ({ title = '', actions = [], sx = {} }) => {
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
                     </Box>
                     <List>
-                        <ListItem disablePadding>
-                            <ListItemButton onClick={() => { setOpen(false); /* ThemeToggle handles its own state */ }} sx={{ justifyContent: 'flex-start' }}>
-                                <ThemeToggle position="inline" />
-                            </ListItemButton>
-                        </ListItem>
                         {actions.map((act, idx) => (
                             <ListItem key={`drawer-act-${idx}`} disablePadding>
                                 <ListItemButton
