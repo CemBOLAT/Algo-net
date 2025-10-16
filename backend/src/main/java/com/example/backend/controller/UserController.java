@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -171,6 +172,48 @@ public class UserController {
         resp.put("id", u.getId());
         resp.put("disabled", u.isDisabled());
         return ResponseEntity.ok(resp);
+    }
+
+    // Update current user's preferences (notifications)
+    @PostMapping("/users/me/preferences")
+    public ResponseEntity<?> updateMyPreferences(
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
+        }
+        String token = authorization.substring(7).trim();
+        try {
+            Map<String, Object> claims = jwtService.parseClaims(token);
+            Long userId = Long.parseLong((String) claims.get("sub"));
+            Optional<User> opt = userRepository.findById(userId);
+            if (opt.isEmpty()) return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+
+            User u = opt.get();
+            Object val = body.get("notificationsEnabled");
+            boolean enabled = false;
+            if (val instanceof Boolean) enabled = (Boolean) val;
+            else if (val instanceof String) enabled = Boolean.parseBoolean((String) val);
+
+            u.setNotificationsEnabled(enabled);
+            userRepository.save(u);
+
+            Map<String, Object> res = new HashMap<>();
+            res.put("notificationsEnabled", u.isNotificationsEnabled());
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
+        }
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> health() {
+        Map<String, Object> res = new HashMap<>();
+        res.put("status", "ok");
+        res.put("service", "backend");
+        res.put("time", Instant.now().toString());
+        return ResponseEntity.ok(res);
     }
 
     private ResponseEntity<Map<String, Object>> error(HttpStatus status, String code, String message) {
