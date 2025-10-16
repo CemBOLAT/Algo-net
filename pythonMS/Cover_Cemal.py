@@ -50,20 +50,37 @@ for key in Weights.keys():
     print("") 
 
 
-# The function for getting cardinal S the set consist of available adjacent vertices per selected type limit distance
-def DistanceNeighbors(u, t):
-    return [v for v in Weights[u].keys() if u != v and Weights[u][v] <= Type_distances[t]]
-
 Types = ["R", "T1", "T2", "T3"]
 Type_distances = { "T1": 10, "T2": 6, "T3" : 12} # 1 3 2
-Type_colors = {"R": "black", "T1": "red", "T2": "yellow", "T3": "v"}
+Type_colors = {"R": "white", "T1": "red", "T2": "yellow", "T3": "green"}
 
 # Prepared distance-neighboor sets.
-S = { (v,t) : 
-     [u for u in Nodes if u != v and Weights[u][v] <= Type_distances[t]] for v in Nodes for t in ["T1", "T2", "T3"] 
-}
+S = {}
+for v in Nodes:
+    for t in ["T1", "T2", "T3"]:
+        neighbors = []
+        for u in Nodes:
+            if u == v:
+                continue
+            if Weights[u][v] <= Type_distances[t]:
+                neighbors.append(u)
+        S[(v, t)] = neighbors
 
-Xt = { (v, t) : pulp.LpVariable(f"x_{v}_{t}", cat=pulp.LpBinary) for v in Nodes for t in Types }
+# -- Initialize the assignment variables Xt -- 
+Xt = {}
+for v in Nodes:
+    for t in Types:
+        Xt[v, t] = pulp.LpVariable(f"x_{v}_{t}", cat=pulp.LpBinary)
+
+# -- Initialize the assignment variables Yuvt -- (u,v) ordered pairs
+Yuvt = {}
+for u in Nodes:
+    for v in Nodes:
+        if u == v:
+            continue
+        for t in ["T1", "T2", "T3"]:
+            if v in S[(u, t)]:
+                Yuvt[u, v, t] = pulp.LpVariable(f"Y_{u}_{v}_{t}", cat="Binary")
 
 model = pulp.LpProblem("Cover", pulp.LpMaximize)
 lambda_param = 1
@@ -105,6 +122,7 @@ objective2 = pulp.lpSum(
     if v1 < v2
 )
 
+
 model += objective1 - lambda_param * objective2, "Objective"
 
 # Constraint for every vertex can be only one type of container
@@ -120,10 +138,18 @@ for v in Nodes:
 # Constraint for every type of container has a limited capacity to cover residents
 Demand = { "T1": 1, "T2": 3, "T3": 2} # Number of residents that can be covered by one container of that type
 for v in Nodes:
-    for t in ["T1", "T2", "T3"]:
-        Rcount_vt = pulp.lpSum(Xt[u, "R"] for u in S[(v, t)])
-        M_vt = len(S[(v, t)])  # big-M to relax when v is not assigned type t
-        model += Rcount_vt <= Demand[t] + M_vt * (1 - Xt[v, t])
+    for t in ["T1","T2","T3"]:
+        # v üzerindeki t tipi konteynere atanmış R sayısı
+        assigned_R = pulp.lpSum(Yuvt[r,v,t] for r in Nodes if r != v and (r,v,t) in Yuvt)
+        M_vt = len(Nodes)  # big-M
+        # Eğer Xt[v,t] = 1 ise kapasite kısıtı aktif
+        model += assigned_R <= Demand[t] + M_vt*(1 - Xt[v,t])
+
+# --- Residential vertexler için atama kısıtı ---
+# Her R tipi vertex, her tip için en fazla 1 konteynere atanabilir
+for r in Nodes:
+    for t in ["T1","T2","T3"]:
+        model += pulp.lpSum(Yuvt[r,v,t] for v in Nodes if v != r and (r,v,t) in Yuvt) <= 1
 
 model.solve()
 
