@@ -6,11 +6,10 @@
 // - { type: 'compare', i: number, value: any, a: any[] }
 // - { type: 'found', index: number, value: any, a: any[] }
 
-export function linearSearchSteps(array, target) {
+export function linearSearchSteps(array, target, t) {
     const steps = [];
     const a = array.slice();
-    // initial snapshot
-    steps.push({ type: 'snapshot', a: a.slice(), note: 'Başlangıç', msg: `Başlangıç dizisi: [${a.join(', ')}]` });
+    steps.push({ type: 'snapshot', a: a.slice(), note: 'init', msg: t ? t('arr_initial', { arr: a.join(', ') }) : `Başlangıç dizisi: [${a.join(', ')}]` });
     for (let i = 0; i < a.length; i++) {
         const equal = a[i] === target;
         steps.push({
@@ -18,15 +17,15 @@ export function linearSearchSteps(array, target) {
             i,
             value: a[i],
             a: a.slice(),
-            msg: equal
-                ? `arr[${i}] == ${String(target)}. bulundu.`
-                : `arr[${i}] != ${String(target)}. sonraki indexe bakıyoruz.`
+            msg: t
+                ? (equal ? t('ls_compare_equal', { i, target: String(target) }) : t('ls_compare_not_equal', { i, target: String(target) }))
+                : (equal ? `arr[${i}] == ${String(target)}. bulundu.` : `arr[${i}] != ${String(target)}. sonraki indexe bakıyoruz.`)
         });
         if (equal) {
-            steps.push({ type: 'found', index: i, value: a[i], a: a.slice(), msg: `arr[${i}] == ${String(target)}. bulundu.` });
+            steps.push({ type: 'found', index: i, value: a[i], a: a.slice(), msg: t ? t('ls_found', { i, target: String(target) }) : `arr[${i}] == ${String(target)}. bulundu.` });
             return { steps, result: { found: true, index: i } };
         }
     }
-    steps.push({ type: 'snapshot', a: a.slice(), msg: `Hedef ${String(target)} bulunamadı.` });
+    steps.push({ type: 'snapshot', a: a.slice(), msg: t ? t('ls_not_found', { target: String(target) }) : `Hedef ${String(target)} bulunamadı.` });
     return { steps, result: { found: false, index: -1 } };
 }

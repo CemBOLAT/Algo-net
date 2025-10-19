@@ -14,6 +14,8 @@ import inorderSteps from './traversals/inorder';
 import preorderSteps from './traversals/preorder';
 import postorderSteps from './traversals/postorder';
 import levelOrderSteps from './traversals/levelorder';
+import { useI18n } from '../../context/I18nContext';
+import { getAlgoTranslator } from '../../i18n/algoI18n';
 
 export default function TreeAlgorithms() {
 	const navigate = useNavigate();
@@ -30,6 +32,8 @@ export default function TreeAlgorithms() {
 	const [manualOpen, setManualOpen] = useState(false);
 
 	const timerRef = useRef(null);
+	const { t, language } = useI18n();
+	const ta = useMemo(() => getAlgoTranslator(language), [language]);
 
 	// Rebuild tree when values or mode change
 	useEffect(() => {
@@ -58,10 +62,10 @@ export default function TreeAlgorithms() {
 
 	const generateSteps = () => {
 		if (!root) return [];
-		if (traversal === 'inorder') return inorderSteps(root);
-		if (traversal === 'preorder') return preorderSteps(root);
-		if (traversal === 'postorder') return postorderSteps(root);
-		return levelOrderSteps(root);
+		if (traversal === 'inorder') return inorderSteps(root, ta);
+		if (traversal === 'preorder') return preorderSteps(root, ta);
+		if (traversal === 'postorder') return postorderSteps(root, ta);
+		return levelOrderSteps(root, ta);
 	};
 	const ensureSteps = () => {
 		if (steps.length === 0 && root) {
@@ -189,11 +193,11 @@ export default function TreeAlgorithms() {
 	return (
 		<Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
 			<TopBar
-                title="Ağaç Algoritmaları"
+                title={t('tree_algorithms')}
                 actions={[
-                    { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
-                    { label: 'Dizi Algoritmaları', onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: 'Dizi Algoritmaları' },
-                    { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
+                    { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+                    { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
+                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
                 ]}
             />
 
@@ -201,32 +205,32 @@ export default function TreeAlgorithms() {
 				<Paper sx={{ p: 2, mb: 2 }}>
 					<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
 						<TextField
-							label="Sayı ekle (Enter ile)"
+							label={ta('add_number_label')}
 							value={input}
 							onChange={(e) => setInput(e.target.value)}
 							onKeyDown={(e) => { if (e.key === 'Enter') addValue(); }}
 							sx={{ width: 220 }}
 						/>
-						<Button variant="contained" onClick={addValue}>Ekle</Button>
-                        <Button variant="contained" onClick={clearValues}>Temizle</Button>
+						<Button variant="contained" onClick={addValue}>{ta('add')}</Button>
+                        <Button variant="contained" onClick={clearValues}>{ta('clear')}</Button>
 						<FormControl sx={{ minWidth: 160 }}>
-							<InputLabel>İşlem</InputLabel>
-							<Select label="İşlem" value={mode} onChange={(e) => setMode(e.target.value)}>
-								<MenuItem value="insert">Ekleme/Silme</MenuItem>
-								<MenuItem value="traversal">Dolaşma</MenuItem>
+							<InputLabel>{ta('operation')}</InputLabel>
+							<Select label={ta('operation')} value={mode} onChange={(e) => setMode(e.target.value)}>
+								<MenuItem value="insert">{ta('insert_delete')}</MenuItem>
+								<MenuItem value="traversal">{ta('traversal_mode')}</MenuItem>
 							</Select>
 						</FormControl>
 
 						{mode === 'insert' && (
 							<Stack direction="row" spacing={1} alignItems="center">
 								<FormControl sx={{ minWidth: 180 }}>
-									<InputLabel>Ekleme Algoritması</InputLabel>
-									<Select label="Ekleme Algoritması" value={insertAlgo} onChange={(e) => setInsertAlgo(e.target.value)}>
-										<MenuItem value="avl">AVL Tree</MenuItem>
+									<InputLabel>{ta('insertion_algorithm')}</InputLabel>
+									<Select label={ta('insertion_algorithm')} value={insertAlgo} onChange={(e) => setInsertAlgo(e.target.value)}>
+										<MenuItem value="avl">{ta('avl_tree')}</MenuItem>
 									</Select>
 								</FormControl>
-								<Tooltip title="AVL için ekleme/silme kuralları">
-                                <IconButton
+								<Tooltip title="AVL">
+                                    <IconButton
                                         size="small"
                                         onClick={() => setManualOpen(true)}
                                         aria-label="AVL rehberi"
@@ -240,15 +244,15 @@ export default function TreeAlgorithms() {
 						{mode === 'traversal' && (
 							<>
 								<FormControl sx={{ minWidth: 180 }}>
-									<InputLabel>Traversal</InputLabel>
-									<Select label="Traversal" value={traversal} onChange={(e) => setTraversal(e.target.value)}>
+									<InputLabel>{ta('traversal_label')}</InputLabel>
+									<Select label={ta('traversal_label')} value={traversal} onChange={(e) => setTraversal(e.target.value)}>
 										<MenuItem value="inorder">Inorder (L, N, R)</MenuItem>
 										<MenuItem value="preorder">Preorder (N, L, R)</MenuItem>
 										<MenuItem value="postorder">Postorder (L, R, N)</MenuItem>
 										<MenuItem value="levelorder">Level Order (BFS)</MenuItem>
 									</Select>
 								</FormControl>
-								<Button variant="outlined" onClick={runTraversal} disabled={!root}>Çalıştır</Button>
+								<Button variant="outlined" onClick={runTraversal} disabled={!root}>{ta('run')}</Button>
 							</>
 						)}
 					</Stack>
@@ -256,7 +260,7 @@ export default function TreeAlgorithms() {
 
 
                 <Paper sx={{ p: 2, mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>Giriş sırası:</Typography>
+                    <Typography variant="subtitle2" gutterBottom>{ta('input_order')}</Typography>
 					<Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
 						{values.map((v, idx) => (
 							<Box key={idx} sx={{ display: 'grid', alignItems: 'center', gap: 0.5 }}>
@@ -285,10 +289,10 @@ export default function TreeAlgorithms() {
 				<Paper sx={{ p: 2, mb: 4 }}>
 					{mode === 'traversal' && (
 						<Paper sx={{ p: 2, mb: 2 }}>
-							<Typography variant="subtitle2" gutterBottom>Traversal Sırası (Order):</Typography>
+							<Typography variant="subtitle2" gutterBottom>{ta('traversal_order')}</Typography>
 							<Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
 								{visitedValues.length === 0 && (
-									<Box sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Henüz ziyaret yok</Box>
+									<Box sx={{ color: 'text.secondary', fontStyle: 'italic' }}>{ta('no_visit_yet')}</Box>
 								)}
 								{visitedValues.map((val, idx) => (
 									<Box key={`${val}-${idx}`} sx={{
@@ -363,10 +367,10 @@ export default function TreeAlgorithms() {
                     </Box>
 					{mode === 'traversal' && traversal === 'levelorder' && (
                         <Paper sx={{ p: 2, mb: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>Kuyruk (Queue):</Typography>
+                            <Typography variant="subtitle2" gutterBottom>{ta('queue')}</Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {(current?.queueIds || []).length === 0 && (
-                                    <Box sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Kuyruk boş</Box>
+                                    <Box sx={{ color: 'text.secondary', fontStyle: 'italic' }}>{ta('queue_empty')}</Box>
                                 )}
                                 {(current?.queueIds || []).map((id, idx) => (
                                     <Box key={`${id}-${idx}`} sx={{
@@ -387,16 +391,16 @@ export default function TreeAlgorithms() {
 					{mode === 'traversal' && (
 						<>
 							<Box sx={{ p: 2, mb: 2 }}>
-								<Typography variant="subtitle2" gutterBottom>Adım: {steps.length ? stepIndex + 1 : 0} / {steps.length}</Typography>
+								<Typography variant="subtitle2" gutterBottom>{ta('step_label')}: {steps.length ? stepIndex + 1 : 0} / {steps.length}</Typography>
 								<Typography variant="body2" sx={{ minHeight: 24 }}>{current?.msg || '—'}</Typography>
 							</Box>
 							<Box sx={{ p: 2, mb: 2 }}>
 								<Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center" justifyContent="flex-start">
-									<Button variant="outlined" onClick={prevStep} disabled={!root}>Geri</Button>
-									<Button variant="contained" color="secondary" onClick={playFast} disabled={!root}>Hızlı Bitir</Button>
-									<Button variant="contained" onClick={playNormal} disabled={!root}>Oynat</Button>
-									<Button color="error" onClick={resetPlayback} disabled={steps.length === 0}>Sıfırla</Button>
-									<Button variant="outlined" onClick={nextStep} disabled={!root}>İleri</Button>
+									<Button variant="outlined" onClick={prevStep} disabled={!root}>{ta('back')}</Button>
+									<Button variant="contained" color="secondary" onClick={playFast} disabled={!root}>{ta('fast_finish')}</Button>
+									<Button variant="contained" onClick={playNormal} disabled={!root}>{ta('play')}</Button>
+									<Button color="error" onClick={resetPlayback} disabled={steps.length === 0}>{ta('reset')}</Button>
+									<Button variant="outlined" onClick={nextStep} disabled={!root}>{ta('next')}</Button>
 								</Stack>
 							</Box>
 						</>

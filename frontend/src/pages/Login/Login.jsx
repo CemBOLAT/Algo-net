@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack, Menu, MenuItem } from '@mui/material';
+import { Email, Lock, Visibility, VisibilityOff, Language } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
+import { useI18n } from '../../context/I18nContext';
 
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 import { setTokens, ensureAccessToken } from '../../utils/auth';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { t, language, setLanguage } = useI18n();
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -18,6 +20,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [isRedirecting, setIsRedirecting] = useState(false);
+    const [langAnchor, setLangAnchor] = useState(null);
 
     // If user already has a valid (or refreshable) access token, go to /graph
     useEffect(() => {
@@ -51,12 +54,12 @@ const Login = () => {
 
         // Basic validation
         if (!formData.email || !formData.password) {
-            setError('Lütfen tüm alanları doldurun.');
+            setError(t('required_fields_error'));
             return;
         }
 
         if (!formData.email.includes('@')) {
-            setError('Geçerli bir e-posta adresi girin.');
+            setError(t('invalid_email_error'));
             return;
         }
 
@@ -69,7 +72,7 @@ const Login = () => {
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                setError(data?.message || 'Giriş başarısız.');
+                setError(data?.message || t('login_failed'));
                 return;
             }
             // success: save tokens, show green message and redirect after 2s
@@ -78,11 +81,11 @@ const Login = () => {
                 setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
             }
             setError('');
-            setSuccessMsg('Giriş başarılı! 2 saniye içinde yönlendirileceksiniz.');
+            setSuccessMsg(t('login_success_redirect'));
             setIsRedirecting(true);
             setTimeout(() => navigate('/graph'), 2000);
         } catch (err) {
-            setError('Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.');
+            setError(t('server_unreachable'));
         }
     };
 
@@ -104,7 +107,33 @@ const Login = () => {
                         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}
         >
-            <ThemeToggle />
+            {/* Theme + Language (side-by-side, not nested) */}
+            <Box sx={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 1200 }}>
+                <ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
+                <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<Language />}
+                    onClick={(e) => setLangAnchor(e.currentTarget)}
+                    aria-haspopup="true"
+                    aria-expanded={Boolean(langAnchor) ? 'true' : undefined}
+                    sx={{ px: 1.25, fontWeight: 600 }}
+                >
+                    {language.toUpperCase()}
+                </Button>
+                <Menu
+                    anchorEl={langAnchor}
+                    open={Boolean(langAnchor)}
+                    onClose={() => setLangAnchor(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                    <MenuItem onClick={() => { setLanguage('tr'); setLangAnchor(null); }}>Türkçe</MenuItem>
+                    <MenuItem onClick={() => { setLanguage('en'); setLangAnchor(null); }}>English</MenuItem>
+                    {/* Add more languages here later */}
+                </Menu>
+            </Box>
+
             <Box
                 sx={{
                     display: 'flex',
@@ -134,7 +163,7 @@ const Login = () => {
                             gutterBottom
                             sx={{ mb: 3, fontWeight: 'bold' }}
                         >
-                            Giriş Yap
+                            {t('login_title')}
                         </Typography>
 
                         <FlashMessage severity="error" message={error} sx={{ mb: 2 }} />
@@ -146,7 +175,7 @@ const Login = () => {
                                 required
                                 fullWidth
                                 id="email"
-                                label="E-posta"
+                                label={t('email')}
                                 name="email"
                                 autoComplete="off"
                                 autoFocus
@@ -170,7 +199,7 @@ const Login = () => {
                                 required
                                 fullWidth
                                 name="password"
-                                label="Şifre"
+                                label={t('password')}
                                 type={showPassword ? 'text' : 'password'}
                                 id="password"
                                 autoComplete="off"
@@ -214,7 +243,7 @@ const Login = () => {
                                     fontWeight: 'bold'
                                 }}
                             >
-                                {isRedirecting ? 'Yönlendiriliyor…' : 'Giriş Yap'}
+                                {isRedirecting ? t('redirecting') : t('login_button')}
                             </Button>
 
                             <Stack spacing={2}>
@@ -225,7 +254,7 @@ const Login = () => {
                                     disabled={isRedirecting}
                                     sx={{ py: 1 }}
                                 >
-                                    Kayıt Ol
+                                    {t('register_button')}
                                 </Button>
 
                                 <Link
@@ -241,7 +270,7 @@ const Login = () => {
                                         }
                                     }}
                                 >
-                                    Şifremi Unuttum
+                                    {t('forgot_password')}
                                 </Link>
                             </Stack>
                         </Box>

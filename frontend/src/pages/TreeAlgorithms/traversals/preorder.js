@@ -1,5 +1,5 @@
 // Emits step objects: { action, nodeId, pathIds, visitOrder, msg }
-export default function preorderSteps(root) {
+export default function preorderSteps(root, t) {
     const steps = [];
     const path = [];
     const visit = [];
@@ -7,14 +7,13 @@ export default function preorderSteps(root) {
         steps.push({ action, nodeId: node?.id ?? null, pathIds: [...path], visitOrder: [...visit], msg: message(action, node) });
     };
     const message = (action, node) => {
-        if (action === 'done') return 'Preorder traversal tamamlandı';
-        if (!node) return "Boş düğüm";
+        if (action === 'done') return t?.('preorder_done') ?? 'Preorder traversal tamamlandı';
+        if (!node) return t?.('empty_node') ?? 'Boş düğüm';
         switch (action) {
-            case 'enter': return `Düğüm ${node.value} içine gir (preorder: N, L, R)`;
-            case 'visit': return `Ziyaret: ${node.value}`;
-            case 'goLeft': return `Sol alt ağaç: ${node.value} → sol`;
-            case 'goRight': return `Sağ alt ağaç: ${node.value} → sağ`;
-            case 'backtrack': return `Geri dön: ${node.value}`;
+            case 'enter': return t?.('preorder_enter', { v: node.value }) ?? `Düğüm ${node.value} içine gir (preorder: N, L, R)`;
+            case 'visit': return t?.('preorder_visit', { v: node.value }) ?? `Ziyaret: ${node.value}`;
+            case 'goLeft': return t?.('preorder_go_left', { v: node.value }) ?? `Sol alt ağaç: ${node.value} → sol`;
+            case 'goRight': return t?.('preorder_go_right', { v: node.value }) ?? `Sağ alt ağaç: ${node.value} → sağ`;
             default: return `${action} ${node.value}`;
         }
     };
