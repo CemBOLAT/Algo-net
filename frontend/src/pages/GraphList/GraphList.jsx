@@ -1,31 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Container, 
-  Typography, 
-  Grid, 
-  Card, 
-  CardContent, 
-  CardActions, 
-  Button, 
-  Box,
-  CircularProgress,
-  Checkbox,
-  FormControlLabel,
-  Fab,
-  IconButton,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Alert
+  Container, Typography, Grid, Card, CardContent, CardActions, Button, Box,
+  CircularProgress, Checkbox, FormControlLabel, Fab, IconButton, Dialog,
+  DialogActions, DialogContent, DialogContentText, DialogTitle, Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import { clearTokens, http } from '../../utils/auth';
 import FlashMessage from '../../components/FlashMessage';
-const API_BASE = import.meta?.env?.VITE_API_BASE || '';
+import { useI18n } from '../../context/I18nContext';
 
 const GraphList = () => {
   const [graphs, setGraphs] = useState([]);
@@ -41,6 +25,7 @@ const GraphList = () => {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackSeverity, setFeedbackSeverity] = useState('success');
   const navigate = useNavigate();
+  const { t, language } = useI18n();
 
   useEffect(() => {
     fetchGraphs();
@@ -68,7 +53,7 @@ const GraphList = () => {
       await http.delete(`/api/graphs/${graphToDelete}`);
       setGraphs(graphs.filter(g => g.id !== graphToDelete));
     } catch (err) {
-      setError('Graph silinirken hata oluştu');
+      setError(t('graph_delete_error'));
     } finally {
       setGraphToDelete(null);
     }
@@ -88,9 +73,12 @@ const GraphList = () => {
     navigate('/login', { replace: true });
   };
 
-    const handleCanvas = () => {
+  const handleCanvas = () => {
     navigate('/graph');
-  }
+  };
+
+  // locale for dates based on current language
+  const locale = language === 'tr' ? 'tr-TR' : 'en-US';
 
   const handleSelectGraph = (graphId) => {
     setSelectedGraphs(prev => 
@@ -122,11 +110,11 @@ const GraphList = () => {
       setGraphs(graphs.filter(g => !selectedGraphs.includes(g.id)));
       setSelectedGraphs([]);
       setFeedbackSeverity('success');
-      setFeedbackMessage(data?.message || 'Graphlar başarıyla silindi');
+      setFeedbackMessage(data?.message || t('graphs_deleted_success'));
       setFeedbackOpen(true);
     } catch (err) {
       setFeedbackSeverity('error');
-      setFeedbackMessage(err.data?.message || 'Toplu silme işlemi başarısız');
+      setFeedbackMessage(err.data?.message || t('bulk_delete_failed'));
       setFeedbackOpen(true);
     } finally {
       setIsDeleting(false);
@@ -149,99 +137,99 @@ const GraphList = () => {
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-        <TopBar
-            title="Tüm Graphlar"
-            actions={[
-                { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
-                { label: 'Profil', onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: 'Profil' }, 
-                { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
-            ]}
-        />
+      <TopBar
+        title={t('all_graphs')}
+        actions={[
+          { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+          { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') }, 
+          { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+        ]}
+      />
       {error && (
         <FlashMessage severity="error" sx={{ mb: 2 }}>
           {error}
         </FlashMessage>
       )}
       <Container>
-      {graphs.length === 0 ? (
-        <Box textAlign="center" mt={4}>
-          <Typography variant="h6" color="textSecondary">
-            Henüz hiç graph bulunamadı. İlk graphı oluşturun!
-          </Typography>
-        </Box>
-      ) : (
-        <>
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={selectedGraphs.length === graphs.length}
-                  indeterminate={selectedGraphs.length > 0 && selectedGraphs.length < graphs.length}
-                  onChange={handleSelectAll}
-                />
-              }
-              label="Tümünü Seç"
-            />
-            {selectedGraphs.length > 0 && (
-              <>
-                <Typography variant="body2" color="primary">
-                  {selectedGraphs.length} graph seçildi
-                </Typography>
-                <IconButton
-                  color="error"
-                  onClick={handleBulkDelete}
-                  disabled={isDeleting}
-                  size="small"
-                  sx={{ ml: 1 }}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </>
-            )}
+        {graphs.length === 0 ? (
+          <Box textAlign="center" mt={4}>
+            <Typography variant="h6" color="textSecondary">
+              {t('no_graphs_message')}
+            </Typography>
           </Box>
-          
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            {graphs.map((graph) => (
-              <Grid item xs={12} sm={6} md={4} key={graph.id}>
-                <Card sx={{ position: 'relative' }}>
-                  <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }}>
-                    <Checkbox
-                      checked={selectedGraphs.includes(graph.id)}
-                      onChange={() => handleSelectGraph(graph.id)}
-                      size="small"
-                    />
-                  </Box>
-                  <CardContent sx={{ pt: 5 }}>
-                    <Typography variant="h6" component="h2">
-                      {graph.name}
-                    </Typography>
-                    <Typography variant="body2">
-                      Node sayısı: {graph.nodes?.length || 0}
-                    </Typography>
-                    <Typography variant="body2">
-                      Edge sayısı: {graph.edges?.length || 0}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      Oluşturulma: {graph.createdAt ? new Date(graph.createdAt).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                      Güncellenme: {graph.updatedAt ? new Date(graph.updatedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button size="small" onClick={() => handleEdit(graph.id)}>
-                      Görüntüle/Düzenle
-                    </Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(graph.id)}>
-                      Sil
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </>
-      )}
+        ) : (
+          <>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectedGraphs.length === graphs.length}
+                    indeterminate={selectedGraphs.length > 0 && selectedGraphs.length < graphs.length}
+                    onChange={handleSelectAll}
+                  />
+                }
+                label={t('select_all')}
+              />
+              {selectedGraphs.length > 0 && (
+                <>
+                  <Typography variant="body2" color="primary">
+                    {selectedGraphs.length} {t('graph_selected_suffix')}
+                  </Typography>
+                  <IconButton
+                    color="error"
+                    onClick={handleBulkDelete}
+                    disabled={isDeleting}
+                    size="small"
+                    sx={{ ml: 1 }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </>
+              )}
+            </Box>
+            
+            <Grid container spacing={3} sx={{ mt: 2 }}>
+              {graphs.map((graph) => (
+                <Grid item xs={12} sm={6} md={4} key={graph.id}>
+                  <Card sx={{ position: 'relative' }}>
+                    <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }}>
+                      <Checkbox
+                        checked={selectedGraphs.includes(graph.id)}
+                        onChange={() => handleSelectGraph(graph.id)}
+                        size="small"
+                      />
+                    </Box>
+                    <CardContent sx={{ pt: 5 }}>
+                      <Typography variant="h6" component="h2">
+                        {graph.name}
+                      </Typography>
+                      <Typography variant="body2">
+                        {t('node_count')} {graph.nodes?.length || 0}
+                      </Typography>
+                      <Typography variant="body2">
+                        {t('edge_count')} {graph.edges?.length || 0}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        {t('created_at')} {graph.createdAt ? new Date(graph.createdAt).toLocaleDateString(locale) : t('unknown')}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        {t('updated_at')} {graph.updatedAt ? new Date(graph.updatedAt).toLocaleDateString(locale) : t('unknown')}
+                      </Typography>
+                    </CardContent>
+                    <CardActions>
+                      <Button size="small" onClick={() => handleEdit(graph.id)}>
+                        {t('view_edit')}
+                      </Button>
+                      <Button size="small" color="error" onClick={() => handleDelete(graph.id)}>
+                        {t('delete')}
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        )}
       </Container>
 
       {selectedGraphs.length > 0 && (
@@ -264,20 +252,19 @@ const GraphList = () => {
         aria-describedby="delete-dialog-description"
       >
         <DialogTitle id="delete-dialog-title">
-          Graphları Sil
+          {t('delete_graphs_title')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            {selectedGraphs.length} adet graphı silmek istediğinizden emin misiniz?
-            Bu işlem geri alınamaz.
+            {selectedGraphs.length} {t('graphs_delete_confirm_suffix')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelBulkDelete} color="primary">
-            İptal
+            {t('cancel')}
           </Button>
           <Button onClick={confirmBulkDelete} color="error" variant="contained" autoFocus>
-            Sil
+            {t('delete')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -290,20 +277,19 @@ const GraphList = () => {
         aria-describedby="single-delete-dialog-description"
       >
         <DialogTitle id="single-delete-dialog-title">
-          Graph'ı Sil
+          {t('delete_graph_title')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="single-delete-dialog-description">
-            Bu graphı silmek istediğinizden emin misiniz?
-            Bu işlem geri alınamaz.
+            {t('delete_graph_confirm')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelSingleDelete} color="primary">
-            İptal
+            {t('cancel')}
           </Button>
           <Button onClick={confirmSingleDelete} color="error" variant="contained" autoFocus>
-            Sil
+            {t('delete')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -314,14 +300,14 @@ const GraphList = () => {
         onClose={handleFeedbackClose}
         aria-labelledby="feedback-dialog-title"
       >
-        <DialogTitle id="feedback-dialog-title">İşlem Sonucu</DialogTitle>
+        <DialogTitle id="feedback-dialog-title">{t('operation_result')}</DialogTitle>
         <DialogContent>
           <Alert severity={feedbackSeverity} sx={{ mt: 1 }}>
             {feedbackMessage}
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleFeedbackClose} autoFocus>Kapat</Button>
+          <Button onClick={handleFeedbackClose} autoFocus>{t('close')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

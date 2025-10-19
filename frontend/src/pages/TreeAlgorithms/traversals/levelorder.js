@@ -1,6 +1,6 @@
 // Level Order (BFS) traversal steps.
 // Emits step objects: { action, nodeId, pathIds, visitOrder, queueIds, level, msg }
-export default function levelOrderSteps(root) {
+export default function levelOrderSteps(root, t) {
     if (!root) return [];
     const steps = [];
     const visit = [];
@@ -21,11 +21,11 @@ export default function levelOrderSteps(root) {
     const queue = [root];
 
     const message = (action, node, extra) => {
-        if (action === 'start') return 'Level Order (BFS) başlat: kökü (seviye 0) kuyruğa al';
-        if (action === 'dequeue') return `Kuyruktan çıkar: ${node.value} (seviye ${levelById.get(node.id)})`;
-        if (action === 'visit') return `Ziyaret: ${node.value} (seviye ${levelById.get(node.id)})`;
-        if (action === 'enqueue') return `Kuyruğa ekle: ${extra?.child?.value} (seviye ${levelById.get(extra?.child?.id)})`;
-        if (action === 'done') return 'Level Order traversal tamamlandı';
+        if (action === 'start') return t?.('bfs_start') ?? 'Level Order (BFS) başlat: kökü (seviye 0) kuyruğa al';
+        if (action === 'dequeue') return t?.('bfs_dequeue', { v: node.value, level: levelById.get(node.id) }) ?? `Kuyruktan çıkar: ${node.value} (seviye ${levelById.get(node.id)})`;
+        if (action === 'visit') return t?.('bfs_visit', { v: node.value, level: levelById.get(node.id) }) ?? `Ziyaret: ${node.value} (seviye ${levelById.get(node.id)})`;
+        if (action === 'enqueue') return t?.('bfs_enqueue', { child: extra?.child?.value, level: levelById.get(extra?.child?.id) }) ?? `Kuyruğa ekle: ${extra?.child?.value} (seviye ${levelById.get(extra?.child?.id)})`;
+        if (action === 'done') return t?.('bfs_done') ?? 'Level Order traversal tamamlandı';
         return `${action} ${node?.value ?? ''}`;
     };
 

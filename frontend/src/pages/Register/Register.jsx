@@ -1,13 +1,15 @@
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 import React, { useState } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff, Person } from '@mui/icons-material';
+import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack, Menu, MenuItem } from '@mui/material';
+import { Email, Lock, Visibility, VisibilityOff, Person, Language } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
+import { useI18n } from '../../context/I18nContext';
 
 const Register = () => {
     const navigate = useNavigate();
+    const { t, language, setLanguage } = useI18n();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -18,6 +20,7 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const [langAnchor, setLangAnchor] = useState(null);
 
     const handleChange = (e) => {
         setFormData({
@@ -31,29 +34,29 @@ const Register = () => {
         e.preventDefault();
 
         if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-            setError('Lütfen tüm alanları doldurun.');
+            setError(t('required_fields_error'));
             return;
         }
 
         if (!formData.email.includes('@')) {
-            setError('Geçerli bir e-posta adresi girin.');
+            setError(t('invalid_email_error'));
             return;
         }
 
         if (formData.password.length < 6) {
-            setError('Şifre en az 6 karakter olmalıdır.');
+            setError(t('min_password_length'));
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Şifreler eşleşmiyor.');
+            setError(t('password_mismatch'));
             return;
         }
 
         // require at least first name and last name (two tokens)
         const parts = formData.name.trim().split(/\s+/);
         if (parts.length < 2) {
-            setError('Lütfen en az isim ve soyisim girin.');
+            setError(t('enter_first_last_name'));
             return;
         }
 
@@ -84,16 +87,16 @@ const Register = () => {
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                setError(data?.message || 'Kayıt sırasında bir hata oluştu.');
+                setError(data?.message || t('registration_error_generic'));
                 return;
             }
 
-            setSuccessMsg('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...');
+            setSuccessMsg(t('register_success'));
             setTimeout(() => {
                 navigate('/login');
             }, 2000);
         } catch (err) {
-            setError('Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.');
+            setError(t('server_unreachable'));
         }
     };
 
@@ -111,7 +114,33 @@ const Register = () => {
                         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}
         >
-            <ThemeToggle />
+            {/* Theme + Language (side-by-side, not nested) */}
+            <Box sx={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 1200 }}>
+                <ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
+                <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<Language />}
+                    onClick={(e) => setLangAnchor(e.currentTarget)}
+                    aria-haspopup="true"
+                    aria-expanded={Boolean(langAnchor) ? 'true' : undefined}
+                    sx={{ px: 1.25, fontWeight: 600 }}
+                >
+                    {language.toUpperCase()}
+                </Button>
+                <Menu
+                    anchorEl={langAnchor}
+                    open={Boolean(langAnchor)}
+                    onClose={() => setLangAnchor(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                    <MenuItem onClick={() => { setLanguage('tr'); setLangAnchor(null); }}>Türkçe</MenuItem>
+                    <MenuItem onClick={() => { setLanguage('en'); setLangAnchor(null); }}>English</MenuItem>
+                    {/* Add more languages here later */}
+                </Menu>
+            </Box>
+
             <Box
                 sx={{
                     display: 'flex',
@@ -141,7 +170,7 @@ const Register = () => {
                             gutterBottom
                             sx={{ mb: 3, fontWeight: 'bold' }}
                         >
-                            Kayıt Ol
+                            {t('register_title')}
                         </Typography>
 
                         <FlashMessage severity="error" message={error} sx={{ mb: 2 }} />
@@ -153,7 +182,7 @@ const Register = () => {
                                 required
                                 fullWidth
                                 id="name"
-                                label="Ad Soyad"
+                                label={t('full_name')}
                                 name="name"
                                 autoComplete="off"
                                 autoFocus
@@ -176,7 +205,7 @@ const Register = () => {
                                 required
                                 fullWidth
                                 id="email"
-                                label="E-posta"
+                                label={t('email')}
                                 name="email"
                                 autoComplete="off"
                                 value={formData.email}
@@ -198,7 +227,7 @@ const Register = () => {
                                 required
                                 fullWidth
                                 name="password"
-                                label="Şifre"
+                                label={t('password')}
                                 type={showPassword ? 'text' : 'password'}
                                 id="password"
                                 autoComplete="off"
@@ -231,7 +260,7 @@ const Register = () => {
                                 required
                                 fullWidth
                                 name="confirmPassword"
-                                label="Şifre Tekrar"
+                                label={t('confirm_password')}
                                 type={showConfirmPassword ? 'text' : 'password'}
                                 id="confirmPassword"
                                 autoComplete="off"
@@ -271,7 +300,7 @@ const Register = () => {
                                     fontWeight: 'bold'
                                 }}
                             >
-                                Kayıt Ol
+                                {t('register_button')}
                             </Button>
 
                             <Stack spacing={2}>
@@ -287,7 +316,7 @@ const Register = () => {
                                         }
                                     }}
                                 >
-                                    Zaten hesabın var mı? Giriş Yap
+                                    {t('have_account_login')}
                                 </Link>
                             </Stack>
                         </Box>
