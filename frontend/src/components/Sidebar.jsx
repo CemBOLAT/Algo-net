@@ -59,6 +59,7 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           setIsLoading = {setIsLoading}
           notify = {notify}
           onLegendChange={(entries) => { setLegendEntries(entries || []); setHasLegend(!!(entries && entries.length)); }}
+          graphName={graphName}
         />
         
         <CustomAlgoButton
@@ -68,6 +69,7 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           isLoading={isLoading}
           setIsLoading={setIsLoading}
           notify={notify}
+          graphName={graphName}
         />
         
         <Button id="reset-btn" variant="outlined" color="inherit" fullWidth onClick={onReset}>

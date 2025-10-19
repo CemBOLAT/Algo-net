@@ -4,14 +4,21 @@ const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || 'http://localhost:8000';
 // CustomAlgo.js
 import { useRef } from "react";
 import { Button, Container } from "@mui/material";
-import { http } from "../utils/auth"; // Adjust the import path as necessary
+import { http, getTokens } from "../utils/auth"; // Adjust the import path as necessary
 
-export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = false, setIsLoading = () => {}, notify = () => {} }) {
+export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = false, setIsLoading = () => {}, notify = () => {}, graphName = 'Graph' }) {
     const fileInputRef = useRef(null);
+
+    const getUserEmail = () => {
+        try {
+            const { accessToken } = getTokens() || {};
+            const payload = JSON.parse(atob((accessToken || '').split('.')[1] || ''));
+            return payload?.email || '';
+        } catch { return ''; }
+    };
 
     const handleFileSelect = async (event) => {
         const file = event.target.files[0];
-
         if (!file) return;
 
         const formData = new FormData();
@@ -19,9 +26,23 @@ export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = f
         formData.append("Vertices", JSON.stringify(nodes));
         formData.append("Edges", JSON.stringify(edges));
 
+        const notifyEnabled = localStorage.getItem('notifications_enabled') === 'true';
+        if (notifyEnabled) {
+            formData.append("shouldNotify", "true");
+            formData.append("saveGraph", "true");
+            formData.append("graphName", graphName || 'Graph');
+            const email = getUserEmail();
+            if (email) formData.append("userEmail", email);
+
+            http.post('/api/run/', formData, { json: false, auth: true, apiBase: API_BASE })
+              .catch((err) => console.error('custom algo async error:', err));
+            notify('success', 'Algoritmanız çalıştığında cevap maili alacaksınız.', 2500);
+            event.target.value = null;
+            return;
+        }
+
         setIsLoading(true);
         try {
-            // replaced fetch with http.post
             const resp = await http.post('/api/run/', formData, {
                 json: false,
                 auth: true,
@@ -29,15 +50,12 @@ export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = f
             });
 
             const data = resp?.result;
-            //console.log(data);
-
             setNodes((prevNodes) =>
                 prevNodes.map((node) => ({
                     ...node,
                     color: data?.[node.id] ?? node.color,
                 }))
             );
-
             event.target.value = null;
         } catch (err) {
             console.error("Request failed:", err);

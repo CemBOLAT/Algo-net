@@ -20,7 +20,7 @@ const Graph = () => {
 	const [selectedNode, setSelectedNode] = useState(null);
 	const [selectedEdge, setSelectedEdge] = useState(null);
 	const [mode, setMode] = useState(null); // 'add-edge'
-	const [tempEdge, setTempEdge] = useState(null);
+		const [tempEdge, setTempEdge] = useState(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [graphId, setGraphId] = useState(null);
@@ -174,6 +174,8 @@ const Graph = () => {
 		setNodes([]);
 		setEdges([]);
 		setSelectedNode(null);
+		setLegendEntries([]);
+		setHasLegend(false);
 		setSelectedEdge(null);
 		setMode(null);
 		setTempEdge(null);
@@ -381,7 +383,7 @@ const Graph = () => {
 
 					{/* Legend overlay */}
 					{hasLegend && legendEntries.length > 0 && (
-						<Box sx={{ position: 'absolute', left: 16, bottom: 16 }}>
+						<Box sx={{ position: 'absolute', right: 16, top: 80 }}>
 							<LegendPanel entries={legendEntries} />
 						</Box>
 					)}
