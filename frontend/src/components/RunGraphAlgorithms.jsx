@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import { TransitionGroup } from 'react-transition-group';
-import { http } from "../utils/auth"; // Adjust the import path as necessary
+import { http, getTokens } from "../utils/auth"; // Adjust the import path as necessary
 
 
 export default function RunGraphAlgorithms({
@@ -20,6 +20,7 @@ export default function RunGraphAlgorithms({
   setIsLoading = () => {},
   notify = () => {},
   onLegendChange = () => {},
+  graphName, // ADDED: receive graphName from Sidebar
 }) {
 
 
@@ -273,6 +274,26 @@ export default function RunGraphAlgorithms({
     formData.append("Edges", JSON.stringify(edges));
     formData.append("entries", JSON.stringify(list));
 
+    // ADDED: async notify flow like CustomAlgo
+    const notifyEnabled = localStorage.getItem('notifications_enabled') === 'true';
+    if (notifyEnabled) {
+      formData.append("shouldNotify", "true");
+      formData.append("saveGraph", "true");
+      formData.append("graphName", graphName || 'Graph');
+      const email = getUserEmail();
+      if (email) formData.append("userEmail", email);
+
+      http.post(`/api/layoutplanning/`, formData, {
+        json: false,
+        auth: true,
+        apiBase: API_BASE,
+      }).catch((err) => console.error('layout planning async error:', err));
+
+      notify('success', 'Algoritmanız çalıştığında cevap maili alacaksınız.', 2500);
+      setLayoutDialogOpen(false);
+      return; // do not block UI
+    }
+
     setIsLoading(true);
     try {
       const resp = await http.post(`/api/layoutplanning/`, formData, {
@@ -293,13 +314,15 @@ export default function RunGraphAlgorithms({
       if (data) {
         const colorMap = data.colors && typeof data.colors === 'object' ? data.colors : data;
         if (colorMap && typeof colorMap === 'object') {
-          updateColoring(colorMap);
+          setNodes((prev) =>
+            prev.map((n) => ({
+              ...n,
+              color: colorMap?.[n.id] ?? n.color,
+            }))
+          );
         }
       }
-
-      // expose legend entries to graph page
       onLegendChange(list);
-
       notify("success", "Layout planning çalıştırıldı.", 1500);
       setLayoutDialogOpen(false);
     } catch (err) {
@@ -309,6 +332,15 @@ export default function RunGraphAlgorithms({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ADDED: extract user email from access token (same as CustomAlgo)
+  const getUserEmail = () => {
+    try {
+      const { accessToken } = getTokens() || {};
+      const payload = JSON.parse(atob((accessToken || '').split('.')[1] || ''));
+      return payload?.email || '';
+    } catch { return ''; }
   };
 
   return (
