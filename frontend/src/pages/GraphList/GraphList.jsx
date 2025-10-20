@@ -5,7 +5,7 @@ import {
   DialogActions, DialogContent, DialogContentText, DialogTitle, Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import { clearTokens, http } from '../../utils/auth';
 import FlashMessage from '../../components/FlashMessage';
@@ -26,15 +26,71 @@ const GraphList = () => {
   const [feedbackSeverity, setFeedbackSeverity] = useState('success');
   const navigate = useNavigate();
   const { t, language } = useI18n();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
+  // keep selection clean when page/size changes
+  useEffect(() => {
+    setSelectedGraphs([]);
+  }, [page, pageSize]);
+
+  // read pagination from URL and initialize defaults if missing
+  useEffect(() => {
+    const parseIntOrDefault = (val, def) => {
+      const n = parseInt(val, 10);
+      return Number.isFinite(n) && n > 0 ? n : def;
+    };
+    const spPage = parseIntOrDefault(searchParams.get('page'), 1);
+    const spSize = parseIntOrDefault(searchParams.get('size'), 10);
+
+    if (spPage !== page) setPage(spPage);
+    if (spSize !== pageSize) setPageSize(spSize);
+
+    if (!searchParams.get('page') || !searchParams.get('size')) {
+      const sp = new URLSearchParams(searchParams);
+      if (!searchParams.get('page')) sp.set('page', String(spPage));
+      if (!searchParams.get('size')) sp.set('size', String(spSize));
+      setSearchParams(sp, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const setPageAndSearch = (nextPage) => {
+    const normalized = Math.max(1, nextPage);
+    setPage(normalized);
+    const sp = new URLSearchParams(searchParams);
+    sp.set('page', String(normalized));
+    sp.set('size', String(pageSize));
+    setSearchParams(sp); // push new entry so back/forward works
+  };
 
   useEffect(() => {
-    fetchGraphs();
-  }, []);
+    fetchGraphs(page, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
 
-  const fetchGraphs = async () => {
+  const fetchGraphs = async (p = page, s = pageSize) => {
+    setLoading(true);
     try {
-      const data = await http.get('/api/graphs/user', { auth: true });
-      setGraphs(data);
+      const start = (p - 1) * s + 1; // 1-based inclusive
+      const end = p * s;
+      const data = await http.get(`/api/graphs/user?range=${start}-${end}`, { auth: true });
+      if (data && typeof data === 'object' && Array.isArray(data.items)) {
+        setGraphs(data.items);
+        setTotal(typeof data.total === 'number' ? data.total : data.items.length);
+      } else if (Array.isArray(data)) {
+        // fallback if server returns full array (no pagination)
+        setGraphs(data.slice(start - 1, end));
+        setTotal(data.length);
+      } else {
+        setGraphs([]);
+        setTotal(0);
+      }
+      setError(null);
     } catch (err) {
       setError(`Failed to fetch graphs: ${err.status || ''} ${err.data?.message || err.message}`);
     } finally {
@@ -51,7 +107,15 @@ const GraphList = () => {
     setSingleDeleteDialogOpen(false);
     try {
       await http.delete(`/api/graphs/${graphToDelete}`);
-      setGraphs(graphs.filter(g => g.id !== graphToDelete));
+      // adjust total and page if needed, then refetch
+      const newTotal = Math.max(0, total - 1);
+      const newLastPage = Math.max(1, Math.ceil(newTotal / pageSize));
+      setTotal(newTotal);
+      if (page > newLastPage) {
+        setPageAndSearch(newLastPage); // useEffect will refetch
+      } else {
+        await fetchGraphs(page, pageSize);
+      }
     } catch (err) {
       setError(t('graph_delete_error'));
     } finally {
@@ -107,11 +171,20 @@ const GraphList = () => {
     setIsDeleting(true);
     try {
       const data = await http.delete('/api/graphs/bulk', { body: selectedGraphs });
-      setGraphs(graphs.filter(g => !selectedGraphs.includes(g.id)));
       setSelectedGraphs([]);
       setFeedbackSeverity('success');
       setFeedbackMessage(data?.message || t('graphs_deleted_success'));
       setFeedbackOpen(true);
+
+      const deletedCount = data?.deletedCount || selectedGraphs.length;
+      const newTotal = Math.max(0, total - deletedCount);
+      const newLastPage = Math.max(1, Math.ceil(newTotal / pageSize));
+      setTotal(newTotal);
+      if (page > newLastPage) {
+        setPageAndSearch(newLastPage); // triggers refetch
+      } else {
+        await fetchGraphs(page, pageSize);
+      }
     } catch (err) {
       setFeedbackSeverity('error');
       setFeedbackMessage(err.data?.message || t('bulk_delete_failed'));
@@ -187,8 +260,36 @@ const GraphList = () => {
                 </>
               )}
             </Box>
-            
-            <Grid container spacing={3} sx={{ mt: 2 }}>
+
+            {/* pagination controls */}
+            <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body2" color="textSecondary">
+                {total === 0 ? '0' : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} / {total}
+              </Typography>
+              <Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  aria-label={t('previous_page')}
+                  onClick={() => setPageAndSearch(page - 1)}
+                  disabled={page === 1 || loading}
+                >
+                  {t('prev')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{ ml: 1 }}
+                  aria-label={t('next_page')}
+                  onClick={() => setPageAndSearch(page + 1)}
+                  disabled={page * pageSize >= total || loading}
+                >
+                  {t('next')}
+                </Button>
+              </Box>
+            </Box>
+
+            <Grid container spacing={3} sx={{ mt: 1 }}>
               {graphs.map((graph) => (
                 <Grid item xs={12} sm={6} md={4} key={graph.id}>
                   <Card sx={{ position: 'relative' }}>
@@ -228,6 +329,29 @@ const GraphList = () => {
                 </Grid>
               ))}
             </Grid>
+
+            {/* bottom pagination controls */}
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                variant="outlined"
+                size="small"
+                aria-label={t('previous_page')}
+                onClick={() => setPageAndSearch(page - 1)}
+                disabled={page === 1 || loading}
+              >
+                {t('prev')}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                sx={{ ml: 1 }}
+                aria-label={t('next_page')}
+                onClick={() => setPageAndSearch(page + 1)}
+                disabled={page * pageSize >= total || loading}
+              >
+                {t('next')}
+              </Button>
+            </Box>
           </>
         )}
       </Container>
