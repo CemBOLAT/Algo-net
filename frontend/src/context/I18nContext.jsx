@@ -87,6 +87,9 @@ const translations = {
     created_at: 'Oluşturulma:',
     updated_at: 'Güncellenme:',
     unknown: 'Bilinmiyor',
+
+    prev: 'Geri',
+    next: 'İleri',
   },
   en: {
     profile: 'Profile',
@@ -172,6 +175,9 @@ const translations = {
     created_at: 'Created:',
     updated_at: 'Updated:',
     unknown: 'Unknown',
+
+    prev: 'Previous',
+    next: 'Next',
   },
 };
 
