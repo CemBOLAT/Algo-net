@@ -32,7 +32,6 @@ export default function RunGraphAlgorithms({
 
   // entries now have stable ids for animations and edit flow
   const [entries, setEntries] = useState([
-    { id: 1, name: '', color: '#1976d2', capacity: 1, distance: 1, unitDistance: 1 }
   ]);
   const [entrySeq, setEntrySeq] = useState(2);
 
@@ -97,26 +96,45 @@ export default function RunGraphAlgorithms({
 
   // Searching algorithms → highlight visited nodes and optionally show traversal path
   const updateSearching = (data) => {
+    console.log("Searching data:", data);
     const visited = new Set(data?.visited ?? []);
     const pathEdges = new Set(
       (data?.edges ?? []).map(([a, b]) => `${a}-${b}`)
     );
+    
+
+    const pathNodes = new Set(data?.path ?? []);
+    console.log("Path Nodes:", pathNodes);
+
+
 
     setNodes((prev) =>
       prev.map((n) => ({
         ...n,
-        color: visited.has(n.id) ? "#FFB300" : "#E0E0E0",
+        color: pathNodes.has(n.id)
+          ? "#D32F2F" // red for path nodes
+          : visited.has(n.id)
+          ? "#FFA000" // orange for visited nodes
+          : "#1976d2", // default color
       }))
     );
 
+    console.log("Path Edges:", pathEdges);
+
+    console.log("all edges before update:", edges);
+
     setEdges((prev) =>
-      prev.map((e) => ({
+    prev.map((e) => {
+      // Edge'i yazdır
+      console.log("Edge:", e);
+
+      return {
         ...e,
-        color: pathEdges.has(`${e.source}-${e.target}`)
-          ? "#FB8C00"
-          : "#BDBDBD",
-      }))
+        color: pathEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
+      };
+    })
     );
+
   };
 
   // Helpers
@@ -126,7 +144,7 @@ export default function RunGraphAlgorithms({
   const addEntry = () => {
     if (entries.length >= 5) return;
     const newId = entrySeq;
-    const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, unitDistance: 1 };
+    const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, unitDistance: 1, size: 1 };
     setEntries(prev => [...prev, next]);
     setDrafts(prev => ({ ...prev, [newId]: next }));
     setEditing(prev => ({ ...prev, [newId]: true }));
@@ -152,7 +170,8 @@ export default function RunGraphAlgorithms({
     const capOk = isPositive(draft.capacity);
     const distOk = isPositive(draft.distance);
     const unitOk = isPositive(draft.unitDistance);
-    if (!nameOk || !capOk || !distOk || !unitOk) {
+    const sizeOk = isPositive(draft.size);
+    if (!nameOk || !capOk || !distOk || !unitOk || !sizeOk) {
       notify("error", "İsim zorunlu; Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2500);
       return;
     }
@@ -164,6 +183,7 @@ export default function RunGraphAlgorithms({
       capacity: Number(draft.capacity),
       distance: Number(draft.distance),
       unitDistance: Number(draft.unitDistance),
+      size: Number(draft.size),
     } : e));
     setEditing(prev => { const n = { ...prev }; delete n[id]; return n; });
     setDrafts(prev => { const n = { ...prev }; delete n[id]; return n; });
@@ -257,14 +277,15 @@ export default function RunGraphAlgorithms({
       capacity: Number(e.capacity),
       distance: Number(e.distance),
       unitDistance: Number(e.unitDistance),
+      size: Number(e.size),
     }));
 
     if (list.some(e => e.name.length === 0)) {
       notify("error", "İsim boş olamaz.", 2000);
       return;
     }
-    if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.unitDistance) > 0))) {
-      notify("error", "Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2200);
+    if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.unitDistance) > 0) || !(Number(e.size) > 0))) {
+      notify("error", "Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2500);
       return;
     }
 
@@ -418,6 +439,7 @@ export default function RunGraphAlgorithms({
                 const capErr = isEditing && !isPositive(view.capacity);
                 const distErr = isEditing && !isPositive(view.distance);
                 const unitErr = isEditing && !isPositive(view.unitDistance);
+                const sizeErr = isEditing && !isPositive(view.size);
 
                 return (
                   <Collapse key={entry.id} timeout={200}>
@@ -480,6 +502,16 @@ export default function RunGraphAlgorithms({
                           helperText={unitErr ? "0'dan büyük olmalı" : ''}
                           inputProps={{ min: 1, step: 1 }}
                         />
+                        <TextField
+                          label="Boyut"
+                          size="small"
+                          type="number"
+                          value={view.size}
+                          onChange={(e) => updateDraft(entry.id, 'size', e.target.value)}
+                          error={sizeErr}
+                          helperText={sizeErr ? "0'dan büyük olmalı" : ''}
+                          inputProps={{ min: 1, step: 1 }}
+                        />
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button variant="contained" onClick={() => saveEdit(entry.id)}>Kaydet</Button>
                           <Button variant="text" color="inherit" onClick={() => cancelEdit(entry.id)}>İptal</Button>
@@ -498,6 +530,7 @@ export default function RunGraphAlgorithms({
                               <Chip size="small" label={`Kapasite: ${entry.capacity}`} />
                               <Chip size="small" label={`Uzaklık: ${entry.distance}`} />
                               <Chip size="small" label={`Birim: ${entry.unitDistance}`} />
+                              <Chip size="small" label={`Büyüklük: ${entry.size}`} />
                             </Box>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 1 }}>

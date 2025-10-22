@@ -187,6 +187,7 @@ public class GraphController {
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
                     le.setUnitDistance(dto.getUnitDistance());
+                    le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
             }
@@ -523,7 +524,7 @@ public class GraphController {
             if (graph.getLegendEntries() != null) {
                 var itL = graph.getLegendEntries().iterator();
                 while (itL.hasNext()) {
-                    LegendEntry l = itL.next();
+                     l = itL.next();
                     itL.remove();
                     entityManager.remove(l);
                 }

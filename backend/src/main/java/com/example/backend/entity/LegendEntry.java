@@ -26,6 +26,9 @@ public class LegendEntry {
     @Column(name = "unit_distance", nullable = false)
     private Double unitDistance;
 
+    @Column(nullable = false)
+    private Double size;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "graph_id", nullable = false)
     @JsonBackReference
@@ -51,6 +54,9 @@ public class LegendEntry {
 
     public Double getUnitDistance() { return unitDistance; }
     public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; }
+
+    public Double getSize() { return size; }
+    public void setSize(Double size) { this.size = size; }
 
     public Graph getGraph() { return graph; }
     public void setGraph(Graph graph) { this.graph = graph; }

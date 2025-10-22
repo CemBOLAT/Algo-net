@@ -78,6 +78,7 @@ def run_fixed_python_script(script_path, vertices, edges, entries=None):
 
     parts = stdout.split("$$$")
     script_output = parts[1].strip() if len(parts) > 1 else stdout.strip()
+    print(parts[0]) # Debugging line to print any output before the $$$ delimiter
 
     try:
         return json.loads(script_output)
