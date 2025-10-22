@@ -19,6 +19,7 @@ const LegendPanel = ({ entries = [] }) => {
                 <Chip size="small" label={`Kapasite: ${e.capacity}`} />
                 <Chip size="small" label={`Uzaklık: ${e.distance}`} />
                 <Chip size="small" label={`Birim: ${e.unitDistance}`} />
+                <Chip size="small" label={`Boyut: ${e.size}`} />
               </Box>
             </Box>
           </Box>
