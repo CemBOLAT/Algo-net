@@ -17,9 +17,9 @@ print("Edges:", edges)
 print("Entries:", entries)
 
 # entries: [
-#     {'name': 'cemak', 'color': '#17fd32', 'capacity': 1, 'distance': 1, 'unitDistance': 1}, 
-#     {'name': 'hastane', 'color': '#d21919', 'capacity': 1, 'distance': 1, 'unitDistance': 1}, 
-#     {'name': 'okul', 'color': '#b319d2', 'capacity': 1, 'distance': 1, 'unitDistance': 1}
+#     {'name': 'cemak', 'color': '#17fd32', 'capacity': 1, 'distance': 1, 'diameter': 1}, 
+#     {'name': 'hastane', 'color': '#d21919', 'capacity': 1, 'distance': 1, 'diameter': 1}, 
+#     {'name': 'okul', 'color': '#b319d2', 'capacity': 1, 'distance': 1, 'diameter': 1}
 # ]
 
 T_Without_R = [ entry['name'] for entry in entries ]

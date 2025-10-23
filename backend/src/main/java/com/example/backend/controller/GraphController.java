@@ -112,7 +112,8 @@ public class GraphController {
         private String color;
         private Double capacity;
         private Double distance;
-        private Double unitDistance;
+        private Double diameter;
+        private Double size;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -122,8 +123,10 @@ public class GraphController {
         public void setCapacity(Double capacity) { this.capacity = capacity; }
         public Double getDistance() { return distance; }
         public void setDistance(Double distance) { this.distance = distance; }
-        public Double getUnitDistance() { return unitDistance; }
-        public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; }
+        public Double getUnitDistance() { return diameter; }
+        public void setUnitDistance(Double diameter) { this.diameter = diameter; }
+        public Double getSize() { return size; }
+        public void setSize(Double size) { this.size = size; }
     }
 
     @PostMapping("/save")
@@ -524,9 +527,9 @@ public class GraphController {
             if (graph.getLegendEntries() != null) {
                 var itL = graph.getLegendEntries().iterator();
                 while (itL.hasNext()) {
-                     l = itL.next();
+                    LegendEntry le = itL.next();
                     itL.remove();
-                    entityManager.remove(l);
+                    entityManager.remove(le);
                 }
             }
             entityManager.flush();
@@ -543,6 +546,7 @@ public class GraphController {
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
                     le.setUnitDistance(dto.getUnitDistance());
+                    le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
             }

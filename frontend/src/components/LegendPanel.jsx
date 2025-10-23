@@ -18,7 +18,7 @@ const LegendPanel = ({ entries = [] }) => {
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.25 }}>
                 <Chip size="small" label={`Kapasite: ${e.capacity}`} />
                 <Chip size="small" label={`Uzaklık: ${e.distance}`} />
-                <Chip size="small" label={`Birim: ${e.unitDistance}`} />
+                <Chip size="small" label={`Yarıçap: ${e.diameter}`} />
                 <Chip size="small" label={`Boyut: ${e.size}`} />
               </Box>
             </Box>

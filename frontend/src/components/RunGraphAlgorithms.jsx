@@ -144,7 +144,7 @@ export default function RunGraphAlgorithms({
   const addEntry = () => {
     if (entries.length >= 5) return;
     const newId = entrySeq;
-    const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, unitDistance: 1, size: 1 };
+    const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, diameter: 1, size: 1 };
     setEntries(prev => [...prev, next]);
     setDrafts(prev => ({ ...prev, [newId]: next }));
     setEditing(prev => ({ ...prev, [newId]: true }));
@@ -169,10 +169,10 @@ export default function RunGraphAlgorithms({
     const nameOk = String(draft.name || '').trim().length > 0;
     const capOk = isPositive(draft.capacity);
     const distOk = isPositive(draft.distance);
-    const unitOk = isPositive(draft.unitDistance);
+    const unitOk = isPositive(draft.diameter);
     const sizeOk = isPositive(draft.size);
     if (!nameOk || !capOk || !distOk || !unitOk || !sizeOk) {
-      notify("error", "İsim zorunlu; Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2500);
+      notify("error", "İsim zorunlu; Kapasite, Uzaklık ve Yarıçap 0'dan büyük olmalıdır.", 2500);
       return;
     }
 
@@ -182,7 +182,7 @@ export default function RunGraphAlgorithms({
       color: String(draft.color || '#1976d2'),
       capacity: Number(draft.capacity),
       distance: Number(draft.distance),
-      unitDistance: Number(draft.unitDistance),
+      diameter: Number(draft.diameter),
       size: Number(draft.size),
     } : e));
     setEditing(prev => { const n = { ...prev }; delete n[id]; return n; });
@@ -276,7 +276,7 @@ export default function RunGraphAlgorithms({
       color: String(e.color || '#1985d2ff'),
       capacity: Number(e.capacity),
       distance: Number(e.distance),
-      unitDistance: Number(e.unitDistance),
+      diameter: Number(e.diameter),
       size: Number(e.size),
     }));
 
@@ -284,8 +284,8 @@ export default function RunGraphAlgorithms({
       notify("error", "İsim boş olamaz.", 2000);
       return;
     }
-    if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.unitDistance) > 0) || !(Number(e.size) > 0))) {
-      notify("error", "Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2500);
+    if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.diameter) > 0) || !(Number(e.size) > 0))) {
+      notify("error", "Kapasite, Uzaklık ve Yarıçap 0'dan büyük olmalıdır.", 2500);
       return;
     }
 
@@ -438,7 +438,7 @@ export default function RunGraphAlgorithms({
                 const nameErr = isEditing && String(view.name || '').trim().length === 0;
                 const capErr = isEditing && !isPositive(view.capacity);
                 const distErr = isEditing && !isPositive(view.distance);
-                const unitErr = isEditing && !isPositive(view.unitDistance);
+                const unitErr = isEditing && !isPositive(view.diameter);
                 const sizeErr = isEditing && !isPositive(view.size);
 
                 return (
@@ -493,11 +493,11 @@ export default function RunGraphAlgorithms({
                           inputProps={{ min: 1, step: 1 }}
                         />
                         <TextField
-                          label="Birim Uzaklık"
+                          label="Yarıçap"
                           size="small"
                           type="number"
-                          value={view.unitDistance}
-                          onChange={(e) => updateDraft(entry.id, 'unitDistance', e.target.value)}
+                          value={view.diameter}
+                          onChange={(e) => updateDraft(entry.id, 'diameter', e.target.value)}
                           error={unitErr}
                           helperText={unitErr ? "0'dan büyük olmalı" : ''}
                           inputProps={{ min: 1, step: 1 }}
@@ -529,7 +529,7 @@ export default function RunGraphAlgorithms({
                             <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                               <Chip size="small" label={`Kapasite: ${entry.capacity}`} />
                               <Chip size="small" label={`Uzaklık: ${entry.distance}`} />
-                              <Chip size="small" label={`Birim: ${entry.unitDistance}`} />
+                              <Chip size="small" label={`Yarıçap: ${entry.diameter}`} />
                               <Chip size="small" label={`Büyüklük: ${entry.size}`} />
                             </Box>
                           </Box>
