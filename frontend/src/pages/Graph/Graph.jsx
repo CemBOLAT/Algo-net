@@ -147,7 +147,7 @@ const Graph = () => {
 					color: le.color,
 					capacity: le.capacity,
 					distance: le.distance,
-					unitDistance: le.unitDistance,
+					diameter: le.diameter,
 				})));
 			} else {
 				setHasLegend(false);
