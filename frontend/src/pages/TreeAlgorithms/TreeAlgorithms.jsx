@@ -192,10 +192,13 @@ export default function TreeAlgorithms() {
 
 	return (
 		<Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-			<TopBar
-                title={t('tree_algorithms')}
+            <TopBar
+                title={t('array_algorithms')}
                 actions={[
                     { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+                    { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
+                    { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
+                    { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
                     { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
                     { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
                 ]}

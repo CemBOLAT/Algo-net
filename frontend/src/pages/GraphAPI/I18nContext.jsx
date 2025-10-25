@@ -195,23 +195,6 @@ const translations = {
     enter_valid_number: 'Geçerli bir sayı girin',
     previous_page: 'Önceki sayfa',
     next_page: 'Sonraki sayfa',
-
-    // QuickGraph dialog additions
-    quickgraph_random_info_disabled: 'Random: öneriler gösterilir, oluşturma kapalı.',
-    ring_summary_one: '1 düğüm, 1 self-loop',
-    ring_summary_two: '2 düğüm, 2 paralel kenar',
-    ring_summary_general: '{n} düğüm, {n} kenar',
-    quickgraph_err_bipartite_min: 'A ve B en az 1 olmalı.',
-    quickgraph_err_nodecount: 'Geçerli bir düğüm sayısı girin.',
-    quickgraph_err_tree_k: 'Ağaç için k >= 1 olmalı.',
-    quickgraph_err_star_centers_range: 'Merkez sayısı 1..{max} aralığında olmalı.',
-    quickgraph_err_grid_dims_min: 'Grid için satır ve sütun sayısı en az 1 olmalı.',
-    quickgraph_err_grid_weight_min: 'Grid için kenar ağırlığı en az 1 olmalı.',
-    quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): her kenar p olasılıkla eklenir (O(n^2) olası kenar; seyrek graph için örnekleme).',
-    quickgraph_random_info_line2: 'G(n, m): tam m adet kenar rastgele seçilir (kenar sayısı kontrolü için).',
-    quickgraph_random_info_line3: 'Barabási–Albert: tercihli bağlanma (ölçekten bağımsız).',
-    quickgraph_random_info_line4: 'Watts–Strogatz: küçük-dünya, yüksek kümeleşme.',
-    quickgraph_random_info_line5: 'Uygulama: tohumlu RNG, O(n + m) üretim, self-loop/çoklu-kenar opsiyonu ve yön/yük ayarları ekleyin.',
   },
   en: {
     profile: 'Profile',
@@ -405,23 +388,6 @@ const translations = {
     enter_valid_number: 'Enter a valid number',
     previous_page: 'Previous page',
     next_page: 'Next page',
-
-    // QuickGraph dialog additions
-    quickgraph_random_info_disabled: 'Random: suggestions are shown, creation is disabled.',
-    ring_summary_one: '1 node, 1 self-loop',
-    ring_summary_two: '2 nodes, 2 parallel edges',
-    ring_summary_general: '{n} nodes, {n} edges',
-    quickgraph_err_bipartite_min: 'A and B must be at least 1.',
-    quickgraph_err_nodecount: 'Enter a valid node count.',
-    quickgraph_err_tree_k: 'For tree, k must be >= 1.',
-    quickgraph_err_star_centers_range: 'Center count must be in 1..{max}.',
-    quickgraph_err_grid_dims_min: 'Grid rows and columns must be at least 1.',
-    quickgraph_err_grid_weight_min: 'Grid edge weight must be at least 1.',
-    quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): add each edge with probability p (O(n^2) possible edges; sample for sparse).',
-    quickgraph_random_info_line2: 'G(n, m): choose exactly m edges uniformly (to control edge count).',
-    quickgraph_random_info_line3: 'Barabási–Albert: preferential attachment (scale-free).',
-    quickgraph_random_info_line4: 'Watts–Strogatz: small-world, high clustering.',
-    quickgraph_random_info_line5: 'Implementation: seeded RNG, O(n + m) generation, self-loop/multiedge options, direction/weight settings.',
   },
 };
 

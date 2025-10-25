@@ -88,6 +88,36 @@ def enumerate_connected_subgraphs_matrix(mat, node_ids, x):
         ext = {w for w in neighbors(u) if w > u}
         yield from backtrack(u, S, ext)
 
+def enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes):
+    n = len(node_ids)
+    sizes_sorted = sorted(set(int(s) for s in target_sizes if s is not None))
+    if not sizes_sorted:
+        return {}
+
+    neighbors_list = [set(np.where(mat[i] > 0)[0]) for i in range(n)]
+    results_idx = {1: [frozenset([i]) for i in range(n)]}
+    max_k = sizes_sorted[-1]
+
+    for k in range(2, max_k + 1):
+        prev_sets = results_idx.get(k - 1, [])
+        new_sets = set()
+        for S in prev_sets:
+            boundary = set()
+            for u in S:
+                boundary |= neighbors_list[u]
+            boundary -= set(S)
+            for v in boundary:
+                new_S = frozenset(set(S) | {v})
+                if len(new_S) == k:
+                    new_sets.add(new_S)
+        results_idx[k] = list(new_sets)
+
+    idx_to_id = dict(enumerate(node_ids))
+    results = {}
+    for k in sizes_sorted:
+        results[k] = [set(idx_to_id[i] for i in S) for S in results_idx.get(k, [])]
+    return results
+
 def build_grid_matrix(vertices, edges):
     # Convert it to fully completed with floyd-warshall
     mat, id_to_idx = build_matrix(vertices, edges)
@@ -108,52 +138,12 @@ def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
         for i in range(len(indices)):
             for j in range(i + 1, len(indices)):
                 dist = grid_mat[indices[i], indices[j]]
-                #print(f"dist-max_dist: {dist}-{max_dist}")
+                print(f"dist-max_dist: {dist}-{max_dist}")
                 if dist > max_dist:
                     max_dist = dist
         if max_dist <= max_diameter:
             valid_subgraphs.append(subgraph)
     return valid_subgraphs
-
-
-def enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes):
-    n = len(node_ids)
-    sizes_sorted = sorted(set(int(s) for s in target_sizes if s is not None))
-    if not sizes_sorted:
-        return {}
-
-    # Build proper adjacency: finite and positive weights only (exclude np.inf)
-    adjacency = np.isfinite(mat) & (mat > 0)
-    np.fill_diagonal(adjacency, False)
-    neighbors_list = [set(np.where(adjacency[i])[0]) for i in range(n)]
-
-    # Start with all singletons
-    results_idx = {1: [frozenset([i]) for i in range(n)]}
-    max_k = sizes_sorted[-1]
-
-    # Build up by size, enforcing canonical order (v > max(S)) to avoid permutations
-    for k in range(2, max_k + 1):
-        prev_sets = results_idx.get(k - 1, [])
-        new_sets = set()
-        for S in prev_sets:
-            boundary = set()
-            for u in S:
-                boundary |= neighbors_list[u]
-            boundary -= set(S)
-            max_idx = max(S)
-            for v in boundary:
-                if v <= max_idx:
-                    continue  # canonical growth to eliminate permutations
-                new_S = frozenset(set(S) | {v})
-                if len(new_S) == k:
-                    new_sets.add(new_S)
-        results_idx[k] = list(new_sets)
-
-    idx_to_id = dict(enumerate(node_ids))
-    results = {}
-    for k in sizes_sorted:
-        results[k] = [set(idx_to_id[i] for i in S) for S in results_idx.get(k, [])]
-    return results
 
 
 mat, id_to_idx = build_matrix(vertices, edges)
@@ -163,19 +153,19 @@ node_ids = list(id_to_idx.keys())
 
 SubGraphs = {}
 
-# Precompute DP results for all requested sizes to reuse across types
-target_sizes = [entry.get('size') for entry in entries]
-dp_by_size = enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes)
-
-for entry in sorted(entries, key=lambda e: e.get('size', 0)):
+for entry in entries:
     name = entry.get('name')
     size = entry.get('size')
-    # Use precomputed connected subgraphs for this size
-    subgraphs_of_size = dp_by_size.get(int(size), [])
-    # Apply diameter constraint on shortest-path grid
+    # print("Finding subgraphs for", name, "with size:", size)
+    subgraphs_of_size = list(enumerate_connected_subgraphs_matrix(mat, node_ids, x=size))
+    # print(f"Total subgraphs of size {size} for {name}:", len(subgraphs_of_size))
+
+    # Now filter by diameter
     max_diameter = entry.get('diameter')
+    #print(f"Filtering subgraphs for {name} with max diameter:", max_diameter)
     valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat, id_to_idx)
-    SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]
+    SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]   
+    #print(f"Valid subgraphs for {name} after diameter filter:", len(valid_subgraphs))
 
 for name, subgraphs in SubGraphs.items():
     print(f"Subgraphs for {name}:", subgraphs)

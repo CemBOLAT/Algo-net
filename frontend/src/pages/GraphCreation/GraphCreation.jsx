@@ -12,6 +12,7 @@ import FileInfoDialog from './components/FileInfoDialog';
 import WeightedExampleDialog from './components/WeightedExampleDialog';
 import FilePreviewDialog from './components/FilePreviewDialog';
 import QuickGraphDialog from './components/QuickGraphDialog';
+import { useI18n } from '../../context/I18nContext';
 
 // New small components
 import GraphNameOptions from './components/GraphNameOptions';
@@ -21,6 +22,13 @@ import BottomActions from './components/BottomActions';
 
 const GraphCreation = () => {
     const navigate = useNavigate();
+    const { t } = useI18n();
+    // Simple formatter for placeholders like {n}, {m}, etc.
+    const tf = (key, params = {}) => {
+        const template = t(key);
+        return template.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? String(params[k]) : `{${k}}`));
+    };
+
     const [graphName, setGraphName] = useState('');
 
     // vertices and edges
@@ -54,7 +62,7 @@ const GraphCreation = () => {
         setEdgeFrom('');
         setEdgeTo('');
         setEdgeWeight('');
-        setCreateSuccess(weighted ? 'Ağırlıklı moda geçildi — kenarlar sıfırlandı, lütfen tekrar ekleyin.' : 'Ağırlıklı mod kapandı — kenarlar sıfırlandı.');
+        setCreateSuccess(weighted ? t('weighted_mode_on') : t('weighted_mode_off'));
         setTimeout(() => setCreateSuccess(''), 2000);
     }, [weighted]);
 
@@ -104,15 +112,15 @@ const GraphCreation = () => {
     const addVertex = () => {
         let name = vertexName.trim();
         if (!name) {
-            setVertexError('İsim boş olamaz');
+            setVertexError(t('vertex_name_required'));
             return;
         }
         if (name.length > 6) {
-            setVertexError('Düğüm adı en fazla 6 karakter olabilir');
+            setVertexError(t('vertex_name_max'));
             return;
         }
         if (vertices.some((existing) => existing.toLowerCase() === name.toLowerCase())) {
-            setVertexError('Aynı isimli düğüm zaten var');
+            setVertexError(t('vertex_name_duplicate'));
             return;
         }
         setVertices((v) => [...v, name]);
@@ -131,17 +139,15 @@ const GraphCreation = () => {
 
     const addEdge = () => {
         if (!edgeFrom || !edgeTo) return;
-        
         // Check for duplicate edges in undirected graphs
         if (edgeExists(edges, edgeFrom, edgeTo, directed)) {
-            setCreateError('Bu kenar zaten var');
+            setCreateError(t('edge_exists_error'));
             setTimeout(() => setCreateError(''), 2500);
             return;
         }
-        
         if (weighted) {
             if (edgeWeight === '' || edgeWeight === null || Number.isNaN(Number(edgeWeight))) {
-                setCreateError('Ağırlıklı graph için kenar ağırlığı gereklidir');
+                setCreateError(t('weight_required_error'));
                 setTimeout(() => setCreateError(''), 2500);
                 return;
             }
@@ -181,7 +187,7 @@ const GraphCreation = () => {
 
     const saveWeightEdit = () => {
         if (weightEditValue === '' || Number.isNaN(Number(weightEditValue))) {
-            setWeightEditError('Geçerli bir sayı girin');
+            setWeightEditError(t('enter_valid_number'));
             return;
         }
         const w = Number(weightEditValue);
@@ -225,17 +231,17 @@ const GraphCreation = () => {
         setCreateError('');
         // If weighted graph, ensure any partial edge inputs won't create invalid edges (weight required on add)
         if (weighted && edgeFormOpen && (edgeWeight === '' || edgeWeight === null)) {
-            setCreateError('Ağırlıklı graph için kenar ağırlığı gereklidir');
+            setCreateError(t('weight_required_error'));
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
         if (graphName.trim() === '') {
-            setCreateError('Graph adı boş olamaz');
+            setCreateError(t('graph_name_empty'));
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
         if (vertexListRef.current && vertexListRef.current.children.length === 0) {
-            setCreateError('En az bir düğüm eklemelisiniz');
+            setCreateError(t('min_vertices_required'));
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
@@ -278,7 +284,7 @@ const GraphCreation = () => {
             navigate('/graph', { state: { nodes: preparedNodes, edges: preparedEdges, name: graphName.trim() } });
         
         } catch (err) {
-            setCreateError('Graph oluşturulurken hata oluştu');
+            setCreateError(t('graph_create_error'));
             setTimeout(() => setCreateError(''), 3000);
         }
     };
@@ -290,7 +296,7 @@ const GraphCreation = () => {
             // close any modals and show error
             setFileModalOpen(false);
             setWeightedExampleModalOpen(false);
-            setCreateError('Dosya boş görünüyor');
+            setCreateError(t('file_empty'));
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
@@ -313,7 +319,7 @@ const GraphCreation = () => {
             // close modals and show error
             setFileModalOpen(false);
             setWeightedExampleModalOpen(false);
-            setCreateError(`Dosya formatı hatalı. Satır ${badLine.index}: "${badLine.text}"`);
+            setCreateError(t('file_format_error'));
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
@@ -365,7 +371,7 @@ const GraphCreation = () => {
     setFileModalOpen(false);
     setWeightedExampleModalOpen(false);
     setCreateError('');
-    setCreateSuccess('Graph yüklendi');
+    setCreateSuccess(t('graph_loaded'));
     setFilePreviewOpen(false);
         try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch (err) { /* ignore */ }
         setTimeout(() => setCreateSuccess(''), 3000);
@@ -379,7 +385,7 @@ const GraphCreation = () => {
         setEdgeTo('');
         setEdgeWeight('');
         setEdgePage(1);
-        setCreateSuccess('Graph sıfırlandı');
+        setCreateSuccess(t('graph_reset'));
         setTimeout(() => setCreateSuccess(''), 2000);
     };
 
@@ -473,7 +479,7 @@ const GraphCreation = () => {
                     break;
                 }
                 default:
-                    setQuickGraphError('Desteklenmeyen graph tipi');
+                    setQuickGraphError(t('unsupported_graph_type'));
                     return;
             }
 
@@ -536,29 +542,26 @@ const GraphCreation = () => {
             // NEW: navigate with state (immediate, not depending on localStorage)
             navigate('/graph', { state: { nodes: nodesForCanvas, edges: edgesForCanvas, name } });
 
-            // Success message per type
             const nodeCount = newVertices.length;
             const edgeCount = newEdges.length;
             let msg = '';
             if (type === 'full') {
-                msg = `Tam graph oluşturuldu (${nodeCount} düğüm, ${edgeCount} kenar)`;
+                msg = tf('quickgraph_full_created', { n: nodeCount, m: edgeCount });
             } else if (type === 'tree') {
-                msg = `Ağaç oluşturuldu (n=${nodeCount}, k=${spec.treeChildCount})`;
+                msg = tf('quickgraph_tree_created', { n: nodeCount, k: spec.treeChildCount });
             } else if (type === 'star') {
-                msg = `Star oluşturuldu (n=${nodeCount}, merkez sayısı=${spec.starCenterCount})`;
+                msg = tf('quickgraph_star_created', { n: nodeCount, c: spec.starCenterCount });
             } else if (type === 'ring') {
-                if (nodeCount === 1) msg = 'Ring oluşturuldu (1 düğüm, 1 self-loop)';
-                else if (nodeCount === 2) msg = 'Ring oluşturuldu (2 düğüm, aralarında 2 paralel kenar)';
-                else msg = `Ring oluşturuldu (n=${nodeCount}, kenar=${edgeCount})`;
+                msg = tf('quickgraph_ring_created', { m: edgeCount });
             } else if (type === 'bipartite') {
-                msg = `Tam bipartite oluşturuldu (A=${spec.bipartiteA}, B=${spec.bipartiteB}, toplam=${nodeCount}, kenar=${edgeCount})`;
+                msg = tf('quickgraph_bipartite_created', { a: spec.bipartiteA, b: spec.bipartiteB, n: nodeCount, m: edgeCount });
             } else if (type === 'grid') {
-                msg = `Grid oluşturuldu (m=${spec.gridRows}, n=${spec.gridCols}, toplam=${nodeCount}, kenar=${edgeCount}, w=${spec.gridWeight})`;
+                msg = tf('quickgraph_grid_created', { r: Number(spec.gridRows), c: Number(spec.gridCols), n: nodeCount, m: edgeCount, w: spec.gridWeight });
             }
             setCreateSuccess(msg);
             setTimeout(() => setCreateSuccess(''), 3000);
         } catch (e) {
-            setQuickGraphError('Hızlı graph oluşturulurken hata oluştu');
+            setQuickGraphError(t('quickgraph_error'));
             setTimeout(() => setQuickGraphError(''), 3000);
         }
     };
@@ -574,7 +577,7 @@ const GraphCreation = () => {
             setFilePreviewOpen(true);
         };
         reader.onerror = () => {
-            setCreateError('Dosya okunamadı');
+            setCreateError(t('file_read_error'));
             setTimeout(() => setCreateError(''), 3000);
         };
         reader.readAsText(file);
@@ -590,14 +593,18 @@ const GraphCreation = () => {
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />
-            <TopBar
-                title="Graph Oluştur"
-                actions={[
-                    { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
-                    { label: 'Profil', onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: 'Profil' },
-                    { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
-                ]}
-            />
+
+
+			<TopBar title={t('create_graph')}
+				actions={[
+					{ label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+					{ label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
+					{ label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
+					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
+					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+					{ label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+				]}
+			/>
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <FlashMessage severity="error" message={createError} sx={{ mb: 2 }} />
                 <FlashMessage severity="success" message={createSuccess} sx={{ mb: 2 }} />

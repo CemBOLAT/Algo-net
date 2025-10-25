@@ -59,14 +59,32 @@ const Profile = () => {
     navigate('/login', { replace: true });
   };
 
-  const topbarActions = [
-    { label: t('go_to_canvas'), to: '/graph' },
-    { label: t('logout'), onClick: handleLogout, color: 'error', variant: 'contained' },
-  ];
+  const handleCanvas = () => {
+    navigate('/graph');
+  }
+
+  const handleArray = () => {
+    navigate('/array-algorithms');
+  }
+
+  const handleTree = () => {
+    navigate('/tree-algorithms');
+  }
+
+
 
   return (
     <>
-      <TopBar title={t('profile')} actions={topbarActions} />
+      <TopBar title={t('profile')}
+              actions={[
+                { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+                { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
+                { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
+                { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
+                { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+                { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+              ]}
+      />
       <Box sx={{ p: { xs: 2, sm: 3 }, display: 'flex', justifyContent: 'center' }}>
         <Paper sx={{ width: '100%', maxWidth: 920, p: { xs: 2, sm: 3 } }} elevation={2}>
           <Stack spacing={2}>
@@ -113,31 +131,6 @@ const Profile = () => {
             </Grid>
 
             <Divider />
-
-            {/* Shortcuts */}
-            <Typography variant="h6">{t('shortcuts')}</Typography>
-            <Grid container spacing={1.5}>
-              <Grid item xs={12} sm={6}>
-                <Button fullWidth variant="contained" onClick={() => navigate('/graph-list')}>
-                  {t('my_graphs')}
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button fullWidth variant="contained" onClick={() => navigate('/graph-creation')}>
-                  {t('create_graph')}
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button fullWidth variant="contained" onClick={() => navigate('/tree-algorithms')}>
-                  {t('tree_algorithms')}
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button fullWidth variant="contained" onClick={() => navigate('/array-algorithms')}>
-                  {t('array_algorithms')}
-                </Button>
-              </Grid>
-            </Grid>
           </Stack>
         </Paper>
       </Box>

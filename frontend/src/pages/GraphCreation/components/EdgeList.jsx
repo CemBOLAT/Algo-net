@@ -3,6 +3,7 @@ import { List, ListItem, Typography, Box, IconButton, Tooltip, Pagination } from
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { useI18n } from '../../../context/I18nContext';
 
 const EdgeList = ({
     edges,
@@ -13,6 +14,7 @@ const EdgeList = ({
     toggleEdgeDelete,
     deleteEdge
 }) => {
+    const { t } = useI18n();
     const totalPages = Math.ceil(edges.length / edgesPerPage) || 1;
     const start = (edgePage - 1) * edgesPerPage;
     const pageEdges = edges.slice(start, start + edgesPerPage);
@@ -36,7 +38,7 @@ const EdgeList = ({
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography sx={{ mr: 1 }}>{label}</Typography>
                                     {edge.weight !== undefined && (
-                                        <Tooltip title="Ağırlığı düzenle">
+                                        <Tooltip title={t('edit_weight_tooltip')}>
                                             <IconButton size="small" onClick={() => openWeightEditor(edge)}>
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
