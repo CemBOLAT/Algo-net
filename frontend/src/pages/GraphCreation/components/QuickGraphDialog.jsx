@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useI18n } from '../../../context/I18nContext';
 import { 
   Dialog, 
   DialogTitle, 
@@ -36,6 +37,13 @@ const QuickGraphDialog = ({
   const [gridCols, setGridCols] = useState(2);
   const [gridWeight, setGridWeight] = useState(1);
 
+  const { t } = useI18n();
+  // formatter for placeholders like {n}, {m}, {max}
+  const tf = (key, params = {}) => {
+    const template = t(key);
+    return String(template).replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? String(params[k]) : `{${k}}`));
+  };
+
   const handleNodeCountChange = (e) => {
     setQuickGraphNodeCount(Number(e.target.value));
     if (quickGraphError) setQuickGraphError('');
@@ -59,42 +67,42 @@ const QuickGraphDialog = ({
     if (!n || n < 1) return '';
     switch (quickGraphType) {
       case 'full':
-        return `Tam graph: ${n} düğüm, ${Math.floor(n * (n - 1) / 2)} kenar (yönsüz)`;
+        return tf('quickgraph_full_created', { n, m: Math.floor(n * (n - 1) / 2) });
       case 'tree':
-        return `Ağaç: ${n} düğüm, ${Math.max(0, n - 1)} kenar, k=${treeChildCount}`;
+        return tf('quickgraph_tree_created', { n, k: treeChildCount });
       case 'star':
-        return `Star: ${n} düğüm, ${Math.max(0, n - starCenterCount)} yaprak, merkez sayısı=${starCenterCount}`;
+        return tf('quickgraph_star_created', { n, c: starCenterCount });
       case 'ring':
-        if (n === 1) return 'Ring: 1 düğüm, 1 self-loop';
-        if (n === 2) return 'Ring: 2 düğüm, aralarında 2 paralel kenar';
-        return `Ring: ${n} düğüm, ${n} kenar (cycle)`;
+        if (n === 1) return tf('quickgraph_ring_created', { m: t('ring_summary_one') });
+        if (n === 2) return tf('quickgraph_ring_created', { m: t('ring_summary_two') });
+        return tf('quickgraph_ring_created', { m: tf('ring_summary_general', { n }) });
       case 'bipartite':
-        return `Tam iki parça: A=${bipartiteA}, B=${bipartiteB}, toplam ${Number(bipartiteA)+Number(bipartiteB)} düğüm, kenar=${Number(bipartiteA)*Number(bipartiteB)}`;
+        return tf('quickgraph_bipartite_created', { a: bipartiteA, b: bipartiteB, n: Number(bipartiteA)+Number(bipartiteB), m: Number(bipartiteA)*Number(bipartiteB) });
       case 'grid':
-        return `Grid: ${gridRows}x${gridCols} (${gridRows * gridCols} düğüm), kenar=${((gridRows - 1) * gridCols + (gridCols - 1) * gridRows)}, kenar ağırlığı=${gridWeight}`;
+        return tf('quickgraph_grid_created', { r: gridRows, c: gridCols, n: gridRows * gridCols, m: ((gridRows - 1) * gridCols + (gridCols - 1) * gridRows), w: gridWeight });
       case 'random':
-        return 'Random: öneriler gösterilir, oluşturma kapalı.';
+        return t('quickgraph_random_info_disabled');
       default:
         return '';
     }
-  }, [quickGraphType, totalNodes, treeChildCount, starCenterCount, bipartiteA, bipartiteB, gridRows, gridCols, gridWeight]);
+  }, [quickGraphType, totalNodes, treeChildCount, starCenterCount, bipartiteA, bipartiteB, gridRows, gridCols, gridWeight, t]);
 
   const handleCreate = () => {
     // basic validations
     if (quickGraphType === 'bipartite') {
-      if (Number(bipartiteA) < 1 || Number(bipartiteB) < 1) return setQuickGraphError?.('A ve B en az 1 olmalı.');
+      if (Number(bipartiteA) < 1 || Number(bipartiteB) < 1) return setQuickGraphError?.(t('quickgraph_err_bipartite_min'));
     } else if (quickGraphType !== 'random') {
-      if (Number(quickGraphNodeCount) < 1) return setQuickGraphError?.('Geçerli bir düğüm sayısı girin.');
+      if (Number(quickGraphNodeCount) < 1) return setQuickGraphError?.(t('quickgraph_err_nodecount'));
     }
-    if (quickGraphType === 'tree' && Number(treeChildCount) < 1) return setQuickGraphError?.('Ağaç için k >= 1 olmalı.');
+    if (quickGraphType === 'tree' && Number(treeChildCount) < 1) return setQuickGraphError?.(t('quickgraph_err_tree_k'));
     if (quickGraphType === 'star') {
       const n = Number(quickGraphNodeCount || 1);
       const c = Number(starCenterCount || 1);
-      if (c < 1 || c >= n) return setQuickGraphError?.(`Merkez sayısı 1..${Math.max(1, n - 1)} aralığında olmalı.`);
+      if (c < 1 || c >= n) return setQuickGraphError?.(tf('quickgraph_err_star_centers_range', { max: Math.max(1, n - 1) }));
     }
     if (quickGraphType === 'grid') {
-      if (Number(gridRows) < 1 || Number(gridCols) < 1) return setQuickGraphError?.('Grid için satır ve sütun sayısı en az 1 olmalı.');
-      if (Number(gridWeight) < 1) return setQuickGraphError?.('Grid için kenar ağırlığı en az 1 olmalı.');
+      if (Number(gridRows) < 1 || Number(gridCols) < 1) return setQuickGraphError?.(t('quickgraph_err_grid_dims_min'));
+      if (Number(gridWeight) < 1) return setQuickGraphError?.(t('quickgraph_err_grid_weight_min'));
     }
     if (quickGraphType === 'random') return;
 
@@ -120,37 +128,37 @@ const QuickGraphDialog = ({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Hızlı Graph Oluştur</DialogTitle>
+      <DialogTitle>{t('quickgraph_title')}</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <FormControl fullWidth>
-            <InputLabel>Graph Tipi</InputLabel>
+            <InputLabel>{t('quickgraph_graph_type')}</InputLabel>
             <Select 
               value={quickGraphType} 
-              label="Graph Tipi" 
+              label={t('quickgraph_graph_type')}
               onChange={handleTypeChange}
             >
-              <MenuItem value="full">Tam Graph (Complete)</MenuItem>
-              <MenuItem value="tree">Ağaç (n, k)</MenuItem>
-              <MenuItem value="star">Star (n, merkez)</MenuItem>
-              <MenuItem value="ring">Ring (n)</MenuItem>
-              <MenuItem value="bipartite">Tam İki Parça (a, b)</MenuItem>
-              <MenuItem value="grid">Grid (m, n, w)</MenuItem>
-              <MenuItem value="random">Random (öneri)</MenuItem>
+              <MenuItem value="full">{t('quickgraph_type_full')}</MenuItem>
+              <MenuItem value="tree">{t('quickgraph_type_tree')}</MenuItem>
+              <MenuItem value="star">{t('quickgraph_type_star')}</MenuItem>
+              <MenuItem value="ring">{t('quickgraph_type_ring')}</MenuItem>
+              <MenuItem value="bipartite">{t('quickgraph_type_bipartite')}</MenuItem>
+              <MenuItem value="grid">{t('quickgraph_type_grid')}</MenuItem>
+              <MenuItem value="random">{t('quickgraph_type_random')}</MenuItem>
             </Select>
           </FormControl>
 
           {/* Layout: only for full; others auto in Graph.jsx */}
           {quickGraphType === 'full' && (
             <FormControl fullWidth>
-              <InputLabel>Layout</InputLabel>
+              <InputLabel>{t('quickgraph_layout')}</InputLabel>
               <Select 
                 value={quickGraphLayout || 'circular'} 
-                label="Layout" 
+                label={t('quickgraph_layout')}
                 onChange={(e) => setQuickGraphLayout(e.target.value)}
               >
-                <MenuItem value="circular">Dairesel (Circular)</MenuItem>
-                <MenuItem value="grid">Izgara (Grid)</MenuItem>
+                <MenuItem value="circular">{t('quickgraph_layout_circular')}</MenuItem>
+                <MenuItem value="grid">{t('quickgraph_layout_grid')}</MenuItem>
               </Select>
             </FormControl>
           )}
@@ -158,20 +166,20 @@ const QuickGraphDialog = ({
           {/* n input for non-bipartite and non-random */}
           {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && quickGraphType !== 'grid' && (
             <TextField
-              label="Düğüm Sayısı (n)"
+              label={t('quickgraph_node_count')}
               type="number"
               fullWidth
               value={quickGraphNodeCount}
               onChange={handleNodeCountChange}
               inputProps={{ min: 1, max: 200 }}
               error={!!quickGraphError}
-              helperText={quickGraphError || "1-200 arasında bir sayı girin"}
+              helperText={quickGraphError || t('quickgraph_node_helper')}
             />
           )}
 
           {quickGraphType === 'tree' && (
             <TextField
-              label="Çocuk Sayısı (k)"
+              label={t('quickgraph_tree_k')}
               type="number"
               fullWidth
               value={treeChildCount}
@@ -182,7 +190,7 @@ const QuickGraphDialog = ({
 
           {quickGraphType === 'star' && (
             <TextField
-              label={`Merkez Sayısı (1..${Math.max(1, Number(quickGraphNodeCount || 1) - 1)})`}
+              label={`${t('quickgraph_star_centers')} (1..${Math.max(1, Number(quickGraphNodeCount || 1) - 1)})`}
               type="number"
               fullWidth
               value={starCenterCount}
@@ -194,7 +202,7 @@ const QuickGraphDialog = ({
           {quickGraphType === 'grid' && (
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-                label="Satır Sayısı (m)"
+                label={t('quickgraph_grid_rows')}
                 type="number"
                 fullWidth
                 value={gridRows}
@@ -202,7 +210,7 @@ const QuickGraphDialog = ({
                 inputProps={{ min: 1, max: 20 }}
               />
               <TextField
-                label="Sütun Sayısı (n)"
+                label={t('quickgraph_grid_cols')}
                 type="number"
                 fullWidth
                 value={gridCols}
@@ -210,7 +218,7 @@ const QuickGraphDialog = ({
                 inputProps={{ min: 1, max: 20 }}
               />
               <TextField
-                label="Kenar Ağırlığı (w)"
+                label={t('quickgraph_grid_weight')}
                 type="number"
                 fullWidth
                 value={gridWeight}
@@ -223,7 +231,7 @@ const QuickGraphDialog = ({
           {quickGraphType === 'bipartite' && (
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-                label="A kümesi (a)"
+                label={t('quickgraph_bipartite_a')}
                 type="number"
                 fullWidth
                 value={bipartiteA}
@@ -231,7 +239,7 @@ const QuickGraphDialog = ({
                 inputProps={{ min: 1, max: 200 }}
               />
               <TextField
-                label="B kümesi (b)"
+                label={t('quickgraph_bipartite_b')}
                 type="number"
                 fullWidth
                 value={bipartiteB}
@@ -243,21 +251,21 @@ const QuickGraphDialog = ({
 
           {quickGraphType === 'random' && (
             <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-              <Typography variant="subtitle2">Random graph önerileri</Typography>
+              <Typography variant="subtitle2">{t('quickgraph_random_info_title')}</Typography>
               <Typography variant="body2" sx={{ mt: 1 }}>
-                - Erdős–Rényi G(n, p): her kenar p olasılıkla eklenir (O(n^2) olası kenar; sparse için edge sampling).
+                {t('quickgraph_random_info_line1')}
               </Typography>
               <Typography variant="body2">
-                - G(n, m): tam m adet kenar rastgele seçilir (kenar sayısı kontrolü için).
+                {t('quickgraph_random_info_line2')}
               </Typography>
               <Typography variant="body2">
-                - Barabási–Albert: tercihli bağlanma (ölçekten bağımsız).
+                {t('quickgraph_random_info_line3')}
               </Typography>
               <Typography variant="body2">
-                - Watts–Strogatz: küçük-dünya, yüksek kümeleşme.
+                {t('quickgraph_random_info_line4')}
               </Typography>
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Uygulama: tohumlu RNG, O(n + m) üretim, self-loop/çoklu-kenar opsiyonu ve yön/yük ayarları ekleyin.
+                {t('quickgraph_random_info_line5')}
               </Typography>
             </Box>
           )}
@@ -269,10 +277,10 @@ const QuickGraphDialog = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>
-          İptal
+          {t('quickgraph_cancel')}
         </Button>
         <Button onClick={handleCreate} variant="contained" disabled={quickGraphType === 'random'}>
-          Oluştur
+          {t('quickgraph_create')}
         </Button>
       </DialogActions>
     </Dialog>

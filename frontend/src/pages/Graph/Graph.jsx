@@ -9,14 +9,16 @@ import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
 import LegendPanel from '../../components/LegendPanel';
 import { Box, Container, Grid, Paper } from '@mui/material';
+import { useI18n } from '../../context/I18nContext';
 
 
 const Graph = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
+	const { t } = useI18n();
 	const [nodes, setNodes] = useState([]);
 	const [edges, setEdges] = useState([]);
-	const [graphName, setGraphName] = useState('Graph Name');
+	const [graphName, setGraphName] = useState('Graph Adı');
 	const [selectedNode, setSelectedNode] = useState(null);
 	const [selectedEdge, setSelectedEdge] = useState(null);
 	const [mode, setMode] = useState(null); // 'add-edge'
@@ -185,7 +187,7 @@ const Graph = () => {
 		if (isSaving) return; // Prevent multiple saves
 		
 		// Validation: Check if graph has a name
-		if (!graphName || graphName.trim() === '' || graphName.trim() === 'Graph Name') {
+		if (!graphName || graphName.trim() === '') {
 			showError('Lütfen graph için bir isim girin.');
 			return;
 		}
@@ -273,7 +275,7 @@ const Graph = () => {
 	}, [selectedNode, selectedEdge, setEdges, setNodes]);
 
 	const updateSearching = (data) => {
-		console.log("Searchsdang data:", data);
+		console.log("Arama verisi:", data);
 		const visited = new Set(data?.visited ?? []);
 		const visitedEdges = new Set((data?.edges ?? []).map(([a, b]) => `${a}-${b}`));
 
@@ -291,6 +293,14 @@ const Graph = () => {
 				color: visitedEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
 			}))
 		);
+	};
+
+	// TopBar action handlers
+	const handleArray = () => navigate('/array-algorithms');
+	const handleTree = () => navigate('/tree-algorithms');
+	const handleLogout = () => {
+		clearTokens();
+		navigate('/login');
 	};
 
 	return (
@@ -353,12 +363,18 @@ const Graph = () => {
 				</Box>
 			)}
 
-			<TopBar title="Graph Simulator"
+			<TopBar title={t('graph_simulator')}
 				actions={[
-					{ label: 'Profile', onClick: () => { if (!isSaving) navigate('/profile'); }, variant: 'contained', color: 'primary', ariaLabel: 'Profile', disabled: isSaving },
-					{ label: 'Çıkış Yap', onClick: () => { if (!isSaving) { clearTokens(); navigate('/login'); } }, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap', disabled: isSaving }
+					{ label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
+					{ label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
+					{ label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
+					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
+					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+					{ label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
 				]}
 			/>
+
+			
 
 			<Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
 				<Box sx={{ borderColor: 'divider' }}>

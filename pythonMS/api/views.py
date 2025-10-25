@@ -36,7 +36,7 @@ def _mk_name_with_suffix(base: str):
     now = datetime.datetime.now()
     return f"{base}_{now.day}:{now.month}:{now.year}"
 
-def _to_backend_payload(vertices, edges, name: str, legend_entries=None):
+def _to_backend_payload(vertices, edges, name: str, legend_entries=None, user_id=None):
     nodes = []
     for v in vertices:
         nodes.append({
@@ -68,19 +68,44 @@ def _to_backend_payload(vertices, edges, name: str, legend_entries=None):
     else:
         payload["hasLegend"] = False
         payload["legendEntries"] = []
+    # NEW: include userId for internal key auth
+    if user_id is not None:
+        try:
+            payload["userId"] = int(user_id)
+        except Exception:
+            payload["userId"] = user_id
     return payload
 
-def _save_graph_to_backend_safe(auth_header, payload):
-    backend_base = os.getenv("JAVA_BACKEND_BASE", "http://localhost:8080")
+def _save_graph_to_backend_safe(payload, auth_header=None):
+    backend_base = os.getenv("JAVA_BACKEND_BASE", "http://localhost:8080").rstrip("/")
+    internal_key = os.getenv("INTERNAL_API_KEY")
     url = f"{backend_base}/api/graphs/save"
-    headers = {}
-    if auth_header:
-        headers["Authorization"] = auth_header
+
+    headers = {"Content-Type": "application/json"}
+    # Prefer internal key if provided
+    if internal_key:
+        headers["X-Internal-Api-Key"] = internal_key
+        # Also forward userId via header if present (Java side can read it)
+        try:
+            if payload.get("userId") is not None:
+                headers["X-Internal-User-Id"] = str(payload["userId"])
+        except Exception:
+            pass
+    # Fallback to Authorization if no internal key available
+    elif auth_header:
+        headers["Authorization"] = auth_header.strip()
+
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=15)
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
         r.raise_for_status()
+        print("Graph saved successfully (async safe)")
     except Exception as ex:
-        print("save graph error (async safe):", ex)
+        resp_text = None
+        try:
+            resp_text = r.text
+        except Exception:
+            pass
+        print(f"save graph error (async safe): {ex} | status: {getattr(r, 'status_code', None)} | body: {resp_text}")
 
 def _get_email_from_auth(auth_header: str):
     """
@@ -103,7 +128,28 @@ def _get_email_from_auth(auth_header: str):
     except Exception:
         return None
 
-# --- KRİTİK DÜZELTME BURADA ---
+# NEW: Extract numeric user id (sub) from Authorization header
+def _get_user_id_from_auth(auth_header: str):
+    try:
+        if not auth_header or " " not in auth_header:
+            return None
+        token = auth_header.split(" ", 1)[1].strip()
+        parts = token.split(".")
+        if len(parts) < 2:
+            return None
+        payload_b64 = parts[1]
+        padding = "=" * (-len(payload_b64) % 4)
+        decoded = base64.urlsafe_b64decode(payload_b64 + padding)
+        payload = json.loads(decoded.decode("utf-8"))
+        sub = payload.get("sub")
+        if sub is None:
+            return None
+        if isinstance(sub, int):
+            return sub
+        # many JWTs encode sub as string
+        return int(sub) if str(sub).isdigit() else None
+    except Exception:
+        return None
 
 def _extract_color_map(result):
     """
@@ -194,7 +240,6 @@ def _perform_async_side_effects(auth_header, save_graph, graph_name, original_ve
     """
     try:
         final_vertices, final_edges = original_vertices, original_edges
-        
         if save_graph:
             # Talep üzerine 'full graph' kontrolü kaldırıldı.
             # Her zaman 'result'ı bir delta olarak uygula.
@@ -204,9 +249,10 @@ def _perform_async_side_effects(auth_header, save_graph, graph_name, original_ve
 
             # Kaydetme işlemi
             name = _mk_name_with_suffix(graph_name)
-            payload = _to_backend_payload(final_vertices, final_edges, name, legend_entries=legend_entries)
+            user_id = _get_user_id_from_auth(auth_header)
+            payload = _to_backend_payload(final_vertices, final_edges, name, legend_entries=legend_entries, user_id=user_id)
             print(f"Saving graph '{name}' with {len(final_vertices)} nodes.")
-            _save_graph_to_backend_safe(auth_header, payload)
+            _save_graph_to_backend_safe(payload, auth_header)  # pass auth for fallback
         
         # Bildirim gönderme
         if should_notify and user_email:
@@ -380,6 +426,6 @@ def run_algorithm_path(request):
         return Response({"result": result})
     return Response({"result": {}})
 
-@api_view(["GET"])
+@api_view(["GET", "HEAD"])
 def health(request):
     return Response({"status": "ok", "service": "pythonMS"})
