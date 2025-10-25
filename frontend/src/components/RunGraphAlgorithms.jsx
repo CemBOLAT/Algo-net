@@ -277,6 +277,8 @@ export default function RunGraphAlgorithms({
       capacity: Number(e.capacity),
       distance: Number(e.distance),
       diameter: Number(e.diameter),
+      // send unitDistance explicitly for backend mapping
+      unitDistance: Number(e.diameter),
       size: Number(e.size),
     }));
 
