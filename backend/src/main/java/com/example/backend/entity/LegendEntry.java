@@ -24,7 +24,10 @@ public class LegendEntry {
     private Double distance;
 
     @Column(name = "unit_distance", nullable = false)
-    private Double unitDistance;
+    private Double diameter;
+
+    @Column(name = "size")
+    private Double size;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "graph_id", nullable = false)
@@ -49,9 +52,13 @@ public class LegendEntry {
     public Double getDistance() { return distance; }
     public void setDistance(Double distance) { this.distance = distance; }
 
-    public Double getUnitDistance() { return unitDistance; }
-    public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; }
+    public Double getUnitDistance() { return diameter; }
+    public void setUnitDistance(Double diameter) { this.diameter = diameter; }
 
     public Graph getGraph() { return graph; }
     public void setGraph(Graph graph) { this.graph = graph; }
+
+    public Double getSize() { return size; }
+    public void setSize(Double size) { this.size = size; }
+
 }

@@ -32,7 +32,6 @@ export default function RunGraphAlgorithms({
 
   // entries now have stable ids for animations and edit flow
   const [entries, setEntries] = useState([
-    { id: 1, name: '', color: '#1976d2', capacity: 1, distance: 1, unitDistance: 1 }
   ]);
   const [entrySeq, setEntrySeq] = useState(2);
 
@@ -97,26 +96,45 @@ export default function RunGraphAlgorithms({
 
   // Searching algorithms → highlight visited nodes and optionally show traversal path
   const updateSearching = (data) => {
+    console.log("Searching data:", data);
     const visited = new Set(data?.visited ?? []);
     const pathEdges = new Set(
       (data?.edges ?? []).map(([a, b]) => `${a}-${b}`)
     );
+    
+
+    const pathNodes = new Set(data?.path ?? []);
+    console.log("Path Nodes:", pathNodes);
+
+
 
     setNodes((prev) =>
       prev.map((n) => ({
         ...n,
-        color: visited.has(n.id) ? "#FFB300" : "#E0E0E0",
+        color: pathNodes.has(n.id)
+          ? "#D32F2F" // red for path nodes
+          : visited.has(n.id)
+          ? "#FFA000" // orange for visited nodes
+          : "#1976d2", // default color
       }))
     );
 
+    console.log("Path Edges:", pathEdges);
+
+    console.log("all edges before update:", edges);
+
     setEdges((prev) =>
-      prev.map((e) => ({
+    prev.map((e) => {
+      // Edge'i yazdır
+      console.log("Edge:", e);
+
+      return {
         ...e,
-        color: pathEdges.has(`${e.source}-${e.target}`)
-          ? "#FB8C00"
-          : "#BDBDBD",
-      }))
+        color: pathEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
+      };
+    })
     );
+
   };
 
   // Helpers
@@ -126,7 +144,7 @@ export default function RunGraphAlgorithms({
   const addEntry = () => {
     if (entries.length >= 5) return;
     const newId = entrySeq;
-    const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, unitDistance: 1 };
+    const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, diameter: 1, size: 1 };
     setEntries(prev => [...prev, next]);
     setDrafts(prev => ({ ...prev, [newId]: next }));
     setEditing(prev => ({ ...prev, [newId]: true }));
@@ -151,9 +169,10 @@ export default function RunGraphAlgorithms({
     const nameOk = String(draft.name || '').trim().length > 0;
     const capOk = isPositive(draft.capacity);
     const distOk = isPositive(draft.distance);
-    const unitOk = isPositive(draft.unitDistance);
-    if (!nameOk || !capOk || !distOk || !unitOk) {
-      notify("error", "İsim zorunlu; Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2500);
+    const unitOk = isPositive(draft.diameter);
+    const sizeOk = isPositive(draft.size);
+    if (!nameOk || !capOk || !distOk || !unitOk || !sizeOk) {
+      notify("error", "İsim zorunlu; Kapasite, Uzaklık ve Yarıçap 0'dan büyük olmalıdır.", 2500);
       return;
     }
 
@@ -163,7 +182,8 @@ export default function RunGraphAlgorithms({
       color: String(draft.color || '#1976d2'),
       capacity: Number(draft.capacity),
       distance: Number(draft.distance),
-      unitDistance: Number(draft.unitDistance),
+      diameter: Number(draft.diameter),
+      size: Number(draft.size),
     } : e));
     setEditing(prev => { const n = { ...prev }; delete n[id]; return n; });
     setDrafts(prev => { const n = { ...prev }; delete n[id]; return n; });
@@ -256,15 +276,16 @@ export default function RunGraphAlgorithms({
       color: String(e.color || '#1985d2ff'),
       capacity: Number(e.capacity),
       distance: Number(e.distance),
-      unitDistance: Number(e.unitDistance),
+      diameter: Number(e.diameter),
+      size: Number(e.size),
     }));
 
     if (list.some(e => e.name.length === 0)) {
       notify("error", "İsim boş olamaz.", 2000);
       return;
     }
-    if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.unitDistance) > 0))) {
-      notify("error", "Kapasite, Uzaklık ve Birim Uzaklık 0'dan büyük olmalıdır.", 2200);
+    if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.diameter) > 0) || !(Number(e.size) > 0))) {
+      notify("error", "Kapasite, Uzaklık ve Yarıçap 0'dan büyük olmalıdır.", 2500);
       return;
     }
 
@@ -417,7 +438,8 @@ export default function RunGraphAlgorithms({
                 const nameErr = isEditing && String(view.name || '').trim().length === 0;
                 const capErr = isEditing && !isPositive(view.capacity);
                 const distErr = isEditing && !isPositive(view.distance);
-                const unitErr = isEditing && !isPositive(view.unitDistance);
+                const unitErr = isEditing && !isPositive(view.diameter);
+                const sizeErr = isEditing && !isPositive(view.size);
 
                 return (
                   <Collapse key={entry.id} timeout={200}>
@@ -471,13 +493,23 @@ export default function RunGraphAlgorithms({
                           inputProps={{ min: 1, step: 1 }}
                         />
                         <TextField
-                          label="Birim Uzaklık"
+                          label="Yarıçap"
                           size="small"
                           type="number"
-                          value={view.unitDistance}
-                          onChange={(e) => updateDraft(entry.id, 'unitDistance', e.target.value)}
+                          value={view.diameter}
+                          onChange={(e) => updateDraft(entry.id, 'diameter', e.target.value)}
                           error={unitErr}
                           helperText={unitErr ? "0'dan büyük olmalı" : ''}
+                          inputProps={{ min: 1, step: 1 }}
+                        />
+                        <TextField
+                          label="Boyut"
+                          size="small"
+                          type="number"
+                          value={view.size}
+                          onChange={(e) => updateDraft(entry.id, 'size', e.target.value)}
+                          error={sizeErr}
+                          helperText={sizeErr ? "0'dan büyük olmalı" : ''}
                           inputProps={{ min: 1, step: 1 }}
                         />
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -497,7 +529,8 @@ export default function RunGraphAlgorithms({
                             <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                               <Chip size="small" label={`Kapasite: ${entry.capacity}`} />
                               <Chip size="small" label={`Uzaklık: ${entry.distance}`} />
-                              <Chip size="small" label={`Birim: ${entry.unitDistance}`} />
+                              <Chip size="small" label={`Yarıçap: ${entry.diameter}`} />
+                              <Chip size="small" label={`Büyüklük: ${entry.size}`} />
                             </Box>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 1 }}>

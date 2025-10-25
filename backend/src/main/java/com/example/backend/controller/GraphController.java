@@ -112,7 +112,8 @@ public class GraphController {
         private String color;
         private Double capacity;
         private Double distance;
-        private Double unitDistance;
+        private Double diameter;
+        private Double size;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -122,8 +123,10 @@ public class GraphController {
         public void setCapacity(Double capacity) { this.capacity = capacity; }
         public Double getDistance() { return distance; }
         public void setDistance(Double distance) { this.distance = distance; }
-        public Double getUnitDistance() { return unitDistance; }
-        public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; }
+        public Double getUnitDistance() { return diameter; }
+        public void setUnitDistance(Double diameter) { this.diameter = diameter; }
+        public Double getSize() { return size; }
+        public void setSize(Double size) { this.size = size; }
     }
 
     @PostMapping("/save")
@@ -187,6 +190,7 @@ public class GraphController {
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
                     le.setUnitDistance(dto.getUnitDistance());
+                    le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
             }
@@ -208,7 +212,10 @@ public class GraphController {
 
     @GetMapping("/user")
     public ResponseEntity<?> getUserGraphs(
-            @RequestHeader(name = "Authorization", required = false) String authorization) {
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestParam(name = "range", required = false) String range,
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size) {
 
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
@@ -218,10 +225,67 @@ public class GraphController {
         try {
             Map<String, Object> claims = jwtService.parseClaims(token);
             Long userId = Long.parseLong((String) claims.get("sub"));
-            
-            List<Graph> graphs = graphRepository.findByUserIdOrderByUpdatedAtDesc(userId);
-            
-            return ResponseEntity.ok(graphs);
+
+            // parse pagination
+            boolean paginate = false;
+            int offset = 0;
+            int limit = 0;
+
+            if (range != null && !range.isBlank()) {
+                try {
+                    String[] parts = range.split("-");
+                    if (parts.length != 2) {
+                        return error(HttpStatus.BAD_REQUEST, "INVALID_RANGE", "Geçersiz range formatı. Örnek: 1-10");
+                    }
+                    int start = Integer.parseInt(parts[0].trim());
+                    int end = Integer.parseInt(parts[1].trim());
+                    if (start < 1 || end < start) {
+                        return error(HttpStatus.BAD_REQUEST, "INVALID_RANGE_VALUES", "Range değerleri geçersiz");
+                    }
+                    offset = start - 1; // 1-based -> 0-based
+                    limit = end - start + 1;
+                    paginate = true;
+                } catch (NumberFormatException nfe) {
+                    return error(HttpStatus.BAD_REQUEST, "INVALID_RANGE", "Range sayısal olmalı. Örnek: 1-10");
+                }
+            } else if (page != null && size != null) {
+                if (page < 1 || size < 1) {
+                    return error(HttpStatus.BAD_REQUEST, "INVALID_PAGING", "Sayfa ve boyut 1'den küçük olamaz");
+                }
+                offset = (page - 1) * size;
+                limit = size;
+                paginate = true;
+            }
+
+            if (!paginate) {
+                // backward compatibility: return full list
+                List<Graph> graphs = graphRepository.findByUserIdOrderByUpdatedAtDesc(userId);
+                return ResponseEntity.ok(graphs);
+            }
+
+            // total count
+            Long total = entityManager.createQuery(
+                            "SELECT COUNT(g) FROM Graph g WHERE g.user.id = :uid", Long.class)
+                    .setParameter("uid", userId)
+                    .getSingleResult();
+
+            // paged items
+            List<Graph> items = entityManager.createQuery(
+                            "SELECT g FROM Graph g WHERE g.user.id = :uid ORDER BY g.updatedAt DESC", Graph.class)
+                    .setParameter("uid", userId)
+                    .setFirstResult(offset)
+                    .setMaxResults(limit)
+                    .getResultList();
+
+            Map<String, Object> res = new HashMap<>();
+            res.put("items", items);
+            res.put("total", total);
+            res.put("offset", offset);
+            res.put("limit", limit);
+            res.put("rangeStart", total == 0 ? 0 : offset + 1);
+            res.put("rangeEnd", offset + items.size());
+
+            return ResponseEntity.ok(res);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -463,9 +527,9 @@ public class GraphController {
             if (graph.getLegendEntries() != null) {
                 var itL = graph.getLegendEntries().iterator();
                 while (itL.hasNext()) {
-                    LegendEntry l = itL.next();
+                    LegendEntry le = itL.next();
                     itL.remove();
-                    entityManager.remove(l);
+                    entityManager.remove(le);
                 }
             }
             entityManager.flush();
@@ -482,6 +546,7 @@ public class GraphController {
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
                     le.setUnitDistance(dto.getUnitDistance());
+                    le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
             }

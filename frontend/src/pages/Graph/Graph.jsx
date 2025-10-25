@@ -147,7 +147,7 @@ const Graph = () => {
 					color: le.color,
 					capacity: le.capacity,
 					distance: le.distance,
-					unitDistance: le.unitDistance,
+					diameter: le.diameter,
 				})));
 			} else {
 				setHasLegend(false);
@@ -271,6 +271,27 @@ const Graph = () => {
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
 	}, [selectedNode, selectedEdge, setEdges, setNodes]);
+
+	const updateSearching = (data) => {
+		console.log("Searchsdang data:", data);
+		const visited = new Set(data?.visited ?? []);
+		const visitedEdges = new Set((data?.edges ?? []).map(([a, b]) => `${a}-${b}`));
+
+		setNodes((prev) =>
+			prev.map((n) => ({
+				...n,
+				color: visited.has(n.id) ? "#FFB300" : "#E0E0E0",
+			}))
+		);
+
+		setEdges((prev) =>
+			prev.map((e) => ({
+				...e,
+				// Graph edges use from/to
+				color: visitedEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
+			}))
+		);
+	};
 
 	return (
 		<Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: '100vh' }}>

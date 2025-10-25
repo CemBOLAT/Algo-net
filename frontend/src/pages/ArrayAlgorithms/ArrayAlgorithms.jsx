@@ -18,10 +18,13 @@ import { heapSort } from './sorts/heapSort';
 import { shellSort } from './sorts/shellSort';
 import { countingSort } from './sorts/countingSort';
 import { radixSort } from './sorts/radixSort';
-// Algorithms and controls temporarily removed per request
+import { useI18n } from '../../context/I18nContext';
+import { getAlgoTranslator } from '../../i18n/algoI18n';
 
 const ArrayAlgorithms = () => {
     const navigate = useNavigate();
+    const { t, language } = useI18n();
+    const ta = React.useMemo(() => getAlgoTranslator(language), [language]);
     const [arr, setArr] = useState([]);
     const [value, setValue] = useState('');
     const [mode, setMode] = useState('search'); // 'search' | 'sort'
@@ -72,7 +75,7 @@ const ArrayAlgorithms = () => {
             setTimeout(() => setShowEmptyTargetError(false), 1000);
             return;
         }
-        const t = isNaN(Number(target)) ? target : Number(target);
+        const tVal = isNaN(Number(target)) ? target : Number(target);
         setResultText('');
         setSteps([]);
         setStepIndex(0);
@@ -80,13 +83,13 @@ const ArrayAlgorithms = () => {
 
         if (mode === 'search') {
             if (algorithm === 'linear-search') {
-                const { steps: st, result } = linearSearchSteps(arr, t);
+                const { steps: st, result } = linearSearchSteps(arr, tVal, ta);
                 setSteps(st);
-                setResultText(result.found ? `Bulundu (index: ${result.index})` : 'Bulunamadı');
+                setResultText(result.found ? ta('found_index', { index: result.index }) : ta('not_found'));
             } else if (algorithm === 'binary-search') {
-                const { steps: st, result } = binarySearchSteps(arr, t);
+                const { steps: st, result } = binarySearchSteps(arr, tVal, ta);
                 setSteps(st);
-                setResultText(result.found ? `Bulundu (sıralı kopyada index: ${result.index})` : 'Bulunamadı');
+                setResultText(result.found ? ta('found_index_sorted_copy', { index: result.index }) : ta('not_found'));
             }
         } else if (mode === 'sort') {
             let out = { steps: [], result: arr };
@@ -266,53 +269,51 @@ const ArrayAlgorithms = () => {
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
             <TopBar
-                title="Dizi Algoritmaları"
+                title={t('array_algorithms')}
                 actions={[
-                    { label: 'Kanvas', onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: 'Kanvas' },
-                    { label: 'Profil', onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: 'Profil' },
-                    { label: 'Ağaç Algoritmaları', onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: 'Ağaç Algoritmaları' },
-                    { label: 'Çıkış Yap', onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: 'Çıkış Yap' }
+                    { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+                    { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
+                    { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
                 ]}
             />
-                
-
             <Container maxWidth="lg" sx={{ py: 4 }}>
-                <FlashMessage severity="error" message={showEmptyError && 'Dizi Boş Olamaz.'} sx={{ mb: 2 }} />
-                <FlashMessage severity="error" message={showEmptyTargetError && 'Hedef Boş Olamaz.'} sx={{ mb: 2 }} />
+                <FlashMessage severity="error" message={showEmptyError && ta('array_empty_error')} sx={{ mb: 2 }} />
+                <FlashMessage severity="error" message={showEmptyTargetError && ta('target_empty_error')} sx={{ mb: 2 }} />
                 <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <TextField size="small" label="Değer (Enter ile ekle)" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { setResultText(''); setSteps([]); addValue(); } }} />
+                    <TextField size="small" label={ta('value_input_label')} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { setResultText(''); setSteps([]); addValue(); } }} />
                     <FormControl size="small" sx={{ minWidth: 160 }}>
-                        <InputLabel>İşlem</InputLabel>
-                        <Select value={mode} label="İşlem" onChange={(e) => {
+                        <InputLabel>{ta('mode_label')}</InputLabel>
+                        <Select value={mode} label={ta('mode_label')} onChange={(e) => {
                             const v = e.target.value;
                             setMode(v);
                             setResultText('');
                             setSteps([]);
                             setAlgorithm(v === 'search' ? 'linear-search' : 'bubble');
                         }}>
-                            <MenuItem value="search">Arama</MenuItem>
-                            <MenuItem value="sort">Sıralama</MenuItem>
+                            <MenuItem value="search">{ta('search')}</MenuItem>
+                            <MenuItem value="sort">{ta('sort')}</MenuItem>
                         </Select>
                     </FormControl>
 
                     {mode === 'search' && (
                         <>
                             <FormControl size="small" sx={{ minWidth: 220 }}>
-                                <InputLabel>Arama Algoritması</InputLabel>
-                                <Select value={algorithm} label="Arama Algoritması" onChange={(e) => { setResultText(''); setSteps([]); setAlgorithm(e.target.value); }}>
+                                <InputLabel>{ta('search_algorithm')}</InputLabel>
+                                <Select value={algorithm} label={ta('search_algorithm')} onChange={(e) => { setResultText(''); setSteps([]); setAlgorithm(e.target.value); }}>
                                     <MenuItem value="linear-search">Linear Search</MenuItem>
                                     <MenuItem value="binary-search">Binary Search</MenuItem>
                                 </Select>
                             </FormControl>
-                            <TextField size="small" label="Hedef" value={target} onChange={(e) => { setResultText(''); setSteps([]); setTarget(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { handleRun(); } }} />
+                            <TextField size="small" label={ta('target_label')} value={target} onChange={(e) => { setResultText(''); setSteps([]); setTarget(e.target.value); }} onKeyDown={(e) => { if (e.key === 'Enter') { handleRun(); } }} />
                         </>
                     )}
 
                     {mode === 'sort' && (
                         <>
                             <FormControl size="small" sx={{ minWidth: 220 }}>
-                                <InputLabel>Sıralama Algoritması</InputLabel>
-                                <Select value={algorithm} label="Sıralama Algoritması" onChange={(e) => { setResultText(''); setSteps([]); setAlgorithm(e.target.value); }}>
+                                <InputLabel>{ta('sort_algorithm')}</InputLabel>
+                                <Select value={algorithm} label={ta('sort_algorithm')} onChange={(e) => { setResultText(''); setSteps([]); setAlgorithm(e.target.value); }}>
                                     <MenuItem value="bubble">Bubble Sort</MenuItem>
                                     <MenuItem value="selection">Selection Sort</MenuItem>
                                     <MenuItem value="insertion">Insertion Sort</MenuItem>
@@ -325,19 +326,19 @@ const ArrayAlgorithms = () => {
                                 </Select>
                             </FormControl>
                             <FormControl size="small" sx={{ minWidth: 160 }}>
-                                <InputLabel>Sıra</InputLabel>
-                                <Select value={order} label="Sıra" onChange={(e) => { setResultText(''); setSteps([]); setOrder(e.target.value); }}>
-                                    <MenuItem value="asc">Artan</MenuItem>
-                                    <MenuItem value="desc">Azalan</MenuItem>
+                                <InputLabel>{ta('order_label')}</InputLabel>
+                                <Select value={order} label={ta('order_label')} onChange={(e) => { setResultText(''); setSteps([]); setOrder(e.target.value); }}>
+                                    <MenuItem value="asc">{ta('asc')}</MenuItem>
+                                    <MenuItem value="desc">{ta('desc')}</MenuItem>
                                 </Select>
                             </FormControl>
                         </>
                     )}
-                    <Button variant="contained" color="success" onClick={handleRun}>Çalıştır</Button>
+                    <Button variant="contained" color="success" onClick={handleRun}>{ta('run')}</Button>
                 </Box>
 
                 <Paper sx={{ p: 2, mb: 2 }}>
-                    <Typography variant="h6">Dizi</Typography>
+                    <Typography variant="h6">{ta('array_label')}</Typography>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
                         {arr.map((v, i) => (
                             <Box key={`${v}-${i}`} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -369,7 +370,7 @@ const ArrayAlgorithms = () => {
                 </Paper>
 
                 <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6">Sonuç</Typography>
+                    <Typography variant="h6">{ta('result_label')}</Typography>
                     {/* Boxes visualizer: show step snapshot if present, else show current array */}
                     <Box sx={{ mt: 2, display: 'flex', gap: 1, alignItems: 'flex-end', minHeight: 112 }}>
                         {(steps[stepIndex]?.a ?? arr).map((v, i) => (
@@ -483,7 +484,7 @@ const ArrayAlgorithms = () => {
                                 const isActive = s?.digit === d;
                                 return (
                                     <Box key={`bucket-${d}`} sx={{ borderRadius: 1, boxShadow: isActive ? 6 : 1, bgcolor: isActive ? 'warning.light' : 'background.paper', p: 0.5, minHeight: 40 }}>
-                                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mb: 0.5 }}>kova {d}</Typography>
+                                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mb: 0.5 }}>{ta('bucket_label', { d })}</Typography>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                             {bs && bs.map((val, idx) => (
                                                 <Box key={`bucket-${d}-${idx}`} sx={{ borderRadius: 1, bgcolor: 'action.hover', textAlign: 'center' }}>
@@ -569,18 +570,18 @@ const ArrayAlgorithms = () => {
                     {/* Step controls */}
                     {canStep && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 2 }}>
-                            <Button variant="outlined" onClick={prevStep} disabled={stepIndex <= 0}>Geri</Button>
+                            <Button variant="outlined" onClick={prevStep} disabled={stepIndex <= 0}>{ta('back')}</Button>
                             {!fastPlaying && (
-                                <Button variant="outlined" onClick={fastFinish}>Hızlı Bitir</Button>
+                                <Button variant="outlined" onClick={fastFinish}>{ta('fast_finish')}</Button>
                             )}
                             {!playing ? (
-                                <Button variant="contained" onClick={play}>Oynat</Button>
+                                <Button variant="contained" onClick={play}>{ta('play')}</Button>
                             ) : (
-                                <Button variant="contained" onClick={pause}>Duraklat</Button>
+                                <Button variant="contained" onClick={pause}>{ta('pause')}</Button>
                             )}
-                            <Button variant="outlined" onClick={restart}>Sıfırla</Button>
-                            <Button variant="outlined" onClick={nextStep} disabled={stepIndex >= Math.max(0, steps.length - 1)}>İleri</Button>
-                            <Typography sx={{ ml: 2 }}>Adım: {steps.length ? stepIndex + 1 : 0}/{steps.length || 0}</Typography>
+                            <Button variant="outlined" onClick={restart}>{ta('reset')}</Button>
+                            <Button variant="outlined" onClick={nextStep} disabled={stepIndex >= Math.max(0, steps.length - 1)}>{ta('next')}</Button>
+                            <Typography sx={{ ml: 2 }}>{ta('step_label')}: {steps.length ? stepIndex + 1 : 0}/{steps.length || 0}</Typography>
                         </Box>
                     )}
 

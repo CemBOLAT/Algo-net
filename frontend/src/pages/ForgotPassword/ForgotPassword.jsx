@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-
-import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, Link, Alert, Stack } from '@mui/material';
-import { Email } from '@mui/icons-material';
+import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, Link, Alert, Stack, Menu, MenuItem } from '@mui/material';
+import { Email, Language } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
+import { useI18n } from '../../context/I18nContext';
 const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
 const ForgotPassword = () => {
 	const navigate = useNavigate();
+	const { t, language, setLanguage } = useI18n();
 	const [email, setEmail] = useState('');
 	const [error, setError] = useState('');
 	const [success, setSuccess] = useState('');
 	const [isSending, setIsSending] = useState(false);
+	const [langAnchor, setLangAnchor] = useState(null);
 
 	const handleChange = (e) => {
 		setEmail(e.target.value);
@@ -24,12 +26,12 @@ const ForgotPassword = () => {
 		e.preventDefault();
 
 		if (!email) {
-			setError('Lütfen e-posta adresinizi girin.');
+			setError(t('enter_email_error'));
 			return;
 		}
 
 		if (!email.includes('@')) {
-			setError('Geçerli bir e-posta adresi girin.');
+			setError(t('invalid_email_error'));
 			return;
 		}
 
@@ -41,17 +43,15 @@ const ForgotPassword = () => {
 				body: JSON.stringify({ email })
 			});
 			if (!res.ok) {
-				const data = await res.json().catch(() => ({}));
+			 const data = await res.json().catch(() => ({}));
 				setError(data?.message || 'İşlem başarısız.');
 				setIsSending(false);
 				return;
 			}
 			setError('');
-			setSuccess('Güvenlik kodu e-posta adresinize gönderildi.');
-
-			// Otomatik yönlendirme yok; kullanıcı isteyince devam edecek
+			setSuccess(t('code_sent'));
 		} catch (err) {
-			setError('Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.');
+			setError(t('server_unreachable'));
 		} finally {
 			setIsSending(false);
 		}
@@ -71,7 +71,33 @@ const ForgotPassword = () => {
 						: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
 			}}
 		>
-			<ThemeToggle />
+			{/* Theme + Language (side-by-side, not nested) */}
+			<Box sx={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 1200 }}>
+				<ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
+				<Button
+					variant="contained"
+					size="small"
+					startIcon={<Language />}
+					onClick={(e) => setLangAnchor(e.currentTarget)}
+					aria-haspopup="true"
+					aria-expanded={Boolean(langAnchor) ? 'true' : undefined}
+					sx={{ px: 1.25, fontWeight: 600 }}
+				>
+					{language.toUpperCase()}
+				</Button>
+				<Menu
+					anchorEl={langAnchor}
+					open={Boolean(langAnchor)}
+					onClose={() => setLangAnchor(null)}
+					anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+					transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+				>
+					<MenuItem onClick={() => { setLanguage('tr'); setLangAnchor(null); }}>Türkçe</MenuItem>
+					<MenuItem onClick={() => { setLanguage('en'); setLangAnchor(null); }}>English</MenuItem>
+					{/* Add more languages here later */}
+				</Menu>
+			</Box>
+
 			<Box
 				sx={{
 					display: 'flex',
@@ -101,7 +127,7 @@ const ForgotPassword = () => {
 							gutterBottom
 							sx={{ mb: 2, fontWeight: 'bold' }}
 						>
-							Şifremi Unuttum
+							{t('forgot_password_title')}
 						</Typography>
 
 						<Typography
@@ -110,7 +136,7 @@ const ForgotPassword = () => {
 							color="text.secondary"
 							sx={{ mb: 3 }}
 						>
-							E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim.
+							{t('forgot_password_desc')}
 						</Typography>
 
 						<FlashMessage severity="error" message={error} sx={{ mb: 2 }} />
@@ -122,7 +148,7 @@ const ForgotPassword = () => {
 								required
 								fullWidth
 								id="email"
-								label="E-posta"
+								label={t('email')}
 								name="email"
 								autoComplete="off"
 								autoFocus
@@ -154,7 +180,7 @@ const ForgotPassword = () => {
 									fontWeight: 'bold'
 								}}
 							>
-								{isSending ? 'Gönderiliyor…' : 'Güvenlik Kodu Gönder'}
+								{isSending ? t('sending') : t('send_security_code')}
 							</Button>
 
 							{success && (
@@ -164,7 +190,7 @@ const ForgotPassword = () => {
 									onClick={() => navigate('/reset-password', { state: { email } })}
 									sx={{ py: 1, mb: 2 }}
 								>
-									Kodu Gir ve Devam Et
+									{t('enter_code_and_continue')}
 								</Button>
 							)}
 
@@ -176,12 +202,10 @@ const ForgotPassword = () => {
 									sx={{
 										textAlign: 'center',
 										textDecoration: 'none',
-										'&:hover': {
-											textDecoration: 'underline'
-										}
+										'&:hover': { textDecoration: 'underline' }
 									}}
 								>
-									Giriş sayfasına dön
+									{t('back_to_login')}
 								</Link>
 							</Stack>
 						</Box>
