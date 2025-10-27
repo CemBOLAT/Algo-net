@@ -1,7 +1,9 @@
 import React from 'react';
 import { Box, Button } from '@mui/material';
+import { useI18n } from '../../../context/I18nContext';
 
 const BottomActions = ({ onOpenQuickGraph, onReset, onOpenFile, onCreate }) => {
+	const { t } = useI18n();
 	return (
 		<Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'center' }}>
 			<Box sx={{ display: 'flex', gap: 2 }}>
@@ -10,23 +12,23 @@ const BottomActions = ({ onOpenQuickGraph, onReset, onOpenFile, onCreate }) => {
 					sx={{ border: '1px solid rgba(59, 130, 246, 0.3)', color: 'primary.main' }}
 					onClick={onOpenQuickGraph}
 				>
-					Hızlı Graph
+					{t('quick_graph_btn')}
 				</Button>
 				<Button 
 					className="tm-modern-btn" 
 					sx={{ border: '1px solid rgba(239, 68, 68, 0.3)', color: 'error.main' }}
 					onClick={onReset}
 				>
-					Reset
+					{t('reset_btn')}
 				</Button>
 			</Box>
 
 			<Box sx={{ display: 'flex', gap: 2 }}>
 				<Button className="tm-modern-btn" sx={{ border: '1px solid rgba(255,255,255,0.06)' }} onClick={onOpenFile}>
-					Dosya Ekle
+					{t('file_add_btn')}
 				</Button>
 				<Button className="tm-modern-btn tm-modern-success" onClick={onCreate}>
-					Oluştur
+					{t('create_btn')}
 				</Button>
 			</Box>
 		</Box>
