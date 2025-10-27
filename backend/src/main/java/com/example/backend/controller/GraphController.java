@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -22,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 @RestController
 @RequestMapping("/api/graphs")
@@ -47,6 +50,8 @@ public class GraphController {
         // legend fields
         private Boolean hasLegend;
         private List<LegendEntryDTO> legendEntries;
+        // NEW: user id for internal key flow
+        private Long userId;
 
         // Getters and setters
         public String getName() { return name; }
@@ -59,6 +64,9 @@ public class GraphController {
         public void setHasLegend(Boolean hasLegend) { this.hasLegend = hasLegend; }
         public List<LegendEntryDTO> getLegendEntries() { return legendEntries; }
         public void setLegendEntries(List<LegendEntryDTO> legendEntries) { this.legendEntries = legendEntries; }
+        // NEW: userId getter/setter
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
     }
 
     public static class NodeDTO {
@@ -112,7 +120,15 @@ public class GraphController {
         private String color;
         private Double capacity;
         private Double distance;
+
+        // Prefer unitDistance; accept legacy 'diameter' too
+        @JsonProperty("unitDistance")
+        @JsonAlias({"diameter"})
+        private Double unitDistance;
+
+        // Keep diameter for backward compatibility with any serializers
         private Double diameter;
+
         private Double size;
 
         public String getName() { return name; }
@@ -123,35 +139,84 @@ public class GraphController {
         public void setCapacity(Double capacity) { this.capacity = capacity; }
         public Double getDistance() { return distance; }
         public void setDistance(Double distance) { this.distance = distance; }
-        public Double getUnitDistance() { return diameter; }
-        public void setUnitDistance(Double diameter) { this.diameter = diameter; }
+
+        // Unified accessors
+        public Double getUnitDistance() { return unitDistance != null ? unitDistance : diameter; }
+        public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; this.diameter = unitDistance; }
+
+        public Double getDiameter() { return diameter; }
+        public void setDiameter(Double diameter) { this.diameter = diameter; if (this.unitDistance == null) this.unitDistance = diameter; }
+
         public Double getSize() { return size; }
         public void setSize(Double size) { this.size = size; }
     }
 
+    @Value("${app.internal.api-key:}")
+    private String internalApiKey;
+
     @PostMapping("/save")
     public ResponseEntity<?> saveGraph(
             @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestHeader(name = "X-Internal-Api-Key", required = false) String internalKeyHeader,
+            @RequestHeader(name = "X-Internal-User-Id", required = false) Long internalUserId,
             @Valid @RequestBody SaveGraphRequest request) {
 
-        // Header protection - check for authorization token
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            return error(HttpStatus.UNAUTHORIZED, "NO_TOKEN", "Token bulunamadı");
-        }
+        User user;
 
-        String token = authorization.substring(7).trim();
-        try {
-            // Validate JWT and get user
-            Map<String, Object> claims = jwtService.parseClaims(token);
-            Long userId = Long.parseLong((String) claims.get("sub"));
-            Optional<User> userOpt = userRepository.findById(userId);
-            
-            if (userOpt.isEmpty()) {
-                return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı bulunamadı");
+        // Resolve effective internal key: property or env fallback
+        String effectiveInternalKey = (internalApiKey != null && !internalApiKey.isBlank())
+                ? internalApiKey
+                : System.getenv("INTERNAL_API_KEY");
+
+        // Priority 1: Internal key flow
+        if (internalKeyHeader != null && effectiveInternalKey != null && internalKeyHeader.equals(effectiveInternalKey)) {
+
+            Long userId = request.getUserId();
+            if (userId == null && internalUserId != null) {
+                userId = internalUserId;
+            }
+            if (userId == null) {
+                return error(HttpStatus.BAD_REQUEST, "USER_ID_REQUIRED", "Internal request must provide a userId");
             }
 
-            User user = userOpt.get();
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                return error(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Kullanıcı (ID'den) bulunamadı");
+            }
+            user = userOpt.get();
 
+        // Priority 2: Bearer token flow
+        } else if (authorization != null && authorization.startsWith("Bearer ")) {
+            try {
+                String token = authorization.substring(7).trim();
+                Map<String, Object> claims = jwtService.parseClaims(token);
+                Object subObj = claims.get("sub");
+                Long userId = (subObj instanceof String) ? Long.parseLong((String) subObj)
+                             : (subObj instanceof Number) ? ((Number) subObj).longValue()
+                             : null;
+                if (userId == null) {
+                    return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz (sub yok)");
+                }
+
+                Optional<User> userOpt = userRepository.findById(userId);
+                if (userOpt.isEmpty()) {
+                    return error(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "Kullanıcı (Token'dan) bulunamadı");
+                }
+                user = userOpt.get();
+            } catch (Exception e) {
+                return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
+            }
+
+        } else {
+            return error(HttpStatus.UNAUTHORIZED, "NO_AUTH", "Kimlik doğrulama bilgisi bulunamadı (Token veya API Key eksik)");
+        }
+
+        // --- END AUTH LOGIC ---
+
+        // If we get here, 'user' is valid and authenticated.
+        // Now, we run the graph-saving logic in its OWN try-catch block.
+        // This is better than your original code, which would call a save error "INVALID_TOKEN".
+        try {
             // Create and save graph
             Graph graph = new Graph(request.getName(), user);
             
@@ -189,7 +254,9 @@ public class GraphController {
                     le.setColor(dto.getColor());
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
-                    le.setUnitDistance(dto.getUnitDistance());
+                    // ensure not-null for DB constraint
+                    Double unitDist = dto.getUnitDistance() != null ? dto.getUnitDistance() : 1.0;
+                    le.setUnitDistance(unitDist);
                     le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
@@ -206,7 +273,10 @@ public class GraphController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş");
+            // This is now a *real* server error, not an auth error
+            // You should log this error!
+            // log.error("Error saving graph for user {}: {}", user.getId(), e.getMessage(), e);
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "GRAPH_SAVE_FAILED", "Grafik kaydedilirken bir sunucu hatası oluştu: " + e.getMessage());
         }
     }
 
@@ -545,7 +615,9 @@ public class GraphController {
                     le.setColor(dto.getColor());
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
-                    le.setUnitDistance(dto.getUnitDistance());
+                    // ensure not-null for DB constraint
+                    Double unitDist = dto.getUnitDistance() != null ? dto.getUnitDistance() : 1.0;
+                    le.setUnitDistance(unitDist);
                     le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
