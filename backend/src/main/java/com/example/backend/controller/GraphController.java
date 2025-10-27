@@ -121,12 +121,8 @@ public class GraphController {
         private Double capacity;
         private Double distance;
 
-        // Prefer unitDistance; accept legacy 'diameter' too
-        @JsonProperty("unitDistance")
-        @JsonAlias({"diameter"})
-        private Double unitDistance;
-
-        // Keep diameter for backward compatibility with any serializers
+        // Prefer diameter; accept legacy aliases if provided
+        @JsonAlias({"unitDist", "unitDistance"})
         private Double diameter;
 
         private Double size;
@@ -141,11 +137,8 @@ public class GraphController {
         public void setDistance(Double distance) { this.distance = distance; }
 
         // Unified accessors
-        public Double getUnitDistance() { return unitDistance != null ? unitDistance : diameter; }
-        public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; this.diameter = unitDistance; }
-
         public Double getDiameter() { return diameter; }
-        public void setDiameter(Double diameter) { this.diameter = diameter; if (this.unitDistance == null) this.unitDistance = diameter; }
+        public void setDiameter(Double diameter) { this.diameter = diameter; }
 
         public Double getSize() { return size; }
         public void setSize(Double size) { this.size = size; }
@@ -255,8 +248,7 @@ public class GraphController {
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
                     // ensure not-null for DB constraint
-                    Double unitDist = dto.getUnitDistance() != null ? dto.getUnitDistance() : 1.0;
-                    le.setUnitDistance(unitDist);
+                    Double unitDist = dto.getDiameter() != null ? dto.getDiameter() : 1.0;
                     le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }
@@ -616,8 +608,7 @@ public class GraphController {
                     le.setCapacity(dto.getCapacity());
                     le.setDistance(dto.getDistance());
                     // ensure not-null for DB constraint
-                    Double unitDist = dto.getUnitDistance() != null ? dto.getUnitDistance() : 1.0;
-                    le.setUnitDistance(unitDist);
+                    Double unitDist = dto.getDiameter() != null ? dto.getDiameter() : 1.0;
                     le.setSize(dto.getSize());
                     graph.getLegendEntries().add(le);
                 }

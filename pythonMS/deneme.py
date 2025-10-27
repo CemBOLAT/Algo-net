@@ -40,6 +40,7 @@ print("Type_Diameter:", Type_Diameter)
 print("BuildingSize:", BuildingSize)
 print("TypesWithR:", T)
 
+BuildingSize.update( {"R": 1} )
 Type_colors.update({"R": "white"})
 
 def build_matrix(vertices, edges):
@@ -251,6 +252,8 @@ SubGraphs = {}
 
 # Precompute DP results for all requested sizes to reuse across types
 target_sizes = [entry.get('size') for entry in entries]
+# Add "R" size if needed
+target_sizes += [1]  # Since "R" buildings are size 1
 dp_by_size = enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes)
 
 for entry in sorted(entries, key=lambda e: e.get('size', 0)):
@@ -260,11 +263,10 @@ for entry in sorted(entries, key=lambda e: e.get('size', 0)):
     subgraphs_of_size = dp_by_size.get(int(size), [])
     # Apply diameter constraint on shortest-path grid
     max_diameter = entry.get('diameter')
-    valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat_dist, id_to_idx)
+    valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat_walk, id_to_idx)
     SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]
 
-
- 
+print("SubGraphs:", SubGraphs) 
 
 S = { (v,t) : [g for g in SubGraphs[t] if check_group_vertex_validation(g, v, t)] for v in Nodes for t in T_Without_R }
 
@@ -282,9 +284,6 @@ for t in T_Without_R:
     for g in SubGraphs[t]:
         subGraph_types.append((g, t))
 
-        
-
-
 x_vt = pulp.LpVariable.dicts("Conteiner type", container_types, cat='Binary')
 
 u_gt = pulp.LpVariable.dicts("Selecting group type", subGraph_types, cat='Binary')
@@ -295,7 +294,7 @@ model += pulp.lpSum(x_vt[(v, "R")] for v in Nodes), "Total_Residences"
 
 # Constraint 1: Node Assignment Constraint
 for v in Nodes:
-    model += pulp.lpSum(x_vt[(v, t)] for t in T) == 1
+    model += pulp.lpSum(x_vt[(v, t)] for t in T) <= 1
 
 # Constraint 2: Rainbow Coverage
 
@@ -305,11 +304,11 @@ for v in Nodes:
         
 
 # Kısıt 3 size constraint
-
 for g, t in subGraph_types:
-    model += sum(x_vt[(u,t)] for u in g) == Capacity[t] * u_gt[(g,t)]
+    model += sum(x_vt[(u,t)] for u in g) == BuildingSize[t] * u_gt[(g,t)]
 
-
+#print("SubGraph_types length:", len(subGraph_types))
+#print(f"Subgraphs", SubGraphs)
 
 model.solve(pulp.PULP_CBC_CMD(msg=True))
 
@@ -320,17 +319,26 @@ for v in Nodes:
         if x_vt[v, t].value():
             vertex_colors[v] = Type_colors[t]
 
-
+print("Status:", pulp.LpStatus[model.status])
 
 def display_res():
-    print("     melik | okul | sağlık |   R")
+    # Başlığı dinamik olarak T listesinden oluştur
+    header = "Node  | " + " | ".join(f"{t:<6}" for t in T)
+    print(header)
+    print("-" * len(header))
+
     for v in Nodes:
-        print(v, "   ", end="")
+        print(f"{v:<5} | ", end="")
+        values = []
         for t in T:
-            print(x_vt[v, t].value(), "    ", end="")
-        print("")
+            val = x_vt[v, t].value()
+            # None yerine 0.0 göstermek daha okunaklı olur
+            val_str = f"{val if val is not None else 0.0:<6.1f}"
+            values.append(val_str)
+        print(" | ".join(values))
 
 display_res()
+
 
 print("$$$")
 print(json.dumps(vertex_colors))
