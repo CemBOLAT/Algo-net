@@ -40,6 +40,7 @@ print("Type_Diameter:", Type_Diameter)
 print("BuildingSize:", BuildingSize)
 print("TypesWithR:", T)
 
+Type_colors.update({"R": "white"})
 
 def build_matrix(vertices, edges):
     """
@@ -308,19 +309,21 @@ for v in Nodes:
 for g, t in subGraph_types:
     model += sum(x_vt[(u,t)] for u in g) == Capacity[t] * u_gt[(g,t)]
 
-vertex_colors = {vertex['id'] : "" for vertex in vertices}
+
 
 model.solve(pulp.PULP_CBC_CMD(msg=True))
 
+vertex_colors = {vertex['id'] : "" for vertex in vertices}
+
 for v in Nodes:
     for t in T:
-        if x_vt[v, t]:
+        if x_vt[v, t].value():
             vertex_colors[v] = Type_colors[t]
 
 
 
 def display_res():
-    print("       R   |  melik   |  okul   |  sağlık")
+    print("     melik | okul | sağlık |   R")
     for v in Nodes:
         print(v, "   ", end="")
         for t in T:
