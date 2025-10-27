@@ -12,6 +12,7 @@ vertices = json.loads(vertices_json)
 edges = json.loads(edges_json)
 entries = json.loads(entries_json) if entries_json else []
 
+edge_set = {(edge["from"], edge["to"]) : edge["weight"] for edge in edges}  # For mix euclidien 
 print("Vertices:", vertices[0])
 print("Edges:", edges)
 print("Entries:", entries)
@@ -22,6 +23,7 @@ print("Entries:", entries)
 #     {'name': 'okul', 'color': '#b319d2', 'capacity': 1, 'distance': 1, 'diameter': 1, 'size': 4}
 # ]
 
+Nodes = [v['id'] for v in vertices]
 T_Without_R = [ entry['name'] for entry in entries ]
 Capacity = { entry['name'] : entry['capacity'] for entry in entries }
 Type_distances = { entry['name'] : entry['distance'] for entry in entries }
@@ -88,16 +90,87 @@ def enumerate_connected_subgraphs_matrix(mat, node_ids, x):
         ext = {w for w in neighbors(u) if w > u}
         yield from backtrack(u, S, ext)
 
-def build_grid_matrix(vertices, edges):
+def build_grid_matrix(vertices, edges, walk):
     # Convert it to fully completed with floyd-warshall
     mat, id_to_idx = build_matrix(vertices, edges)
-    n = mat.shape[0]
-    for k in range(n):
-        for i in range(n):
-            for j in range(n):
-                if mat[i, j] > mat[i, k] + mat[k, j]:
-                    mat[i, j] = mat[i, k] + mat[k, j]
+
+    # Finding Fly distances according to existing weights
+    col_size = 1
+
+    for index in range(len(Nodes)):
+        if (Nodes[index], Nodes[index+1]) in edge_set:
+            col_size += 1
+        else:
+            break
+
+    print(f"col size : {col_size}")
+    row, col = 0, 0
+
+    Pos = {}
+    Pos_reverse = {}
+
+    for v in range(len(Nodes)):
+        if (col == col_size):
+            col = 0
+            row += 1
+        Pos.update( {v: (row, col)})
+        #print(f"{v} pos : {row}-{col}")
+        Pos_reverse.update( {(row, col) : v})
+        col += 1
+
+    # Calculating x and y axes weights to calculate euclidian with just between vertices in same street
+    for outer in range(len(Nodes)):
+        for inner in range(len(Nodes)):
+            if (inner != outer and mat[outer, inner] == np.inf ):
+                if ( walk == 1 and Pos[inner][0] - Pos[outer][0] != 1):
+                    continue
+                x = 0
+                y = 0
+                pos = Pos[inner]
+                outPos = Pos[outer]
+                
+                if (pos[1] > outPos[1]):
+                    
+                    while (pos[1] != outPos[1]):
+                        x += mat[Pos_reverse[pos], Pos_reverse[(pos[0], pos[1]-1)]]
+                        pos = (pos[0], pos[1]-1) 
+                    
+                    pos = Pos[inner]
+                elif ( pos[1] < outPos[1]):
+                    while (pos[1] != outPos[1]):
+                        x += mat[Pos_reverse[pos], Pos_reverse[(pos[0], pos[1]+1)]]
+                        pos = (pos[0], pos[1]+1) 
+                    
+                    pos = Pos[inner]
+                
+                
+                if (pos[0] > outPos[0]):
+                    while (pos[0] != outPos[0]):
+                        y += mat[Pos_reverse[pos], Pos_reverse[(pos[0]-1, pos[1])]]
+                        pos = (pos[0]-1, pos[1])
+                elif (pos[0] < outPos[0]):
+                    while (pos[0] != outPos[0]):
+                        y += mat[Pos_reverse[pos], Pos_reverse[(pos[0]+1, pos[1])]]
+                        pos = (pos[0]+1, pos[1]) 
+                    pos = Pos[inner]
+
+
+
+                w = np.sqrt(np.square(x) + np.square(y)).round(2)
+                #print(f"{outer}-{inner} : x={x}, y={y}, w={w}")
+                mat[inner, outer] = w
+                mat[outer, inner] = w
+
+    # Applying Flloyd-Marshall algorithm with added euclidian values
+    if (walk == 1):
+        for k in range(mat.shape[0]):
+            for i in range(mat.shape[0]):
+                for j in range(mat.shape[0]):
+                    if mat[i, j] > mat[i, k] + mat[k, j]:
+                        mat[i, j] = mat[i, k] + mat[k, j]
+    
     return mat, id_to_idx
+
 
 #Define a function that takes all subgraphs for that size and type and returns the valid ones according to diameter constraints
 def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
@@ -108,7 +181,7 @@ def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
         for i in range(len(indices)):
             for j in range(i + 1, len(indices)):
                 dist = grid_mat[indices[i], indices[j]]
-                print(f"dist-max_dist: {dist}-{max_dist}")
+                #print(f"dist-max_dist: {dist}-{max_dist}")
                 if dist > max_dist:
                     max_dist = dist
         if max_dist <= max_diameter:
@@ -116,58 +189,145 @@ def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
     return valid_subgraphs
 
 
+def enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes):
+    n = len(node_ids)
+    sizes_sorted = sorted(set(int(s) for s in target_sizes if s is not None))
+    if not sizes_sorted:
+        return {}
+
+    # Build proper adjacency: finite and positive weights only (exclude np.inf)
+    adjacency = np.isfinite(mat) & (mat > 0)
+    np.fill_diagonal(adjacency, False)
+    neighbors_list = [set(np.where(adjacency[i])[0]) for i in range(n)]
+
+    # Start with all singletons
+    results_idx = {1: [frozenset([i]) for i in range(n)]}
+    max_k = sizes_sorted[-1]
+
+    # Build up by size, enforcing canonical order (v > max(S)) to avoid permutations
+    for k in range(2, max_k + 1):
+        prev_sets = results_idx.get(k - 1, [])
+        new_sets = set()
+        for S in prev_sets:
+            boundary = set()
+            for u in S:
+                boundary |= neighbors_list[u]
+            boundary -= set(S)
+            max_idx = max(S)
+            for v in boundary:
+                if v <= max_idx:
+                    continue  # canonical growth to eliminate permutations
+                new_S = frozenset(set(S) | {v})
+                if len(new_S) == k:
+                    new_sets.add(new_S)
+        results_idx[k] = list(new_sets)
+
+    idx_to_id = dict(enumerate(node_ids))
+    results = {}
+    for k in sizes_sorted:
+        results[k] = [set(idx_to_id[i] for i in S) for S in results_idx.get(k, [])]
+    return results
+
+
+def check_group_vertex_validation(G, v, t):
+    for u in G:
+        if (grid_mat_walk[id_to_idx_walk[u], id_to_idx_walk[v]] <= Type_distances[t] ):
+            return True
+    
+    return False
+
+
 mat, id_to_idx = build_matrix(vertices, edges)
-grid_mat, id_to_idx = build_grid_matrix(vertices, edges)
+grid_mat_walk, id_to_idx_walk = build_grid_matrix(vertices, edges, 1)
+
+grid_mat_dist, id_to_idx_dist = build_grid_matrix(vertices, edges, 0)
+
+
 
 node_ids = list(id_to_idx.keys())
 
 SubGraphs = {}
 
-for entry in entries:
+# Precompute DP results for all requested sizes to reuse across types
+target_sizes = [entry.get('size') for entry in entries]
+dp_by_size = enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes)
+
+for entry in sorted(entries, key=lambda e: e.get('size', 0)):
     name = entry.get('name')
     size = entry.get('size')
-    # print("Finding subgraphs for", name, "with size:", size)
-    subgraphs_of_size = list(enumerate_connected_subgraphs_matrix(mat, node_ids, x=size))
-    # print(f"Total subgraphs of size {size} for {name}:", len(subgraphs_of_size))
-
-    # Now filter by diameter
+    # Use precomputed connected subgraphs for this size
+    subgraphs_of_size = dp_by_size.get(int(size), [])
+    # Apply diameter constraint on shortest-path grid
     max_diameter = entry.get('diameter')
-    #print(f"Filtering subgraphs for {name} with max diameter:", max_diameter)
-    valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat, id_to_idx)
-    SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]   
-    #print(f"Valid subgraphs for {name} after diameter filter:", len(valid_subgraphs))
+    valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat_dist, id_to_idx)
+    SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]
 
-# for name, subgraphs in SubGraphs.items():
-#     print(f"Subgraphs for {name}:", subgraphs)
+
  
-Nodes = [v['id'] for v in vertices]
+
+S = { (v,t) : [g for g in SubGraphs[t] if check_group_vertex_validation(g, v, t)] for v in Nodes for t in T_Without_R }
+
 
 model = pulp.LpProblem("Maximize_Residences", pulp.LpMaximize)
 
 # x_st: t türü bina s konumuna yerleştirilirse 1 olur.
-building_vars = []
+container_types = []
+for t in T:
+    for v in Nodes:
+        container_types.append((v, t))
+
+subGraph_types = []
 for t in T_Without_R:
-    for s in SubGraphs[t]:
-        building_vars.append((t, s))
+    for g in SubGraphs[t]:
+        subGraph_types.append((g, t))
+
         
-x_st = pulp.LpVariable.dicts("type_t_pos_s_its1", building_vars, cat='Binary')
 
-y_j = pulp.LpVariable.dicts("if_residential_its1", Nodes, cat='Binary')
 
-model += pulp.lpSum(y_j[j] for j in Nodes), "Total_Residences"
+x_vt = pulp.LpVariable.dicts("Conteiner type", container_types, cat='Binary')
+
+u_gt = pulp.LpVariable.dicts("Selecting group type", subGraph_types, cat='Binary')
+
+y_vgt = pulp.LpVariable.dicts("vertex-group assigning", Nodes, cat='Binary')  # Will be used for demand
+
+model += pulp.lpSum(x_vt[(v, "R")] for v in Nodes), "Total_Residences"
 
 # Constraint 1: Node Assignment Constraint
-for j in Nodes:
-    model += pulp.lpSum(x_st[(t, s)] for t, s in building_vars if j in s) + y_j[j] <= 1
+for v in Nodes:
+    model += pulp.lpSum(x_vt[(v, t)] for t in T) == 1
 
-# Kısıt 2: Kapsama Kısıtı (Rainbow Coverage)
-
-vertex_colors = {vertex['id'] : "" for vertex in vertices}
+# Constraint 2: Rainbow Coverage
 
 for v in Nodes:
     for t in T_Without_R:
-        # Use solved value
-        vertex_colors[v] = Type_colors[t]
+        model += pulp.lpSum(u_gt[(g,t)] for g in S[(v,t)]) >= x_vt[(v, 'R')]
+        
+
+# Kısıt 3 size constraint
+
+for g, t in subGraph_types:
+    model += sum(x_vt[(u,t)] for u in g) == Capacity[t] * u_gt[(g,t)]
+
+vertex_colors = {vertex['id'] : "" for vertex in vertices}
+
+model.solve(pulp.PULP_CBC_CMD(msg=True))
+
+for v in Nodes:
+    for t in T:
+        if x_vt[v, t]:
+            vertex_colors[v] = Type_colors[t]
+
+
+
+def display_res():
+    print("       R   |  melik   |  okul   |  sağlık")
+    for v in Nodes:
+        print(v, "   ", end="")
+        for t in T:
+            print(x_vt[v, t].value(), "    ", end="")
+        print("")
+
+display_res()
 
 print("$$$")
 print(json.dumps(vertex_colors))
