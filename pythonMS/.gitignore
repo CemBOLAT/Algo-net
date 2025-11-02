@@ -29,9 +29,6 @@ venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Cplex
-residential_model.lp
-
 # Unit test / coverage reports #
 htmlcov/
 .tox/
@@ -73,3 +70,5 @@ package-lock.json
 # Compiled C extensions #
 *.so
 
+# lp files #
+*.lp

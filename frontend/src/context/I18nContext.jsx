@@ -72,7 +72,6 @@ const translations = {
     no_graphs_message: 'Henüz hiç graph bulunamadı. İlk graphı oluşturun!',
     view_edit: 'Görüntüle/Düzenle',
     delete: 'Sil',
-    cancel: 'İptal',
     close: 'Kapat',
     delete_graphs_title: 'Graphları Sil',
     graphs_delete_confirm_suffix: 'adet graphı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
@@ -336,7 +335,6 @@ const translations = {
     // weight editor
     edit_weight_title: 'Edit Edge Weight',
     weight_label: 'Weight',
-    cancel: 'Cancel',
     save: 'Save',
 
     // Weighted example / File info
