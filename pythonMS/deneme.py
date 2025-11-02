@@ -301,7 +301,6 @@ for v in Nodes:
     model += pulp.lpSum(x_vt[(v, t)] for t in T) <= 1
 
 # Constraint 2: Rainbow Coverage
-
 for v in Nodes:
     for t in T_Without_R:
         model += pulp.lpSum(u_gt[(g,t)] for g in S[(v,t)]) >= x_vt[(v, 'R')]
@@ -317,8 +316,6 @@ for g, t in subGraph_types:
 model.solve(pulp.PULP_CBC_CMD(msg=True))
 
 vertex_colors = {vertex['id'] : "black" for vertex in vertices}
-
-
 
 for v in Nodes:
     for t in T:

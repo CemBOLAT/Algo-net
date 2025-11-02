@@ -3,7 +3,6 @@ import pulp
 import json
 import sys
 import numpy as np
-
 from docplex.mp.model import Model
 from typing import Dict, Iterable, Tuple, List, Set
 
@@ -16,9 +15,9 @@ edges = json.loads(edges_json)
 entries = json.loads(entries_json) if entries_json else []
 
 edge_set = {(edge["from"], edge["to"]) : edge["weight"] for edge in edges}  # For mix euclidien 
-print("Vertices:", vertices[0])
-print("Edges:", edges)
-print("Entries:", entries)
+# print("Vertices:", vertices[0])
+# print("Edges:", edges)
+# print("Entries:", entries)
 
 # entries: [
 #     {'name': 'cemak', 'color': '#17fd32', 'capacity': 1, 'distance': 1, 'diameter': 1, 'size': 3}, 
@@ -35,13 +34,13 @@ Type_Diameter = { entry['name'] : entry['diameter'] for entry in entries }
 BuildingSize = { entry['name'] : entry['size'] for entry in entries }
 T = T_Without_R + ["R"]
 
-print("Types:", T_Without_R)
-print("Demands:", Capacity)
-print("Type_distances:", Type_distances)
-print("Type_colors:", Type_colors)
-print("Type_Diameter:", Type_Diameter)
-print("BuildingSize:", BuildingSize)
-print("TypesWithR:", T)
+# print("Types:", T_Without_R)
+# print("Demands:", Capacity)
+# print("Type_distances:", Type_distances)
+# print("Type_colors:", Type_colors)
+# print("Type_Diameter:", Type_Diameter)
+# print("BuildingSize:", BuildingSize)
+# print("TypesWithR:", T)
 
 BuildingSize.update( {"R": 1} )
 Type_colors.update({"R": "white"})
@@ -108,7 +107,7 @@ def build_grid_matrix(vertices, edges, walk):
         else:
             break
 
-    print(f"col size : {col_size}")
+    #print(f"col size : {col_size}")
     row, col = 0, 0
 
     Pos = {}
@@ -176,7 +175,6 @@ def build_grid_matrix(vertices, edges, walk):
     
     return mat, id_to_idx
 
-
 #Define a function that takes all subgraphs for that size and type and returns the valid ones according to diameter constraints
 def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
     valid_subgraphs = []
@@ -192,7 +190,6 @@ def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
         if max_dist <= max_diameter:
             valid_subgraphs.append(subgraph)
     return valid_subgraphs
-
 
 def enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes):
     n = len(node_ids)
@@ -236,17 +233,16 @@ def enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes):
 
 def check_group_vertex_validation(G, v, t):
     for u in G:
-        if (grid_mat_walk[id_to_idx_walk[u], id_to_idx_walk[v]] <= Type_distances[t] ):
+        if (grid_mat_walk[id_to_idx_walk[u], id_to_idx_walk[v]] <= Type_distances[t]):
             return True
-    
     return False
 
 
 mat, id_to_idx = build_matrix(vertices, edges)
 grid_mat_walk, id_to_idx_walk = build_grid_matrix(vertices, edges, 1)
 
-grid_mat_dist, id_to_idx_dist = build_grid_matrix(vertices, edges, 0)
-
+#print("Adjacency Matrix:\n", mat)
+#print("Grid Matrix (Walk):\n", grid_mat_walk)
 
 
 node_ids = list(id_to_idx.keys())
@@ -255,6 +251,7 @@ SubGraphs = {}
 
 # Precompute DP results for all requested sizes to reuse across types
 target_sizes = [entry.get('size') for entry in entries]
+
 # Add "R" size if needed
 target_sizes += [1]  # Since "R" buildings are size 1
 dp_by_size = enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes)
@@ -269,11 +266,11 @@ for entry in sorted(entries, key=lambda e: e.get('size', 0)):
     valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat_walk, id_to_idx)
     SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]
 
-print("SubGraphs:", SubGraphs) 
+#print("SubGraphs:", SubGraphs) 
 
 S = { (v,t) : [g for g in SubGraphs[t] if check_group_vertex_validation(g, v, t)] for v in Nodes for t in T_Without_R }
 
-print(f"S: {S}")
+#print(f"S: {S}")
 
 # x_st: t türü bina s konumuna yerleştirilirse 1 olur.
 container_types = []
@@ -281,7 +278,7 @@ for t in T:
     for v in Nodes:
         container_types.append((v, t))
 
-print(f"container types2 : {container_types}")
+#print(f"container types2 : {container_types}")
 
 subGraph_types = []
 for t in T_Without_R:
@@ -438,14 +435,6 @@ for v in Nodes:
         if model.solution.get_value(f"x_{v}_{t}") > 0:
             vertex_colors[v] = Type_colors[t]
 
-
-
-""" 
-for v in Nodes:
-    for t in T:
-        if x_vt[v, t].value():
-            vertex_colors[v] = Type_colors[t]
-
 def display_res():
     # Başlığı dinamik olarak T listesinden oluştur
     header = "Node  | " + " | ".join(f"{t:<6}" for t in T)
@@ -456,13 +445,13 @@ def display_res():
         print(f"{v:<5} | ", end="")
         values = []
         for t in T:
-            val = x_vt[v, t].value()
+            val = model.solution.get_value(f"x_{v}_{t}")
             # None yerine 0.0 göstermek daha okunaklı olur
             val_str = f"{val if val is not None else 0.0:<6.1f}"
             values.append(val_str)
         print(" | ".join(values))
-  """
 
+#display_res()
 
 print("$$$")
 print(json.dumps(vertex_colors))
