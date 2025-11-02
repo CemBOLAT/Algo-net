@@ -1,7 +1,11 @@
+
 import pulp
 import json
 import sys
 import numpy as np
+
+from docplex.mp.model import Model
+from typing import Dict, Iterable, Tuple, List, Set
 
 vertices_json = sys.argv[1]
 edges_json = sys.argv[2]
@@ -271,8 +275,6 @@ S = { (v,t) : [g for g in SubGraphs[t] if check_group_vertex_validation(g, v, t)
 
 print(f"S: {S}")
 
-model = pulp.LpProblem("Maximize_Residences", pulp.LpMaximize)
-
 # x_st: t türü bina s konumuna yerleştirilirse 1 olur.
 container_types = []
 for t in T:
@@ -286,46 +288,163 @@ for t in T_Without_R:
     for g in SubGraphs[t]:
         subGraph_types.append((g, t))
 
-print(f"subgraph types: {subGraph_types}")
+#####       Model Başlangıç    ##############
 
-x_vt = pulp.LpVariable.dicts("Conteiner type", container_types, cat='Binary')
 
-u_gt = pulp.LpVariable.dicts("Selecting group type", subGraph_types, cat='Binary')
+def build_model(V: List[str],
+                T: List[str],
+                G: Dict[str, List[Tuple[str, ...]]],
+                A: Dict[str, int],
+                S: Dict[Tuple[str, str], List[Tuple[str, ...]]],
+                non_res_types: List[str],
+                r_type: str = "R",
+                name: str = 'residential_ilp') -> Model:
+    """
+    Build the DOcplex model.
 
-y_vgt = pulp.LpVariable.dicts("vertex-group assigning", Nodes, cat='Binary')  # Will be used for demand
+    Parameters
+    ----------
+    V : iterable of vertex ids (hashable, e.g. str or int)
+    T : iterable of type ids (include residential type `r_type`)
+    G : dict mapping type -> list of groups. Each group is represented by a tuple of vertices.
+        Example: G['c'] = [("v1","v2"),("v3","v4","v5"), ...]
+        Groups must be disjoint or overlapping as your instance requires.
+    A : dict mapping type -> integer group size A_t (for t != r_type).
+    S : dict mapping (v, t) -> list of groups (these groups must be members of G[t])
+        that are within distance D_t from v. The keys are tuples (v, t). The values are
+        lists of group tuples from G[t].
+    r_type : label identifying residential type in T (default 'r')
 
-model += pulp.lpSum(x_vt[(v, "R")] for v in Nodes), "Total_Residences"
+    Returns
+    -------
+    model : docplex.mp.model.Model with variables and constraints created.
+    """
 
-# Constraint 1: Node Assignment Constraint
-for v in Nodes:
-    model += pulp.lpSum(x_vt[(v, t)] for t in T) <= 1
+    model = Model(name=name)
 
-# Constraint 2: Rainbow Coverage
+    # Map groups to a canonical id string so we can index variables easily
+    # We'll index groups as (t, g_index) where g_index is integer index in G[t]
+    G_indexed: Dict[str, List[Tuple[int, Tuple[str, ...]]]] = {}
+    for t in non_res_types:
+        groups = G.get(t, [])
+        G_indexed[t] = list(enumerate(groups))
 
-for v in Nodes:
-    for t in T_Without_R:
-        model += pulp.lpSum(u_gt[(g,t)] for g in S[(v,t)]) >= x_vt[(v, 'R')]
-        
+    # Decision variables
+    x = {}  # x[v,t]
+    for v in V:
+        for t in T:
+            x[v, t] = model.binary_var(name=f"x_{v}_{t}")
 
-# Kısıt 3 size constraint
-for g, t in subGraph_types:
-    model += sum(x_vt[(u,t)] for u in g) == BuildingSize[t] * u_gt[(g,t)]
+    # u[g,t] where g is indexed
+    u = {}
+    for t in non_res_types:
+        for gi, g in G_indexed[t]:
+            u[(t, gi)] = model.binary_var(name=f"u_{t}_{gi}")
 
-#print("SubGraph_types length:", len(subGraph_types))
-#print(f"Subgraphs", SubGraphs)
+    # y[v,g,t] : residential vertex v assigned to group g of type t (if needed)
+    # We create y only for t in non-residential types and for groups that appear in S[(v,t)]
+    y = {}
+    for v in V:
+        for t in non_res_types:
+            # S may be missing some keys; default to empty list
+            candidate_groups = S.get((v, t), [])
+            if not candidate_groups:
+                continue
+            # For each candidate group find its index in G_indexed[t]
+            # We assume group tuples are exactly the same objects used in G[t]
+            # To speed up lookups build a group->index map for this t
+            g_to_index = {g: gi for gi, g in G_indexed[t]}
+            for g in candidate_groups:
+                if g not in g_to_index:
+                    raise KeyError(f"Group {g} in S[({v},{t})] not found in G[{t}].")
+                gi = g_to_index[g]
+                y[v, (t, gi)] = model.binary_var(name=f"y_{v}_{t}_{gi}")
 
-model.solve(pulp.PULP_CBC_CMD(msg=True))
+    # Objective: maximize sum_{v in V} x[v, r_type]
+    model.maximize(model.sum(x[v, r_type] for v in V))
+
+    # Constraints
+    # 1) Single type per vertex: sum_t x[v,t] <= 1
+    for v in V:
+        model.add_constraint(model.sum(x[v, t] for t in T) <= 1,
+                             ctname=f"single_type_{v}")
+
+    # 2) Neighborhood Coverage (Rainbow Constraint): for each v and each non-residential t:
+    #    sum_{g in S_{v,t}} u_{g,t} >= x_{v,r}
+    # We interpret S[(v,t)] as list of group tuples; we map them to indices
+    for v in V:
+        for t in non_res_types:
+            candidate_groups = S.get((v, t), [])
+            if not candidate_groups:
+                # If no available groups for (v,t) then the constraint becomes 0 >= x[v,r]
+                # which forces x[v,r] == 0. We add this constraint explicitly.
+                model.add_constraint(0 >= x[v, r_type], ctname=f"coverage_none_{v}_{t}")
+                continue
+            # map groups to indices
+            g_to_index = {g: gi for gi, g in G_indexed[t]}
+            model.add_constraint(model.sum(u[(t, g_to_index[g])] for g in candidate_groups) >= x[v, r_type],
+                                 ctname=f"rainbow_{v}_{t}")
+
+    # 3) Group Size Consistency: for each group g in G[t] and v in g, u[g,t] <= x[v,t] 
+    for t in non_res_types:
+        for gi, g in G_indexed[t]:
+            # g is a tuple/list of vertex ids
+            for v in g:
+                model.add_constraint(u[(t, gi)] <= x[v,t], ctname=f"group_size_{t},_{gi}")
+
+
+    # 4) Group cross/free vertices preventing
+    for t in non_res_types:
+        for v in Nodes:
+            model.add_constraint(x[v,t] <= model.sum(u[(t, gi)] for gi, g in G_indexed[t] if v in g))
+            model.add_constraint(model.sum(u[(t, gi)] for gi, g in G_indexed[t] if v in g) <= 1)
+
+    return model, G_indexed
+
+
+model, G_indexed = build_model(Nodes, T, SubGraphs, BuildingSize, S, T_Without_R ,r_type='R')
+
+# Optionally write LP file for CPLEX (or pass model to CPLEX solver via DOcplex)
+model.export_as_lp('residential_model.lp')
+
+# Solve (requires CPLEX/DOcplex solver available). If you have CPLEX installed and
+# properly configured, you can call model.solve(). Otherwise use the local DOcplex
+# heuristic or write .lp and solve with cplex command line.
+try:
+    sol = model.solve()
+    if sol:
+        print("Objective:", model.objective_value)
+        for v in Nodes:
+            print(v, {t: x for t, x in ((t, model.solution.get_value(f"x_{v}_{t}")) for t in T)})
+        for t in T_Without_R:
+            print(f"t : {t}")
+            for gi , g in G_indexed[t]:
+                print(g, {t: model.solution.get_value(f"u_{t}_{gi}") })
+    else:
+        print("No solution found by DOcplex solve()")
+except Exception as e:
+    print("Solve skipped or failed (no CPLEX engine available in this environment):", e)
+    print("LP written to residential_model.lp")
+
+
+
+###        Model Bitiş         ###############
+
 
 vertex_colors = {vertex['id'] : "black" for vertex in vertices}
 
+for v in Nodes:
+    for t in T:
+        if model.solution.get_value(f"x_{v}_{t}") > 0:
+            vertex_colors[v] = Type_colors[t]
 
 
+
+""" 
 for v in Nodes:
     for t in T:
         if x_vt[v, t].value():
             vertex_colors[v] = Type_colors[t]
-
-print("Status:", pulp.LpStatus[model.status])
 
 def display_res():
     # Başlığı dinamik olarak T listesinden oluştur
@@ -342,8 +461,7 @@ def display_res():
             val_str = f"{val if val is not None else 0.0:<6.1f}"
             values.append(val_str)
         print(" | ".join(values))
-
-display_res()
+  """
 
 
 print("$$$")
