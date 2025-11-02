@@ -70,3 +70,5 @@ package-lock.json
 # Compiled C extensions #
 *.so
 
+# lp files #
+*.lp
