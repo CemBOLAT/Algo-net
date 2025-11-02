@@ -29,6 +29,9 @@ venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Cplex
+residential_model.lp
+
 # Unit test / coverage reports #
 htmlcov/
 .tox/
