@@ -18,186 +18,215 @@
 The following sets and parameters are defined as input data to the model:
 
 \begin{itemize}
-    \item $V$: set of vertices (discrete container locations), $|V|=n$.
-    \item $T$: set of container types.
-    \item $r \in T$: residential container type.
-    \item $D_t$: Distance limit (Manhattan-Euclidean) between residential $r$ and non-residential type $t \in T \setminus\{r\}$.
-    \item $A_t$: Required size of a group (number of containers) for type $t \in T \setminus \{r\}$.
-    \item $\Delta_t$: Maximum allowable diameter (distance threshold) for type $t \in T \setminus \{r\}$.
-    \item $d(u,v)$: Manhattan-Euclidean shortest distance between vertices $u,v \in V$. (The shortest real life path between vertices) 
-    \item $h(u,v)$: Euclidean distance between vertices $u,v\in V$ (used in the clustering penalty).
-    \item $G_t$: Upper bound on the number of possible groups for type $t$.
-    \item $\text{Allowed}_t$: Subset of vertices feasible for type $t$ (based on component pruning).
-    \item $\text{TooFar}_t = \{(u,v) \in \text{Allowed}_t \times \text{Allowed}_t \mid d(u,v) > \Delta_t\}$.
+    \item $V$: Set of vertices (container locations).
+    \item $T$: Set of container types.
+    \item $r \in T$: Residential container type.
+    \item $C_t$: Maximum number of residential vertices that can be assigned to a building of type $t \in T \setminus \{r\}$.
+    \item $D_t$: Service distance threshold for type $t \in T \setminus \{r\}$, indicating the maximum distance within which the type can serve residential vertices. Distances follow a mixed Manhattan–Euclidean metric.
+    \item $S_t$: Number of containers that constitute one complete group of type $t \in T \setminus \{r\}$.
+    \item $\Delta_t$: Maximum allowable distance between any two vertices belonging to the same group of type $t \in T \setminus \{r\}$.
+    \item $d(u,v)$: Mixed Manhattan–Euclidean distance between vertices $u,v \in V$.
+    \item $h(u,v)$: Euclidean distance between vertices $u,v \in V$, used for compactness or clustering penalties.
 \end{itemize}
 
+\newpage
+
+\section{Precomputed Variables}
+
+The following auxiliary sets are precomputed based on spatial relationships between vertices and type-specific parameters.
 
 \vspace{1em}
-\textbf{Neighborhood sets (precomputed):}
+
+\textbf{Candidate Subgroups:}
 
 \[
-S_{v,t} = \{\, u \in V \mid u \neq v \text{ and } d(u,v) \le D_t \,\},
-\quad \forall v\in V,\ \forall t\in T\setminus\{r\}.
+U(t) = 
+\Bigl\{
+    U \subseteq V \ \Big| \ |U| = S_t
+\Bigr\},
+\quad \forall t \in T \setminus \{r\}.
 \]
 
-\textbf{Explanation:}
-For each vertex $v \in V$ and non-residential container type $t \in T \setminus \{r\}$,
-the set $S_{v,t}$ represents all neighboring vertices that lie within the
-maximum allowable distance $D_t$ for that type.
-These neighborhoods are used to evaluate the ``rainbow coverage'' constraint,
-ensuring that each residential vertex is surrounded by nearby containers of different types.
+\textbf{Explanation:}  
+For each non-residential type $t$, the set $U(t)$ contains all possible subsets of vertices of size $S_t$.  
+Each subset represents a potential configuration (subgraph) of containers that could form one complete group of type $t$.
 
-\vspace{1em}
-\textbf{Allowed vertices for type size (precomputed):}
+\vspace{1.5em}
 
+\textbf{Feasible Groups Under Diameter Constraint:}
 
 \[
-\text{Allowed}_t
-= 
-\Bigl\{\, 
-v \in V
-\ \Big|\
-\exists\, C \subseteq V :
-\begin{array}{l}
-C \text{ is a connected component of } G_t = (V, E_t), \\[4pt]
-E_t = \{\, (u,v) \in V \times V \mid d(u,v) \le \Delta_t \,\}, \\[6pt]
-v \in C \text{ and } |C| \ge A_t
-\end{array}
+G_t = 
+\Bigl\{
+    U \in U(t) \ \Big| \ 
+    d(u,v) \le \Delta_t,\ 
+    \forall u,v \in U
 \Bigr\},
-\quad 
+\quad \forall t \in T \setminus \{r\}.
+\]
+
+\textbf{Explanation:}  
+The subset $G_t$ filters $U(t)$ by removing all candidate groups whose internal pairwise distances exceed the maximum allowable limit $\Delta_t$.  
+Thus, $G_t$ includes only compact, spatially feasible groups for each non-residential type.
+
+\vspace{1.5em}
+
+\textbf{Neighborhood Groups for Residential Vertices:}
+
+\[
+S_{v,t} = 
+\Bigl\{
+    G \in G_t \ \Big| \ 
+    \exists\, u \in G : d(u,v) \le D_t
+\Bigr\},
+\quad \forall v \in V, \ \forall t \in T \setminus \{r\}.
+\]
+
+\textbf{Explanation:}  
+For each vertex $v$ and type $t$, the set $S_{v,t}$ contains all feasible groups of type $t$ that are within the service distance $D_t$ from $v$.  
+Intuitively, it defines which type-$t$ facilities (groups) can potentially serve residential container $v$ under the mixed Manhattan–Euclidean distance metric.
+
+\newpage
+
+\newpage
+
+\newpage
+\section{Decision Variables}
+
+All decision variables are binary.
+
+\vspace{1em}
+
+\textbf{Type Assignment Variables:}
+
+\[
+x_{v,t} =
+\begin{cases}
+1, & 
+\text{if vertex } v \\ 
+  & \text{is assigned type } t, \\[4pt]
+0, & \text{otherwise.}
+\end{cases}
+\qquad 
+\forall v \in V,\ 
+\forall t \in T.
+\]
+
+\textbf{Explanation:}  
+The variable $x_{v,t}$ indicates whether vertex $v$ hosts a container of type $t$.  
+Each vertex can take at most one type, including the residential type $r$.
+
+\vspace{1.5em}
+
+\textbf{Residential-to-Group Assignment Variables:}
+
+\[
+y_{v,g,t} =
+\begin{cases}
+1, & 
+\text{if residential vertex } v \\ 
+  & \text{is assigned to group } g \\ 
+  & \text{of type } t, \\[4pt]
+0, & \text{otherwise.}
+\end{cases}
+\qquad 
+\forall v \in V,\ 
+\forall g \in G_t,\ 
 \forall t \in T \setminus \{r\}.
 \]
 
-\textbf{Explanation:} 
-For each non-residential container type $t$, the graph $G_t$ is constructed by connecting 
-vertices whose pairwise distance does not exceed the type-specific diameter limit $\Delta_t$.
-Each connected component $C$ of $G_t$ represents a spatially contiguous cluster of vertices.
-The set $\text{Allowed}_t$ then consists of all vertices that belong to at least one such component 
-containing at least $A_t$ vertices, ensuring that every feasible placement 
-can support a full group of size $A_t$ for container type $t$.
+\textbf{Explanation:}  
+The variable $y_{v,g,t}$ links each residential vertex to a feasible group $g$ of a non-residential type $t$.  
+It determines whether vertex $v$ is served by that particular facility group.
 
 \vspace{1.5em}
-\textbf{Too-distant vertex pairs (precomputed):}
 
+\textbf{Group Activation Variables:}
 
 \[
-TooFar_t = \{(u,v) \in Allowed_t \times Allowed_t \mid d(u,v) > \Delta_t\}.
-\]
-
-\textbf{Explanation:}
-For each non-residential container type $t$, 
-the set $\text{TooFar}_t$ contains all unordered vertex pairs $(u,v)$ 
-whose mutual distance exceeds the maximum diameter $\Delta_t$ allowed for type $t$.
-These precomputed pairs are used to impose compactness constraints,
-preventing two vertices that are too far apart from belonging to the same container group.
-
-\section{Decision variables (core model)}
-
-Primary assignment variables:
-\[
-X_{v,t} =
+u_{g,t} =
 \begin{cases}
-1, & \text{if vertex } v \text{ is assigned type } t,\\[4pt]
+1, & 
+\text{if group } g \\ 
+  & \text{of type } t \text{ is activated}, \\[4pt]
 0, & \text{otherwise.}
 \end{cases}
-\qquad \forall v\in V,\ \forall t\in T.
+\qquad 
+\forall g \in G_t,\ 
+\forall t \in T \setminus \{r\}.
 \]
 
-\[
-Y_{g,t,v} = 
-\begin{cases}
-1, & \text{if vertex $v$ belongs to group $g$ of type $t$,}\\
-0, & \text{otherwise.}
-\end{cases}
-\quad \forall t \in T \setminus \{r\}, g = 1,\dots,G_t,v \in \text{Allowed}_t.  
-\]
+\textbf{Explanation:}  
+The binary variable $u_{g,t}$ activates or deactivates group $g$ of type $t$.  
+Only activated groups can serve residential vertices and contribute to the model’s coverage and capacity constraints.
 
-\[
-U_{g,t} =
-\begin{cases}
-1, & \text{if group $g$ of type $t$ is activated,}\\[3pt]
-0, & \text{otherwise;}
-\end{cases}
-\qquad \forall g = 1,\dots,G_t,\ \forall t \in T \setminus \{r\}.
-\]
-
-All decision variables are binary:
-\[
-X_{v,t},\ Y_{g,t,v},\ U_{g,t} \in \{0,1\}.
-\]
+\newpage
 
 \section{Objective}
 
-Maximize the total number of residential containers:
+Maximize the total number of residential containers (where $r$ denotes the residential type):
 \[
-\max \sum_{v \in V} X_{v,r}.
+\max \sum_{v \in V} x_{v,r}
 \]
 
-\section{Core constraints}
+\section{Core Constraints}
 
 \begin{enumerate}
     \item \textbf{Single type per vertex:}
     \[
-    \sum_{t\in T} X_{v,t} \le 1 \qquad \forall v\in V.
+    \sum_{t \in T} x_{v,t} \le 1 
+    \qquad \forall v \in V.
     \]
-    Each vertex can host at most one container type.
-    \item \textbf{Neighborhood Coverage (Rainbow Constraint):}
-    \[
-    \sum_{u\in S_{v,t}} X_{u,t} \ge X_{v,r}
-    \qquad \forall v\in V,\ \forall t\in T\setminus\{r\}.
-    \]
-    If a vertex v is residential, it must have at least one neighboring vertex of each
-non-residential type within distance Dt
-.
-    \item \textbf{Group Size Consistency:}
-    \[
-    \sum_{v \in \text{Allowed}_t} Y_{g,t,v} = A_t \, U_{g,t} 
-    \qquad \forall t \in T \setminus \{r\}, \forall g = 1,\dots,G_t.
-    \]
+    \textbf{Explanation:}  
+    Each vertex can host at most one container type, including the residential type $r$.
 
-    Each activated group of type $t$ must contain exactly $A_t$ vertices:
+    \vspace{0.7em}
 
-    \item\textbf{Linking Groups and Vertex Assignment}
+    \item \textbf{Neighborhood coverage (Rainbow constraint):}
     \[
-    X_{v,t} = \sum_{g \in \text{ValidGroups}_{v,t}} Y_{g,t,v} 
-    \qquad \forall v \in V, \forall t \in T \setminus \{r\},
-    \]
-    where 
-    \[
-    \text{ValidGroups}_{v,t} =
-    \begin{cases}
-    \{1,\dots,G_t\}, & \text{if } v \in \text{Allowed}_t,\\[3pt]
-    \varnothing, & \text{otherwise.}
-    \end{cases}
-    \]
-
-    A vertex $v$ is assigned type $t$ if and only if it belongs to one active group of type $t$:
-
-    \item\textbf{Diameter Restriction}
-    \[
-    Y_{g,t,u} + Y_{g,t,v} \le 1
+    \sum_{g \in S_{v,t}} u_{g,t} \ge x_{v,r}
     \qquad 
-    \forall t \in T \setminus \{r\}, \forall g = 1,\dots,G_t, 
-    \forall (u,v) \in \text{TooFar}_t.
+    \forall v \in V,\ 
+    \forall t \in T \setminus \{r\}.
     \]
-    Any two vertices that are farther apart than $\Delta_t$ cannot belong to the same group:
-    \item\textbf{ Sequential Symmetry Breaking}
+    \textbf{Explanation:}  
+    For every residential vertex $v$, and for each non-residential type $t$,  
+    at least one activated group $u_{g,t}$ within $S_{v,t}$ must exist within service distance $D_t$.  
+    This ensures that every residential vertex is covered by all required non-residential facilities.
+
+    \vspace{0.7em}
+
+    \item \textbf{Group size consistency:}
     \[
-    U_{g,t} \ge U_{g+1,t} 
-    \qquad \forall t \in T \setminus \{r\}, \forall g = 1,\dots,G_t - 1.
+    u_{g,t} \le x_{v,t}
+    \qquad 
+    \forall t \in T \setminus \{r\},\ 
+    \forall g \in G_t,\ 
+    \forall v \in g.
     \]
-    Groups of each type are activated in order to eliminate symmetric solutions:
+    \textbf{Explanation:}  
+    A group $g$ of type $t$ can only be activated if all its member vertices $v$ are assigned as that same type.  
+    This enforces internal consistency between group activation and vertex-type assignment.
+
+    \vspace{0.7em}
+
+    \item \textbf{Group–vertex membership coherence:}
+    \[
+    x_{v,t} \le 
+    \sum_{\substack{g \in G_t \\ v \in g}} u_{g,t},
+    \qquad
+    \sum_{\substack{g \in G_t \\ v \in g}} u_{g,t} \le 1,
+    \qquad
+    \forall v \in V,\ 
+    \forall t \in T \setminus \{r\}.
+    \]
+    \textbf{Explanation:}  
+    A vertex $v$ can be assigned to type $t$ only if it belongs to at least one active group of that type,  
+    and each vertex can participate in at most one such group.  
+    These two inequalities jointly prevent cross-group overlaps and maintain group exclusivity.
 \end{enumerate}
 
-\textbf{Explanation:}  
-These constraints ensure the logical and spatial feasibility of the model:
-\begin{enumerate}
-    \item Each vertex hosts exactly one container type, preventing overlap between different functions.
-    \item Residential vertices are supported by a diverse set of neighboring container types within predefined distance limits (rainbow coverage).
-    \item Each non-residential container group maintains the required number of units, ensuring consistent group sizes.
-    \item Vertex-type assignments and group memberships are linked, guaranteeing that every container of a given type belongs to exactly one active group.
-    \item The diameter restriction enforces spatial compactness by preventing distant vertices from being assigned to the same group.
-    \item Sequential symmetry-breaking constraints eliminate redundant solutions by activating groups in order.
-\end{enumerate}
+
+
 
 \end{document}

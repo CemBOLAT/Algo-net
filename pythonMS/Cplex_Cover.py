@@ -1,10 +1,10 @@
-
 import pulp
 import json
 import sys
 import numpy as np
 from docplex.mp.model import Model
 from typing import Dict, Iterable, Tuple, List, Set
+import math
 
 vertices_json = sys.argv[1]
 edges_json = sys.argv[2]
@@ -98,81 +98,86 @@ def build_grid_matrix(vertices, edges, walk):
     # Convert it to fully completed with floyd-warshall
     mat, id_to_idx = build_matrix(vertices, edges)
 
-    # Finding Fly distances according to existing weights
-    col_size = 1
+    n = len(Nodes)
+    # Robust grid sizing: use square-ish layout to avoid fragile sequential-edge logic
+    col_size = int(math.ceil(math.sqrt(n)))
+    row_count = int(math.ceil(n / col_size))
 
-    for index in range(len(Nodes)):
-        if (Nodes[index], Nodes[index+1]) in edge_set:
-            col_size += 1
-        else:
-            break
-
-    #print(f"col size : {col_size}")
-    row, col = 0, 0
-
+    # Build positions row-major for n nodes
     Pos = {}
     Pos_reverse = {}
+    idx = 0
+    for r in range(row_count):
+        for c in range(col_size):
+            if idx >= n:
+                break
+            Pos[idx] = (r, c)
+            Pos_reverse[(r, c)] = idx
+            idx += 1
 
-    for v in range(len(Nodes)):
-        if (col == col_size):
-            col = 0
-            row += 1
-        Pos.update( {v: (row, col)})
-        #print(f"{v} pos : {row}-{col}")
-        Pos_reverse.update( {(row, col) : v})
-        col += 1
+    # Helper to check if a grid coordinate exists
+    def has_pos(p):
+        return p in Pos_reverse
 
     # Calculating x and y axes weights to calculate euclidian with just between vertices in same street
-    for outer in range(len(Nodes)):
-        for inner in range(len(Nodes)):
-            if (inner != outer and mat[outer, inner] == np.inf ):
-                if ( walk == 1 and Pos[inner][0] - Pos[outer][0] != 1):
-                    continue
-                x = 0
-                y = 0
-                pos = Pos[inner]
-                outPos = Pos[outer]
-                
-                if (pos[1] > outPos[1]):
-                    
-                    while (pos[1] != outPos[1]):
-                        x += mat[Pos_reverse[pos], Pos_reverse[(pos[0], pos[1]-1)]]
-                        pos = (pos[0], pos[1]-1) 
-                    
-                    pos = Pos[inner]
-                elif ( pos[1] < outPos[1]):
-                    while (pos[1] != outPos[1]):
-                        x += mat[Pos_reverse[pos], Pos_reverse[(pos[0], pos[1]+1)]]
-                        pos = (pos[0], pos[1]+1) 
-                    
-                    pos = Pos[inner]
-                
-                
-                if (pos[0] > outPos[0]):
-                    while (pos[0] != outPos[0]):
-                        y += mat[Pos_reverse[pos], Pos_reverse[(pos[0]-1, pos[1])]]
-                        pos = (pos[0]-1, pos[1])
-                elif (pos[0] < outPos[0]):
-                    while (pos[0] != outPos[0]):
-                        y += mat[Pos_reverse[pos], Pos_reverse[(pos[0]+1, pos[1])]]
-                        pos = (pos[0]+1, pos[1]) 
-                    pos = Pos[inner]
+    for outer in range(n):
+        for inner in range(n):
+            if inner == outer or mat[outer, inner] != np.inf:
+                continue
 
+            # If walk==1 only consider vertical-adjacent rows (?) original logic tried to filter — keep similar check
+            if walk == 1 and (Pos[inner][0] - Pos[outer][0] != 1) and (Pos[inner][0] != Pos[outer][0]):
+                # if not in same row or next row, skip trying euclidean fill
+                continue
 
+            x = 0.0
+            y = 0.0
+            pos = Pos[inner]
+            outPos = Pos[outer]
 
-                w = np.sqrt(np.square(x) + np.square(y)).round(2)
-                #print(f"{outer}-{inner} : x={x}, y={y}, w={w}")
-                mat[inner, outer] = w
-                mat[outer, inner] = w
+            aborted = False
 
-    # Applying Flloyd-Marshall algorithm with added euclidian values
-    if (walk == 1):
+            # move horizontally from inner towards outer
+            while pos[1] != outPos[1]:
+                # determine next column step
+                step = -1 if pos[1] > outPos[1] else 1
+                next_pos = (pos[0], pos[1] + step)
+                if not has_pos(pos) or not has_pos(next_pos):
+                    aborted = True
+                    break
+                x += mat[Pos_reverse[pos], Pos_reverse[next_pos]]
+                pos = next_pos
+
+            if aborted:
+                continue
+
+            # reset to original inner for vertical computation
+            pos = Pos[inner]
+            # move vertically from inner towards outer
+            while pos[0] != outPos[0]:
+                step = -1 if pos[0] > outPos[0] else 1
+                next_pos = (pos[0] + step, pos[1])
+                if not has_pos(pos) or not has_pos(next_pos):
+                    aborted = True
+                    break
+                y += mat[Pos_reverse[pos], Pos_reverse[next_pos]]
+                pos = next_pos
+
+            if aborted:
+                continue
+
+            w = float(np.sqrt(x * x + y * y).round(2))
+            mat[inner, outer] = w
+            mat[outer, inner] = w
+
+    # Applying Floyd-Warshall algorithm with added euclidian values if requested
+    if walk == 1:
         for k in range(mat.shape[0]):
             for i in range(mat.shape[0]):
                 for j in range(mat.shape[0]):
-                    if mat[i, j] > mat[i, k] + mat[k, j]:
+                    if mat[i, k] + mat[k, j] < mat[i, j]:
                         mat[i, j] = mat[i, k] + mat[k, j]
-    
+
     return mat, id_to_idx
 
 #Define a function that takes all subgraphs for that size and type and returns the valid ones according to diameter constraints
@@ -191,44 +196,55 @@ def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
             valid_subgraphs.append(subgraph)
     return valid_subgraphs
 
-def enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes):
-    n = len(node_ids)
-    sizes_sorted = sorted(set(int(s) for s in target_sizes if s is not None))
-    if not sizes_sorted:
-        return {}
+class ConnectedSubgraphDPCache:
+    """
+    Cache connected induced subgraphs by size for a given adjacency matrix.
+    Uses canonical growth (only add vertices with index > max(S)) to avoid duplicates.
+    Subsequent requests for larger sizes extend previous results instead of recomputing from scratch.
+    """
+    def __init__(self, mat: np.ndarray, node_ids: List[str]):
+        # Build adjacency boolean from mat
+        adjacency = np.isfinite(mat) & (mat > 0)
+        np.fill_diagonal(adjacency, False)
+        self.neighbors_list = [set(np.where(adjacency[i])[0]) for i in range(adjacency.shape[0])]
+        self.n = len(node_ids)
+        self.node_ids = node_ids
+        # results_idx[size] -> list of frozenset(indices)
+        self.results_idx = {1: [frozenset([i]) for i in range(self.n)]}
+        self.max_computed = 1
 
-    # Build proper adjacency: finite and positive weights only (exclude np.inf)
-    adjacency = np.isfinite(mat) & (mat > 0)
-    np.fill_diagonal(adjacency, False)
-    neighbors_list = [set(np.where(adjacency[i])[0]) for i in range(n)]
+    def _extend_to(self, k: int):
+        if k <= self.max_computed:
+            return
+        for size in range(self.max_computed + 1, k + 1):
+            prev_sets = self.results_idx.get(size - 1, [])
+            new_sets = set()
+            for S in prev_sets:
+                boundary = set()
+                for u in S:
+                    boundary |= self.neighbors_list[u]
+                boundary -= set(S)
+                max_idx = max(S)
+                for v in boundary:
+                    if v <= max_idx:
+                        continue
+                    new_S = frozenset(set(S) | {v})
+                    if len(new_S) == size:
+                        new_sets.add(new_S)
+            self.results_idx[size] = list(new_sets)
+        self.max_computed = k
 
-    # Start with all singletons
-    results_idx = {1: [frozenset([i]) for i in range(n)]}
-    max_k = sizes_sorted[-1]
-
-    # Build up by size, enforcing canonical order (v > max(S)) to avoid permutations
-    for k in range(2, max_k + 1):
-        prev_sets = results_idx.get(k - 1, [])
-        new_sets = set()
-        for S in prev_sets:
-            boundary = set()
-            for u in S:
-                boundary |= neighbors_list[u]
-            boundary -= set(S)
-            max_idx = max(S)
-            for v in boundary:
-                if v <= max_idx:
-                    continue  # canonical growth to eliminate permutations
-                new_S = frozenset(set(S) | {v})
-                if len(new_S) == k:
-                    new_sets.add(new_S)
-        results_idx[k] = list(new_sets)
-
-    idx_to_id = dict(enumerate(node_ids))
-    results = {}
-    for k in sizes_sorted:
-        results[k] = [set(idx_to_id[i] for i in S) for S in results_idx.get(k, [])]
-    return results
+    def get_sizes(self, target_sizes: Iterable[int]) -> Dict[int, List[Set[str]]]:
+        sizes = sorted({int(s) for s in target_sizes if s is not None})
+        if not sizes:
+            return {}
+        max_k = sizes[-1]
+        self._extend_to(max_k)
+        idx_to_id = dict(enumerate(self.node_ids))
+        results = {}
+        for k in sizes:
+            results[k] = [set(idx_to_id[i] for i in S) for S in self.results_idx.get(k, [])]
+        return results
 
 
 def check_group_vertex_validation(G, v, t):
@@ -253,7 +269,10 @@ SubGraphs = {}
 target_sizes = [entry.get('size') for entry in entries]
 # Add "R" size if needed
 target_sizes += [1]  # Since "R" buildings are size 1
-dp_by_size = enumerate_connected_subgraphs_dp(mat, node_ids, target_sizes)
+
+# Use cached incremental DP enumerator instead of recomputing per-type
+dp_cache = ConnectedSubgraphDPCache(mat, node_ids)
+dp_by_size = dp_cache.get_sizes(target_sizes)
 
 for entry in sorted(entries, key=lambda e: e.get('size', 0)):
     name = entry.get('name')
@@ -266,10 +285,20 @@ for entry in sorted(entries, key=lambda e: e.get('size', 0)):
     SubGraphs[name] = [frozenset(s) for s in valid_subgraphs]
 
 #print("SubGraphs:", SubGraphs) 
+# length of SubGraphs equal to number of types
+print(f"length of SubGraphs: {len(SubGraphs)}")
+for t in SubGraphs:
+    print(f"length of SubGraphs[{t}]: {len(SubGraphs[t])}")
+    # for g in SubGraphs[t]:
+    #     print(f"  SubGraph: {g}")
+    print("-----------------------------")
 
 S = { (v,t) : [g for g in SubGraphs[t] if check_group_vertex_validation(g, v, t)] for v in Nodes for t in T_Without_R }
 
-#print(f"S: {S}")
+# No problem on S v_t it properly gooes for number of vertices times types.
+#print(f"S length: {len(S)}") 
+# for key in S:
+#     print(f"S[{key}]: {S[key]}")
 
 # x_st: t türü bina s konumuna yerleştirilirse 1 olur.
 container_types = []
@@ -341,7 +370,7 @@ def build_model(V: List[str],
     # We create y only for t in non-residential types and for groups that appear in S[(v,t)]
     y = {}
     for v in V:
-        for t in non_res_types:
+        for t in non_residential_types:
             # S may be missing some keys; default to empty list
             candidate_groups = S.get((v, t), [])
             if not candidate_groups:
@@ -398,29 +427,29 @@ def build_model(V: List[str],
     return model, G_indexed
 
 
-model, G_indexed = build_model(Nodes, T, SubGraphs, BuildingSize, S, T_Without_R ,r_type='R')
+# model, G_indexed = build_model(Nodes, T, SubGraphs, BuildingSize, S, T_Without_R ,r_type='R')
 
-# Optionally write LP file for CPLEX (or pass model to CPLEX solver via DOcplex)
-model.export_as_lp('residential_model.lp')
+# # Optionally write LP file for CPLEX (or pass model to CPLEX solver via DOcplex)
+# model.export_as_lp('residential_model.lp')
 
-# Solve (requires CPLEX/DOcplex solver available). If you have CPLEX installed and
-# properly configured, you can call model.solve(). Otherwise use the local DOcplex
-# heuristic or write .lp and solve with cplex command line.
-try:
-    sol = model.solve()
-    if sol:
-        print("Objective:", model.objective_value)
-        for v in Nodes:
-            print(v, {t: x for t, x in ((t, model.solution.get_value(f"x_{v}_{t}")) for t in T)})
-        for t in T_Without_R:
-            print(f"t : {t}")
-            for gi , g in G_indexed[t]:
-                print(g, {t: model.solution.get_value(f"u_{t}_{gi}") })
-    else:
-        print("No solution found by DOcplex solve()")
-except Exception as e:
-    print("Solve skipped or failed (no CPLEX engine available in this environment):", e)
-    print("LP written to residential_model.lp")
+# # Solve (requires CPLEX/DOcplex solver available). If you have CPLEX installed and
+# # properly configured, you can call model.solve(). Otherwise use the local DOcplex
+# # heuristic or write .lp and solve with cplex command line.
+# try:
+#     sol = model.solve()
+#     if sol:
+#         print("Objective:", model.objective_value)
+#         for v in Nodes:
+#             print(v, {t: x for t, x in ((t, model.solution.get_value(f"x_{v}_{t}")) for t in T)})
+#         for t in T_Without_R:
+#             print(f"t : {t}")
+#             for gi , g in G_indexed[t]:
+#                 print(g, {t: model.solution.get_value(f"u_{t}_{gi}") })
+#     else:
+#         print("No solution found by DOcplex solve()")
+# except Exception as e:
+#     print("Solve skipped or failed (no CPLEX engine available in this environment):", e)
+#     print("LP written to residential_model.lp")
 
 
 
@@ -429,26 +458,26 @@ except Exception as e:
 
 vertex_colors = {vertex['id'] : "black" for vertex in vertices}
 
-for v in Nodes:
-    for t in T:
-        if model.solution.get_value(f"x_{v}_{t}") > 0:
-            vertex_colors[v] = Type_colors[t]
+# for v in Nodes:
+#     for t in T:
+#         if model.solution.get_value(f"x_{v}_{t}") > 0:
+#             vertex_colors[v] = Type_colors[t]
 
-def display_res():
-    # Başlığı dinamik olarak T listesinden oluştur
-    header = "Node  | " + " | ".join(f"{t:<6}" for t in T)
-    print(header)
-    print("-" * len(header))
+# def display_res():
+#     # Başlığı dinamik olarak T listesinden oluştur
+#     header = "Node  | " + " | ".join(f"{t:<6}" for t in T)
+#     print(header)
+#     print("-" * len(header))
 
-    for v in Nodes:
-        print(f"{v:<5} | ", end="")
-        values = []
-        for t in T:
-            val = model.solution.get_value(f"x_{v}_{t}")
-            # None yerine 0.0 göstermek daha okunaklı olur
-            val_str = f"{val if val is not None else 0.0:<6.1f}"
-            values.append(val_str)
-        print(" | ".join(values))
+#     for v in Nodes:
+#         print(f"{v:<5} | ", end="")
+#         values = []
+#         for t in T:
+#             val = model.solution.get_value(f"x_{v}_{t}")
+#             # None yerine 0.0 göstermek daha okunaklı olur
+#             val_str = f"{val if val is not None else 0.0:<6.1f}"
+#             values.append(val_str)
+#         print(" | ".join(values))
 
 #display_res()
 
