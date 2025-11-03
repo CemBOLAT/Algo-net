@@ -370,7 +370,7 @@ def build_model(V: List[str],
     # We create y only for t in non-residential types and for groups that appear in S[(v,t)]
     y = {}
     for v in V:
-        for t in non_residential_types:
+        for t in non_res_types:
             # S may be missing some keys; default to empty list
             candidate_groups = S.get((v, t), [])
             if not candidate_groups:
@@ -427,7 +427,7 @@ def build_model(V: List[str],
     return model, G_indexed
 
 
-# model, G_indexed = build_model(Nodes, T, SubGraphs, BuildingSize, S, T_Without_R ,r_type='R')
+model, G_indexed = build_model(Nodes, T, SubGraphs, BuildingSize, S, T_Without_R ,r_type='R')
 
 # # Optionally write LP file for CPLEX (or pass model to CPLEX solver via DOcplex)
 # model.export_as_lp('residential_model.lp')
@@ -435,8 +435,8 @@ def build_model(V: List[str],
 # # Solve (requires CPLEX/DOcplex solver available). If you have CPLEX installed and
 # # properly configured, you can call model.solve(). Otherwise use the local DOcplex
 # # heuristic or write .lp and solve with cplex command line.
-# try:
-#     sol = model.solve()
+try:
+    sol = model.solve()
 #     if sol:
 #         print("Objective:", model.objective_value)
 #         for v in Nodes:
@@ -447,9 +447,9 @@ def build_model(V: List[str],
 #                 print(g, {t: model.solution.get_value(f"u_{t}_{gi}") })
 #     else:
 #         print("No solution found by DOcplex solve()")
-# except Exception as e:
-#     print("Solve skipped or failed (no CPLEX engine available in this environment):", e)
-#     print("LP written to residential_model.lp")
+except Exception as e:
+    print("Solve skipped or failed (no CPLEX engine available in this environment):", e)
+    print("LP written to residential_model.lp")
 
 
 
@@ -458,10 +458,10 @@ def build_model(V: List[str],
 
 vertex_colors = {vertex['id'] : "black" for vertex in vertices}
 
-# for v in Nodes:
-#     for t in T:
-#         if model.solution.get_value(f"x_{v}_{t}") > 0:
-#             vertex_colors[v] = Type_colors[t]
+for v in Nodes:
+    for t in T:
+        if model.solution.get_value(f"x_{v}_{t}") > 0:
+            vertex_colors[v] = Type_colors[t]
 
 # def display_res():
 #     # Başlığı dinamik olarak T listesinden oluştur
