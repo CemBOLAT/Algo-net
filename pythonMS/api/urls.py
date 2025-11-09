@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.urls import path
-from .views import run_python, run_algorithm_color, run_algorithm_search, run_algorithm_path, run_algorithm_layoutplanning, health
+from .views import run_python, run_algorithm_color, run_algorithm_search, run_algorithm_path, run_algorithm_layoutplanning, run_algorithm_package_coloring ,health
 
 urlpatterns = [
     path("run/", run_python, name="run_python"),
@@ -24,5 +24,6 @@ urlpatterns = [
     path("searching/", run_algorithm_search, name = "search_graph"),
     path("pathfinding/", run_algorithm_path, name = "path_graph"),
     path("layoutplanning/", run_algorithm_layoutplanning, name="layout_planning"),
+    path("package_coloring/", run_algorithm_package_coloring, name="package_coloring"),
     path("health/", health, name="health"),
 ]

@@ -478,6 +478,97 @@ const GraphCreation = () => {
                     result = { vertices, edges, positions };
                     break;
                 }
+                case 'Melih': {
+                    
+                    const Pn = Number(spec.pathLength)
+                    const Bn = Number(spec.graphPathLength)    
+                    const Kn = Number(spec.graphSize) 
+                    console.log("Bankaii")
+                    const nOfKCompleteGraphs = Pn / Bn;
+
+                    const vertices = [];
+                    const edges = [];
+                    const positions = [];
+
+                    let vertexOffset = 0;
+                    let edgeId = 0;
+
+                    // --- Dynamic scaling ---
+                    // Inner radius grows gently with the size of Kₙ
+                    const innerRadius = 40 + Kn * 10; 
+                    // Outer radius scales with both number of graphs and inner radius
+                    const outerRadius = innerRadius * (2.2 + nOfKCompleteGraphs / 2);
+
+                    for (let i = 0; i < nOfKCompleteGraphs; i++) {
+                        // Center of this subgraph on a large circle
+                        const angle = (2 * Math.PI * i) / nOfKCompleteGraphs;
+                        const centerX = outerRadius * Math.cos(angle);
+                        const centerY = outerRadius * Math.sin(angle);
+
+                        // --- Create K_{K_n} complete graph ---
+                        const subVertices = Array.from({ length: Kn }, (_, j) => `v${vertexOffset + j}`);
+                        const subEdges = [];
+
+                        for (let a = 0; a < Kn; a++) {
+                            for (let b = a + 1; b < Kn; b++) {
+                                subEdges.push({
+                                    id: edgeId++,
+                                    name: `e_${subVertices[a]}_${subVertices[b]}`,
+                                    from: subVertices[a],
+                                    to: subVertices[b],
+                                    showDelete: false,
+                                    directed: false,
+                                    weight: 1,
+                                });
+                            }
+                        }
+
+                        // --- Circular positions for this subgraph ---
+                        const subPositions = subVertices.map((_, j) => {
+                            const theta = (2 * Math.PI * j) / Kn;
+                            return {
+                                x: centerX + innerRadius * Math.cos(theta),
+                                y: centerY + innerRadius * Math.sin(theta),
+                            };
+                        });
+
+                        // --- Connect this K_n to the previous one ---
+                        if (i > 0) {
+                            const prevStart = vertexOffset - (Kn - Bn + 1);
+                            const prevVertex = `v${prevStart}`;
+                            const currentVertex = `v${vertexOffset}`;
+                            subEdges.push({
+                                id: edgeId++,
+                                name: `bridge_${i - 1}_${i}`,
+                                from: prevVertex,
+                                to: currentVertex,
+                                showDelete: false,
+                                directed: false,
+                                weight: 1
+                            });
+                        }
+
+                        vertices.push(...subVertices);
+                        edges.push(...subEdges);
+                        positions.push(...subPositions);
+
+                        vertexOffset += Kn;
+                    }
+
+                    // --- Shift all positions to positive coordinates ---
+                    const minX = Math.min(...positions.map(p => p.x));
+                    const minY = Math.min(...positions.map(p => p.y));
+                    const shiftX = minX < 0 ? -minX + 50 : 0;
+                    const shiftY = minY < 0 ? -minY + 50 : 0;
+                    const shiftedPositions = positions.map(p => ({
+                        x: p.x + shiftX,
+                        y: p.y + shiftY,
+                    }));
+                    
+                    result =  { vertices, edges, positions: shiftedPositions };
+                }
+                    
+                    break;
                 default:
                     setQuickGraphError(t('unsupported_graph_type'));
                     return;

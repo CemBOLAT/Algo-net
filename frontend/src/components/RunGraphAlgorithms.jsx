@@ -89,7 +89,7 @@ export default function RunGraphAlgorithms({
   // Utility: detect algorithm category
   const getAlgorithmCategory = (algoName) => {
 
-    const coloringAlgos = ["ordered_coloring"];
+    const coloringAlgos = ["ordered_coloring", "package_coloring"];
     const searchingAlgos = ["dfs", "bfs"];
     const pathFindingAlgos = ["dijkstra"];
     const layoutAlgos = ["layout_planning"];
@@ -107,12 +107,35 @@ export default function RunGraphAlgorithms({
 
   // Coloring algorithms → recolor nodes
   const updateColoring = (data) => {
-    setNodes((prev) =>
-      prev.map((n) => ({
-        ...n,
-        color: data?.[n.id] ?? n.color,
-      }))
-    );
+    if (selectedAlgo === 'package_coloring') {
+      // Find the maximum number
+      const maxNum = Math.max(...Object.values(data));
+
+      // Generate distinct colors for each number
+      const colors = Array.from({ length: maxNum }, (_, i) => {
+        // You can use HSL for evenly spaced colors
+        const hue = (i * 360) / maxNum;
+        return `hsl(${hue}, 70%, 50%)`;
+      });
+
+      setNodes((prev) =>
+        prev.map((n) => {
+          const num = data[n.id];
+          return {
+            ...n,
+            color: num ? colors[num - 1] : n.color, // num-1 because array is 0-indexed
+            label: num ? String(num) : n.label, // set the label to the number
+          };
+        })
+      );
+    } else {
+      setNodes((prev) =>
+        prev.map((n) => ({
+          ...n,
+          color: data?.[n.id] ?? n.color,
+        }))
+      );
+    }
   };
 
   // Pathfinding algorithms → highlight selected edges
@@ -283,7 +306,7 @@ export default function RunGraphAlgorithms({
 
     setIsLoading(true);
     try {
-      const resp = await http.post(`/api/${category}/`, formData, {
+      const resp = await http.post(selectedAlgo === "package_coloring" ? `/api/package_coloring/`: `/api/${category}/`, formData, {
         json: false,
         auth: true,
         apiBase: API_BASE,
@@ -416,7 +439,7 @@ export default function RunGraphAlgorithms({
 
   return (
     <>
-      <Collapse in={!["ordered_coloring", "layout_planning"].includes(selectedAlgo)}>
+      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2, p: 1, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, }}>
             <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>From</InputLabel>

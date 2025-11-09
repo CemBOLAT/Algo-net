@@ -44,6 +44,7 @@ const Sidebar = ({ onRun, onReset, onSave, isSaving = false, graphName = 'Graph 
           <MenuItem value="dijkstra">Dijkstra's Algorithm</MenuItem>
           <MenuItem value="ordered_coloring">Ordered Coloring </MenuItem>
           <MenuItem value="layout_planning">Layout Planning</MenuItem>
+          <MenuItem value="package_coloring">Ahmet Melih Coloring</MenuItem>
         </Select>
       </FormControl>
 

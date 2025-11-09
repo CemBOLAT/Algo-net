@@ -36,6 +36,9 @@ const QuickGraphDialog = ({
   const [gridRows, setGridRows] = useState(2);
   const [gridCols, setGridCols] = useState(2);
   const [gridWeight, setGridWeight] = useState(1);
+  const [pathLength, setpathLength] = useState(2);
+  const [graphPathLength, setgraphPathLength] = useState(2);
+  const [graphSize, setgraphSize] = useState(1);
 
   const { t } = useI18n();
   // formatter for placeholders like {n}, {m}, {max}
@@ -104,6 +107,15 @@ const QuickGraphDialog = ({
       if (Number(gridRows) < 1 || Number(gridCols) < 1) return setQuickGraphError?.(t('quickgraph_err_grid_dims_min'));
       if (Number(gridWeight) < 1) return setQuickGraphError?.(t('quickgraph_err_grid_weight_min'));
     }
+    if (quickGraphType === 'Melih' ){
+      /* console.log("Eyyyy")
+      console.log(Number(pathLength))
+      console.log(Number(graphPathLength))
+      console.log(Number(graphSize)) */
+      if (Number(pathLength) == 0) return setQuickGraphError?.(t('quickgraph_err_Melih_Bn'));
+      if (Number(graphPathLength) > Number(graphSize)) return setQuickGraphError?.(t('quickgraph_err_Melih_Bn_Kn'));
+      if (Number(pathLength) % Number(graphPathLength) != 0 ) return setQuickGraphError?.(t('quickgraph_err_Melih_Pn_Bn'))
+    }
     if (quickGraphType === 'random') return;
 
     // Pass only spec; generation happens in GraphCreation utils
@@ -115,6 +127,8 @@ const QuickGraphDialog = ({
           ? Number(bipartiteA) + Number(bipartiteB)
           : quickGraphType === 'grid'
           ? Number(gridRows) * Number(gridCols)
+          : quickGraphType === 'Melih'
+          ? Number(pathLength) / Number(graphPathLength) 
           : Number(quickGraphNodeCount),
       treeChildCount: quickGraphType === 'tree' ? Number(treeChildCount) : undefined,
       starCenterCount: quickGraphType === 'star' ? Number(starCenterCount) : undefined,
@@ -122,15 +136,18 @@ const QuickGraphDialog = ({
       bipartiteB: quickGraphType === 'bipartite' ? Number(bipartiteB) : undefined,
       gridRows: quickGraphType === 'grid' ? Number(gridRows) : undefined,
       gridCols: quickGraphType === 'grid' ? Number(gridCols) : undefined,
-      gridWeight: quickGraphType === 'grid' ? Number(gridWeight) : undefined
+      gridWeight: quickGraphType === 'grid' ? Number(gridWeight) : undefined,
+      pathLength : quickGraphType === 'Melih' ? Number(pathLength): undefined,
+      graphPathLength : quickGraphType === 'Melih' ? Number(graphPathLength): undefined,
+      graphSize : quickGraphType === 'Melih' ? Number(graphSize): undefined             
     });
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog open={open} onClose={onClose} fullWidth >
       <DialogTitle>{t('quickgraph_title')}</DialogTitle>
       <DialogContent>
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3}}>
           <FormControl fullWidth>
             <InputLabel>{t('quickgraph_graph_type')}</InputLabel>
             <Select 
@@ -145,6 +162,7 @@ const QuickGraphDialog = ({
               <MenuItem value="bipartite">{t('quickgraph_type_bipartite')}</MenuItem>
               <MenuItem value="grid">{t('quickgraph_type_grid')}</MenuItem>
               <MenuItem value="random">{t('quickgraph_type_random')}</MenuItem>
+              <MenuItem value="Melih"> {t('quickgraph_Ahmet_Melih')}</MenuItem>
             </Select>
           </FormControl>
 
@@ -164,7 +182,7 @@ const QuickGraphDialog = ({
           )}
 
           {/* n input for non-bipartite and non-random */}
-          {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && quickGraphType !== 'grid' && (
+          {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && quickGraphType !== 'grid' && quickGraphType !== 'Melih' && (
             <TextField
               label={t('quickgraph_node_count')}
               type="number"
@@ -223,6 +241,35 @@ const QuickGraphDialog = ({
                 fullWidth
                 value={gridWeight}
                 onChange={(e) => { setGridWeight(Number(e.target.value)); setQuickGraphError?.(''); }}
+                inputProps={{ min: 1, max: 100 }}
+              />
+            </Box>
+          )}
+
+          {quickGraphType === 'Melih' && (
+            <Box sx={{ display: 'flex', gap: 2}}>
+              <TextField
+                label={t('quickgraph_Pn')}
+                type="number"
+                fullWidth
+                value={pathLength}
+                onChange={(e) => { setpathLength(Number(e.target.value)); setQuickGraphError?.(''); }}
+                inputProps={{ min: 1, max: 100 }}
+              />
+              <TextField
+                label={t('quickgraph_Bn')}
+                type="number"
+                fullWidth
+                value={graphPathLength}
+                onChange={(e) => { setgraphPathLength(Number(e.target.value)); setQuickGraphError?.(''); }}
+                inputProps={{ min: 1, max: 100 }}
+              />
+              <TextField
+                label={t('quickgraph_Kn')}
+                type="number"
+                fullWidth
+                value={graphSize}
+                onChange={(e) => { setgraphSize(Number(e.target.value)); setQuickGraphError?.(''); }}
                 inputProps={{ min: 1, max: 100 }}
               />
             </Box>

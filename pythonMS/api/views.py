@@ -390,7 +390,21 @@ def run_algorithm_layoutplanning(request):
             )
             threading.Thread(target=_perform_async_side_effects, args=thread_args).start()
         return Response({"result": color_map})
-
+    
+@api_view(["POST"])
+@parser_classes([MultiPartParser, FormParser])
+def run_algorithm_package_coloring(request):
+    serializer = ColorSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+    script_path = os.path.join(settings.BASE_DIR, os.environ.get("LAYOUT_PLANNING_SCRIPT", "Package_Coloring.py"))
+    try:
+        result = run_fixed_python_script(script_path, data["vertices"], data["edges"], data.get("entries", []))
+        if not result: raise ScriptExecutionError("Empty result from script")
+        return Response({"result": result})
+    except ScriptExecutionError as e:
+        print("layout planning error (sync):", e)
+        return Response({"result": {}})
 
 # --- DİĞER ALGORİTMA ENDPOINT'LERİ (DEĞİŞİKLİK YOK) ---
 @api_view(["POST"])
