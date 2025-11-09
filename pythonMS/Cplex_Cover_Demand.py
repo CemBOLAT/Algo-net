@@ -549,8 +549,75 @@ def add_group_cross_constraints(model, x, u, Nodes, G_indexed, non_res_types):
                 ctname=f"sum_u_le_1_{v}_{t}"
             )
 
+def add_assignment_equalities(model, y, x, S, G_indexed, non_res_types, r_type="R"):
+    """
+    Enforces:  sum_{g in S_{v,t}} y[v,(t,gi)] == x[v,r]
+    For S[(v,t)] == [], enforces x[v,r] == 0 (o tip için servis yoksa residential olamaz).
+    """
+    # G_index: t -> { frozenset(group)->gi }
+    G_idx_map = {
+        t: {frozenset(g): gi for gi, g in G_indexed[t]}
+        for t in non_res_types
+    }
+
+    # V ve T'yi y'den ve S'den türetmek için anahtarları dolaşalım
+    # y anahtarı: (v, (t, gi))
+    V_all = sorted({vk for (vk, _) in y.keys()})
+    for v_t, groups in S.items():
+        v, t = v_t
+        if t not in non_res_types:
+            continue
+
+        # Bu (v,t) için y terimlerini topla
+        y_terms = []
+        if groups:
+            for g in groups:
+                fsg = frozenset(g)
+                gi = G_idx_map[t].get(fsg, None)
+                if gi is None:
+                    # S, G ile birebir aynı temsil (tuple/frozenset) olmalı
+                    # Tutarsızlık varsa hiç terim eklemeyelim (yok say)
+                    continue
+                key = (v, (t, gi))
+                if key in y:
+                    y_terms.append(y[key])
+
+            if y_terms:
+                model.add_constraint(
+                    model.sum(y_terms) == x[v, r_type],
+                    ctname=f"assign_eq_{v}_{t}"
+                )
+            else:
+                # Uygun grup görünmüyorsa bu (v,t) için residential olamaz
+                model.add_constraint(
+                    x[v, r_type] == 0,
+                    ctname=f"assign_none_{v}_{t}"
+                )
+        else:
+            # S[(v,t)] boş: bu t için v'yi servis edecek grup yok => x[v,r]=0
+            model.add_constraint(
+                x[v, r_type] == 0,
+                ctname=f"assign_none_{v}_{t}"
+            )
+
+def add_demand_constraints(model, y, u, x, Capacity, non_res_types, r_type="R"):
+    # (1) Capacity: sum_v y[v,g,t] <= C_t * u[g,t]
+    for t in non_res_types:
+        cap = Capacity[t]
+        group_indices = set(gi for (_, (tt, gi)) in y.keys() if tt == t)
+        for gi in group_indices:
+            terms = [var for (v,(tt,ggi)), var in y.items() if tt==t and ggi==gi]
+            if terms:
+                model.add_constraint(model.sum(terms) <= cap * u[(t, gi)],
+                                     ctname=f"capacity_{t}_{gi}")
+
+    # (2) Linking: y <= u, y <= x_r
+    for (v, (t, gi)), y_var in y.items():
+        model.add_constraint(y_var <= u[(t, gi)], ctname=f"y_le_u_{v}_{t}_{gi}")
+        model.add_constraint(y_var <= x[v, r_type], ctname=f"y_le_xr_{v}_{t}_{gi}")
 
 
+    
 def build_model(V: List[str],
                 T: List[str],
                 G: Dict[str, List[Tuple[str, ...]]],
@@ -645,6 +712,16 @@ def build_model(V: List[str],
         r_type=r_type
     )
 
+    add_assignment_equalities(
+        model=model,
+        y=y,
+        x=x,
+        S=S,
+        G_indexed=G_indexed,
+        non_res_types=non_res_types,
+        r_type=r_type
+    )
+
     # 3) Group Size Consistency: for each group g in G[t] and v in g, u[g,t] <= x[v,t] 
     add_group_size_constraints(
         model,
@@ -661,33 +738,73 @@ def build_model(V: List[str],
                                 Nodes, 
                                 G_indexed, 
                                 non_res_types)
+    
+    # 5) Capacity + linking
+    add_demand_constraints(
+        model=model,
+        y=y,
+        u=u,
+        x=x,
+        Capacity=Capacity,
+        non_res_types=non_res_types,
+        r_type=r_type
+    )
     return model, G_indexed
 
 
 model, G_indexed = build_model(Nodes, T, SubGraphs, BuildingSize, S, T_Without_R ,r_type='R')
 
 # # Optionally write LP file for CPLEX (or pass model to CPLEX solver via DOcplex)
-# model.export_as_lp('residential_model.lp')
+model.export_as_lp('residential_model.lp')
 
-# # Solve (requires CPLEX/DOcplex solver available). If you have CPLEX installed and
-# # properly configured, you can call model.solve(). Otherwise use the local DOcplex
-# # heuristic or write .lp and solve with cplex command line.
-""" try:
-    #sol = model.solve()
-#     if sol:
-#         print("Objective:", model.objective_value)
-#         for v in Nodes:
-#             print(v, {t: x for t, x in ((t, model.solution.get_value(f"x_{v}_{t}")) for t in T)})
-#         for t in T_Without_R:
-#             print(f"t : {t}")
-#             for gi , g in G_indexed[t]:
-#                 print(g, {t: model.solution.get_value(f"u_{t}_{gi}") })
-#     else:
-#         print("No solution found by DOcplex solve()")
+# Solve (requires CPLEX/DOcplex solver available). If you have CPLEX installed and
+# properly configured, you can call model.solve(). Otherwise use the local DOcplex
+# heuristic or write .lp and solve with cplex command line.
+try:
+    sol = model.solve()
+    if sol:
+        #print("Objective:", model.objective_value)
+        for v in Nodes:
+            print(v, {t: x for t, x in ((t, model.solution.get_value(f"x_{v}_{t}")) for t in T)})
+        for t in T_Without_R:
+            print(f"t : {t}")
+            for gi , g in G_indexed[t]:
+                print(g, {t: model.solution.get_value(f"u_{t}_{gi}") })
+        # --- Assigned building count print (any type) ---
+        assigned_building_count = sum(
+            1 for v in Nodes for tt in T if model.solution.get_value(f"x_{v}_{tt}") > 0
+        )
+        print(assigned_building_count)
+        # --- People assigned per non-residential type ---
+        assigned_non_res = {}
+        for t in T_Without_R:
+            total = 0
+            for v in Nodes:
+                for gi, g in G_indexed[t]:
+                    val = model.solution.get_value(f"y_{v}_{t}_{gi}")
+                    if val:
+                        total += val
+            assigned_non_res[t] = int(round(total))
+        print(json.dumps(assigned_non_res))
+        # --- Per group (facility) assigned counts ---
+        group_assignment_details = {}
+        for t in T_Without_R:
+            type_groups = {}
+            for gi, g in G_indexed[t]:
+                load = 0
+                for v in Nodes:
+                    val = model.solution.get_value(f"y_{v}_{t}_{gi}")
+                    if val:
+                        load += val
+                type_groups[str(gi)] = {"nodes": list(g), "assigned": int(round(load))}
+            group_assignment_details[t] = type_groups
+
+        print(json.dumps(group_assignment_details))
+    else:
+        print("No solution found by DOcplex solve()")
 except Exception as e:
     print("Solve skipped or failed (no CPLEX engine available in this environment):", e)
-    print("LP written to residential_model.lp") """
-
+    print("LP written to residential_model.lp")
 
 
 ###        Model Bitiş         ###############
@@ -695,10 +812,10 @@ except Exception as e:
 
 vertex_colors = {vertex['id'] : "black" for vertex in vertices}
 
-""" for v in Nodes:
+for v in Nodes:
     for t in T:
         if model.solution.get_value(f"x_{v}_{t}") > 0:
-            vertex_colors[v] = Type_colors[t] """
+            vertex_colors[v] = Type_colors[t]
 
 # def display_res():
 #     # Başlığı dinamik olarak T listesinden oluştur
@@ -717,6 +834,7 @@ vertex_colors = {vertex['id'] : "black" for vertex in vertices}
 #         print(" | ".join(values))
 
 #display_res()
-print("Model eğitimi olmadan bitti")
+
+#print("Model eğitimi olmadan bitti")
 print("$$$")
 print(json.dumps(vertex_colors))

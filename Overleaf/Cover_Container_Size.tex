@@ -182,6 +182,7 @@ Maximize the total number of residential containers (where $r$ denotes the resid
 
     \vspace{0.7em}
 
+
     \item \textbf{Neighborhood coverage (Rainbow constraint):}
     \[
     \sum_{g \in S_{v,t}} u_{g,t} \ge x_{v,r}
@@ -224,6 +225,67 @@ Maximize the total number of residential containers (where $r$ denotes the resid
     A vertex $v$ can be assigned to type $t$ only if it belongs to at least one active group of that type,  
     and each vertex can participate in at most one such group.  
     These two inequalities jointly prevent cross-group overlaps and maintain group exclusivity.
+
+% --- Assignment equality constraint ---
+\item \textbf{Assignment equality constraint:}
+\[
+\sum_{g \in S_{v,t}} y_{v,g,t} = x_{v,r},
+\qquad
+\forall v \in V,\ \forall t \in T \setminus \{r\}.
+\]
+
+\textbf{Explanation:}  
+This equality enforces that every residential vertex $v$ must be assigned to exactly one
+active group $g$ of each non-residential type $t$.
+If $x_{v,r}=1$, the vertex must appear in one and only one assignment $y_{v,g,t}=1$.
+If $x_{v,r}=0$, no assignment can exist for that vertex.
+This ensures that each residential container receives full coverage
+and activates the relevant demand and capacity constrain
+
+% --- Demand (capacity) constraint ---
+\item \textbf{Demand (capacity) constraint:}
+\[
+\sum_{v \in V} y_{v,g,t} \le C_t \, u_{g,t}
+\qquad
+\forall t \in T \setminus \{r\},\ \forall g \in G_t.
+\]
+
+\textbf{Explanation:}  
+This constraint enforces the demand–capacity relationship between residential vertices and
+non-residential groups.  
+For each group $g$ of type $t$, the left-hand side represents the total number of residential vertices
+assigned to that group.  
+The right-hand side, $C_t \, u_{g,t}$, limits this number by the capacity parameter $C_t$.
+If the group is inactive ($u_{g,t}=0$), no residential vertex can be assigned to it.
+If the group is active ($u_{g,t}=1$), it may serve up to $C_t$ residential vertices but not more.
+This ensures that the total service load of each non-residential group
+never exceeds its predefined maximum capacity.
+
+\vspace{1em}
+
+% --- Linking constraints ---
+\textbf{Linking constraints between assignments and activations:}
+\[
+y_{v,g,t} \le u_{g,t},
+\qquad
+y_{v,g,t} \le x_{v,r},
+\qquad
+\forall v \in V,\ \forall t \in T \setminus \{r\},\ \forall g \in S_{v,t}.
+\]
+
+\textbf{Explanation:}  
+These linking constraints preserve logical consistency between different decision variables:
+\begin{itemize}
+    \item The inequality $y_{v,g,t} \le u_{g,t}$ ensures that a residential vertex $v$ can only be assigned
+    to a group $g$ if that group is activated.
+    \item The inequality $y_{v,g,t} \le x_{v,r}$ guarantees that only vertices designated as residential
+    ($x_{v,r}=1$) can receive service from a non-residential group.
+\end{itemize}
+Together, these two relationships prevent infeasible assignments such as
+linking inactive groups to residential vertices or assigning non-residential vertices
+to any facility group.
+
+
 \end{enumerate}
 
 
