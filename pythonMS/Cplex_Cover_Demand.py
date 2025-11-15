@@ -693,7 +693,7 @@ def build_model(V: List[str],
     # Constraints
     # 1) Single type per vertex: sum_t x[v,t] <= 1
     for v in V:
-        model.add_constraint(model.sum(x[v, t] for t in T) <= 1,
+        model.add_constraint(model.sum(x[v, t] for t in T) == 1,
                              ctname=f"single_type_{v}")
 
 
@@ -780,7 +780,15 @@ try:
         for t in T_Without_R:
             total = 0
             for v in Nodes:
-                for gi, g in G_indexed[t]:
+                # S may be missing some keys; default to empty list
+                candidate_groups = S.get((v, t), [])
+                if not candidate_groups:
+                    continue
+                g_to_index = {g: gi for gi, g in G_indexed[t]}
+                for g in candidate_groups:
+                    if g not in g_to_index:
+                        raise KeyError(f"Group {g} in S[({v},{t})] not found in G[{t}].")
+                    gi = g_to_index[g]
                     val = model.solution.get_value(f"y_{v}_{t}_{gi}")
                     if val:
                         total += val
@@ -793,13 +801,23 @@ try:
             for gi, g in G_indexed[t]:
                 load = 0
                 for v in Nodes:
+                    candidate_groups =S.get((v,t), [])
+                    if not candidate_groups:
+                        continue
+                    if g not in candidate_groups:
+                        continue 
                     val = model.solution.get_value(f"y_{v}_{t}_{gi}")
                     if val:
                         load += val
                 type_groups[str(gi)] = {"nodes": list(g), "assigned": int(round(load))}
             group_assignment_details[t] = type_groups
 
-        print(json.dumps(group_assignment_details))
+        for types, values in group_assignment_details.items():
+            print(f"{types} :")
+            for groups in values.values():
+                if groups["assigned"] != 0:  
+                    print(groups["nodes"], "->", "Assigned :", {groups["assigned"]} )
+        #print(json.dumps(group_assignment_details))
     else:
         print("No solution found by DOcplex solve()")
 except Exception as e:
