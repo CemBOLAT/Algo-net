@@ -18,7 +18,9 @@ const translations = {
     create_graph: 'Graph Oluştur',
     tree_algorithms: 'Ağaç Algoritmaları',
     array_algorithms: 'Dizi Algoritmaları',
-
+    unhcr_info: 'UNHCR Bilgi Sayfası',
+    download: 'İndir',
+    download_pdf_unhcr: 'UNHCR PDF\'ini İndir',
     // Login/Register shared
     password: 'Şifre',
     confirm_password: 'Şifre Tekrar',
@@ -285,7 +287,7 @@ const translations = {
     update_password: 'Update Password',
     reset_failed: 'Password could not be reset.',
     password_updated_redirect: 'Your password has been updated! Redirecting to login in 2 seconds.',
-
+    download_pdf_unhcr: 'Download UNHCR PDF',
     // GraphList
     all_graphs: 'All Graphs',
     select_all: 'Select All',
@@ -311,6 +313,7 @@ const translations = {
 
     prev: 'Previous',
     next: 'Next',
+    download: 'Download',
     
     graph_simulator: 'Graph Simulator',
 
@@ -417,6 +420,7 @@ const translations = {
     reset_btn: 'Reset',
     file_add_btn: 'Add File',
     create_btn: 'Create',
+    unhcr_info: 'UNHCR Information Page',
 
     // GraphNameOptions
     graph_name_label: 'Graph Name',

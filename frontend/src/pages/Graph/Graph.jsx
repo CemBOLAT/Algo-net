@@ -440,6 +440,7 @@ const Graph = () => {
 					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
 					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
 					// New: toggle Legend Editor
+                    { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
 					{ label: 'Legend Ekle', onClick: () => setShowLegendEditor(v => !v), variant: 'contained', color: 'primary', ariaLabel: 'legend_add', isButton: true },
 					{ label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
 				]}

@@ -698,7 +698,8 @@ const GraphCreation = () => {
 					{ label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
 					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
 					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-					{ label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+                    { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
 				]}
 			/>
             <Container maxWidth="lg" sx={{ py: 4 }}>

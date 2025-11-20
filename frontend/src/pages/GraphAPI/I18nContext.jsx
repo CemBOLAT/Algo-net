@@ -199,6 +199,8 @@ const translations = {
     enter_valid_number: 'Geçerli bir sayı girin',
     previous_page: 'Önceki sayfa',
     next_page: 'Sonraki sayfa',
+    unhcr_info: 'UNHCR Bilgi Sayfası',
+
   },
   en: {
     profile: 'Profile',
@@ -210,6 +212,7 @@ const translations = {
     theme: 'Theme',
     go_to_canvas: 'Back to Canvas',
     logout: 'Logout',
+    unhcr_info: 'UNHCR Information Page',
     shortcuts: 'Shortcuts',
     my_graphs: 'My Graphs',
     create_graph: 'Create Graph',

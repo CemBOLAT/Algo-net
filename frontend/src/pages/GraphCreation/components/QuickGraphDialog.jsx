@@ -106,11 +106,12 @@ const QuickGraphDialog = ({
       if (Number(gridWeight) < 1) return onCreate?.({ error: t('quickgraph_err_grid_weight_min') }); // setQuickGraphError yerine
     }
     if (quickGraphType === 'Melih' ){
+      console.log("graphPathLength, pathLength, graphSize:", graphPathLength, pathLength, graphSize);
       if (Number(graphPathLength) <= 0) return onCreate?.({ error: t('quickgraph_err_Melih_Bn') }); // setQuickGraphError yerine
       if (Number(pathLength) <= 0) return onCreate?.({ error: t('quickgraph_err_Melih_Bn') }); // setQuickGraphError yerine
       if (Number(graphSize) <= 0) return onCreate?.({ error: t('quickgraph_err_Melih_Kn_positive') }); // setQuickGraphError yerine
-      if (Number(graphPathLength) > Number(graphSize)) return onCreate?.({ error: t('quickgraph_err_Melih_Bn_Kn') }); // setQuickGraphError yerine
-      if (Number(pathLength) % Number(graphPathLength) !== 0 ) return onCreate?.({ error: t('quickgraph_err_Melih_Pn_Bn') }); // setQuickGraphError yerine
+      if (Number(graphPathLength) > Number(graphSize)) {console.log("graphPathLength,", graphPathLength, graphSize); return onCreate?.({ error: t('quickgraph_err_Melih_Bn_Kn') })}; // setQuickGraphError yerine
+      if (Number(pathLength) % Number(graphPathLength) !== 0 ) {console.log("bba"); return onCreate?.({ error: t('quickgraph_err_Melih_Pn_Bn') });} // setQuickGraphError yerine
     }
     if (quickGraphType === 'random') return;
 
@@ -196,7 +197,7 @@ const QuickGraphDialog = ({
               type="number"
               fullWidth
               value={treeChildCount}
-              onChange={(e) => { setTreeChildCount(Number(e.target.value)); setQuickGraphError?.(''); }}
+              onChange={(e) => { setTreeChildCount(Number(e.target.value)); }}
               inputProps={{ min: 1, max: 10 }}
               helperText={t('quickgraph_tree_k_helper')} // Bu güncellenecek
             />
@@ -208,7 +209,7 @@ const QuickGraphDialog = ({
               type="number"
               fullWidth
               value={starCenterCount}
-              onChange={(e) => { setStarCenterCount(Number(e.target.value)); setQuickGraphError?.(''); }}
+              onChange={(e) => { setStarCenterCount(Number(e.target.value)); }}
               inputProps={{ min: 1, max: Math.max(1, Number(quickGraphNodeCount || 1) - 1) }}
               helperText={t('quickgraph_star_centers_helper')} // Bu güncellenecek
             />
@@ -221,7 +222,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={gridRows}
-                onChange={(e) => { setGridRows(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setGridRows(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 20 }}
                 helperText={t('quickgraph_grid_rows_helper')} // Bu güncellenecek
               />
@@ -230,7 +231,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={gridCols}
-                onChange={(e) => { setGridCols(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setGridCols(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 20 }}
                 helperText={t('quickgraph_grid_cols_helper')} // Bu güncellenecek
               />
@@ -239,7 +240,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={gridWeight}
-                onChange={(e) => { setGridWeight(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setGridWeight(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 100 }}
                 helperText={t('quickgraph_grid_weight_helper')} // Bu güncellenecek
               />
@@ -253,7 +254,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={pathLength}
-                onChange={(e) => { setpathLength(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setpathLength(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 100 }}
                 helperText={t('quickgraph_Pn_helper')} // Bu güncellenecek
               />
@@ -262,7 +263,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={graphPathLength}
-                onChange={(e) => { setgraphPathLength(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setgraphPathLength(Number(e.target.value));}}
                 inputProps={{ min: 1, max: 100 }}
                 helperText={t('quickgraph_Bn_helper')} // Bu güncellenecek
               />
@@ -271,7 +272,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={graphSize}
-                onChange={(e) => { setgraphSize(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setgraphSize(Number(e.target.value));}}
                 inputProps={{ min: 1, max: 100 }}
                 helperText={t('quickgraph_Kn_helper')} // Bu güncellenecek
               />
@@ -285,7 +286,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={bipartiteA}
-                onChange={(e) => { setBipartiteA(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setBipartiteA(Number(e.target.value));}}
                 inputProps={{ min: 1, max: 200 }}
               helperText={t('quickgraph_bipartite_a_helper')} // Bu güncellenecek
               />
@@ -294,7 +295,7 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={bipartiteB}
-                onChange={(e) => { setBipartiteB(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setBipartiteB(Number(e.target.value)); }}
                 inputProps={{ min: 1, max: 200 }}
                 helperText={t('quickgraph_bipartite_b_helper')} // Bu güncellenecek
               />
