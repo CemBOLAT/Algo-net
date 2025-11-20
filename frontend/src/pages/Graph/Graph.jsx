@@ -8,7 +8,7 @@ import EdgeSettings from '../../components/EdgeSettings';
 import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
 import LegendPanel from '../../components/LegendPanel';
-import { Box, Container, Grid, Paper } from '@mui/material';
+import { Box, Container, Grid, Paper, Button, TextField, IconButton, Stack, Typography } from '@mui/material';
 import { useI18n } from '../../context/I18nContext';
 
 
@@ -30,6 +30,14 @@ const Graph = () => {
 	const [errorMessage, setErrorMessage] = useState('');
 	const [hasLegend, setHasLegend] = useState(false);
 	const [legendEntries, setLegendEntries] = useState([]);
+	// New: simple draft state for adding legend entries with arbitrary attributes
+	const [legendDraft, setLegendDraft] = useState({
+		name: '',
+		color: '#1976d2',
+		attributes: [{ key: '', value: '' }],
+	});
+	// New: controls the visibility of the legend editor
+	const [showLegendEditor, setShowLegendEditor] = useState(false);
 
 	// Helper function to show error messages
 	const showError = (message) => {
@@ -143,14 +151,25 @@ const Graph = () => {
 			// Legend (if backend returns)
 			if (graph.hasLegend && Array.isArray(graph.legendEntries)) {
 				setHasLegend(true);
-				// normalize keys
-				setLegendEntries(graph.legendEntries.map(le => ({
-					name: le.name,
-					color: le.color,
-					capacity: le.capacity,
-					distance: le.distance,
-					diameter: le.diameter,
-				})));
+				// normalize: prefer attributes; fallback to fixed fields
+				setLegendEntries(graph.legendEntries.map((le) => {
+					const attrs = le.attributes && typeof le.attributes === 'object'
+						? le.attributes
+						: (() => {
+								const a = {};
+								if (le.capacity !== undefined) a['Kapasite'] = String(le.capacity);
+								if (le.distance !== undefined) a['Uzaklık'] = String(le.distance);
+								const d = le.diameter ?? le.unitDistance;
+								if (d !== undefined) a['Yarıçap'] = String(d);
+								if (le.size !== undefined) a['Boyut'] = String(le.size);
+								return a;
+						  })();
+					return {
+						name: le.name,
+						color: le.color,
+						attributes: attrs,
+					};
+				}));
 			} else {
 				setHasLegend(false);
 				setLegendEntries([]);
@@ -181,6 +200,40 @@ const Graph = () => {
 		setSelectedEdge(null);
 		setMode(null);
 		setTempEdge(null);
+	};
+
+	const updateDraftAttr = (idx, field, val) => {
+		setLegendDraft(prev => {
+			const next = { ...prev, attributes: prev.attributes.map((r, i) => i === idx ? { ...r, [field]: val } : r) };
+			return next;
+		});
+	};
+
+	const addDraftAttrRow = () => {
+		setLegendDraft(prev => ({ ...prev, attributes: [...prev.attributes, { key: '', value: '' }] }));
+	};
+	
+	const removeDraftAttrRow = (idx) => {
+		setLegendDraft(prev => ({ ...prev, attributes: prev.attributes.filter((_, i) => i !== idx) }));
+	};
+	
+	const addLegendEntryFromDraft = () => {
+		const name = legendDraft.name?.trim();
+		const color = legendDraft.color || '#1976d2';
+		if (!name) {
+			showError('Lütfen legend başlığı girin.');
+			return;
+		}
+		const attrs = {};
+		(legendDraft.attributes || []).forEach(({ key, value }) => {
+			const k = (key ?? '').trim();
+			if (!k) return;
+			attrs[k] = String(value ?? '');
+		});
+		setLegendEntries(prev => [...prev, { name, color, attributes: attrs }]);
+		setHasLegend(true);
+		setLegendDraft({ name: '', color: '#1976d2', attributes: [{ key: '', value: '' }] });
+		showSuccess('Legend girdisi eklendi');
 	};
 
 	const handleSaveGraph = async () => {
@@ -224,11 +277,27 @@ const Graph = () => {
 				name: graphName.trim(),
 				nodes: nodesData,
 				edges: edgesData,
-				// include legend if present
 				hasLegend: hasLegend && legendEntries.length > 0,
-				legendEntries: (hasLegend ? legendEntries : []),
+				legendEntries: (hasLegend
+					? legendEntries.map(e => {
+						const attrs = e.attributes || {};
+						// first try attributes, then fallback to direct numeric fields
+						const cap = attrs.Kapasite !== undefined ? Number(attrs.Kapasite) : (e.capacity !== undefined ? Number(e.capacity) : 0);
+						const dist = attrs.Uzaklık !== undefined ? Number(attrs.Uzaklık) : (e.distance !== undefined ? Number(e.distance) : 0);
+						const diam = attrs.Yarıçap !== undefined ? Number(attrs.Yarıçap) : (e.diameter !== undefined ? Number(e.diameter) : 0);
+						const sz = attrs.Boyut !== undefined ? Number(attrs.Boyut) : (e.size !== undefined ? Number(e.size) : 0);
+						return {
+							name: e.name || 'Legend',
+							color: e.color || '#1976d2',
+							attributes: attrs,
+							capacity: cap,
+							distance: dist,
+							diameter: diam,
+							size: sz,
+						};
+					})
+					: []),
 			};
-
 			console.log("Prepared graph data for saving:", JSON.stringify(requestBody));
 
 			// Use PUT for update, POST for new
@@ -370,6 +439,8 @@ const Graph = () => {
 					{ label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
 					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
 					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+					// New: toggle Legend Editor
+					{ label: 'Legend Ekle', onClick: () => setShowLegendEditor(v => !v), variant: 'contained', color: 'primary', ariaLabel: 'legend_add', isButton: true },
 					{ label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
 				]}
 			/>
@@ -421,7 +492,67 @@ const Graph = () => {
 					{/* Legend overlay */}
 					{hasLegend && legendEntries.length > 0 && (
 						<Box sx={{ position: 'absolute', right: 16, top: 80 }}>
-							<LegendPanel entries={legendEntries} />
+							<LegendPanel
+								entries={legendEntries}
+								onDelete={(idx) => {
+									setLegendEntries(prev => {
+										const next = prev.filter((_, i) => i !== idx);
+										if (next.length === 0) setHasLegend(false);
+										return next;
+									});
+									showSuccess('Legend girdisi silindi');
+								}}
+							/>
+						</Box>
+					)}
+
+					{/* Minimal Legend Entry Editor (toggle via navbar button) */}
+					{showLegendEditor && (
+						<Box sx={{ position: 'absolute', right: 16, top: hasLegend && legendEntries.length > 0 ? 80 + 300 : 80, width: 360, maxWidth: '90vw' }}>
+							<Paper elevation={3} sx={{ p: 1.5 }}>
+								<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Legend Ekle</Typography>
+								<Stack spacing={1}>
+									<TextField
+										size="small"
+										label="Başlık"
+										value={legendDraft.name}
+										onChange={e => setLegendDraft(prev => ({ ...prev, name: e.target.value }))}
+									/>
+									<TextField
+										size="small"
+										label="Renk (#hex)"
+										value={legendDraft.color}
+										onChange={e => setLegendDraft(prev => ({ ...prev, color: e.target.value }))}
+									/>
+									<Box>
+										<Typography variant="caption" sx={{ fontWeight: 600 }}>Özellikler</Typography>
+										<Stack spacing={0.5} sx={{ mt: 0.5 }}>
+											{legendDraft.attributes.map((row, idx) => (
+												<Box key={idx} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 0.5 }}>
+													<TextField
+														size="small"
+														placeholder="Anahtar (örn. Kapasite)"
+														value={row.key}
+														onChange={e => updateDraftAttr(idx, 'key', e.target.value)}
+													/>
+													<TextField
+														size="small"
+														placeholder="Değer (örn. 0)"
+														value={row.value}
+														onChange={e => updateDraftAttr(idx, 'value', e.target.value)}
+													/>
+													<Button color="error" variant="outlined" size="small" onClick={() => removeDraftAttrRow(idx)}>Sil</Button>
+												</Box>
+											))}
+											<Button variant="text" size="small" onClick={addDraftAttrRow}>Özellik Ekle</Button>
+										</Stack>
+									</Box>
+									<Stack direction="row" spacing={1}>
+										<Button variant="contained" size="small" onClick={addLegendEntryFromDraft}>Ekle</Button>
+										<Button variant="outlined" size="small" onClick={() => setShowLegendEditor(false)}>Kapat</Button>
+									</Stack>
+								</Stack>
+							</Paper>
 						</Box>
 					)}
 

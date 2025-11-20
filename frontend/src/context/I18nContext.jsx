@@ -122,6 +122,11 @@ const translations = {
     quickgraph_grid_created: 'Grid oluşturuldu ({r}x{c}, toplam={n}, kenar={m}, w={w})',
     quickgraph_error: 'Hızlı graph oluşturulurken hata oluştu',
 
+    // Melih:
+    quickgraph_Bn_helper: 'Graph içindeki path üzerindeki düğüm sayısı',
+    quickgraph_Kn_helper: 'Tam graph boyutu',
+    quickgraph_Pn_helper: 'Path üzerindeki düğüm sayısı',
+
     // weight editor
     edit_weight_title: 'Kenar Ağırlığını Düzenle',
     weight_label: 'Ağırlık',
@@ -400,6 +405,12 @@ const translations = {
     quickgraph_random_info_title: 'Random graph suggestions',
     quickgraph_create: 'Create',
     quickgraph_cancel: 'Cancel',
+
+
+    // Melih:
+    quickgraph_Bn_helper: 'Number of vertices on the path within the graph',
+    quickgraph_Kn_helper: 'Full graph size',
+    quickgraph_Pn_helper: 'Number of vertices on the path',
 
     // Bottom actions
     quick_graph_btn: 'Quick Graph',

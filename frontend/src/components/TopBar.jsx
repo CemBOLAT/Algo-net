@@ -16,7 +16,8 @@ import {
     Select,
     MenuItem,
     FormControl,
-    InputLabel
+    InputLabel,
+    Button // added
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useI18n } from '../context/I18nContext';
@@ -43,6 +44,20 @@ const TopBar = ({ title = '', actions = [], sx = {} }) => {
         if (act.to) return navigate(act.to);
     };
 
+    // split actions: buttons vs menu
+    const isTruthy = (v) => {
+        if (typeof v === 'boolean') return v;
+        if (v == null) return false;
+        const s = String(v).toLowerCase();
+        return s === 'true' || s === '1' || s === 'yes';
+    };
+    const { buttonActions, menuActions } = useMemo(() => {
+        const btn = [];
+        const menu = [];
+        (actions || []).forEach(a => (isTruthy(a?.isButton) ? btn : menu).push(a));
+        return { buttonActions: btn, menuActions: menu };
+    }, [actions]);
+
     return (
         <>
             <AppBar position="static" color="inherit" elevation={1} sx={sx}>
@@ -59,32 +74,50 @@ const TopBar = ({ title = '', actions = [], sx = {} }) => {
                                 <MenuIcon />
                             </IconButton>
                         ) : (
-                            // değişiklik: butonlar yerine Select kullanılıyor
-                            <FormControl size="small" sx={{ minWidth: 140 }}>
-                                <InputLabel id="topbar-actions-label">{t('topbar.options', { defaultValue: 'Options' })}</InputLabel>
-                                <Select
-                                    labelId="topbar-actions-label"
-                                    value={selected}
-                                    label={t('topbar.options', { defaultValue: 'Options' })}
-                                    displayEmpty
-                                    onChange={(e) => {
-                                        const idx = e.target.value;
-                                        setSelected(''); // hemen sıfırla, placeholder gösterilsin
-                                        if (idx === '') return;
-                                        const act = actions[idx];
-                                        if (act && !act.disabled) handleAction(act);
-                                    }}
-                                    renderValue={(v) => (v === '' ? t('topbar.options', { defaultValue: 'Options' }) : actions[v]?.label)}
-                                    inputProps={{ 'aria-label': t('topbar.actions_aria', { defaultValue: 'topbar-actions' }) }}
-                                >
-                                    <MenuItem value="">{t('topbar.select_placeholder', { defaultValue: '--' })}</MenuItem>
-                                    {actions.map((act, idx) => (
-                                        <MenuItem key={`select-act-${idx}`} value={idx} disabled={act.disabled || false}>
-                                            {act.label}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {/* Render real buttons */}
+                                {buttonActions.map((act, idx) => (
+                                    <Button
+                                        key={`btn-act-${idx}`}
+                                        variant={act.variant || 'contained'}
+                                        color={act.color || 'primary'}
+                                        aria-label={act.ariaLabel || `btn-${idx}`}
+                                        disabled={act.disabled || false}
+                                        onClick={() => !act.disabled && handleAction(act)}
+                                        size="small"
+                                    >
+                                        {act.label}
+                                    </Button>
+                                ))}
+                                {/* Keep the rest in a Select; hide if empty */}
+                                {menuActions.length > 0 && (
+                                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                                        <InputLabel id="topbar-actions-label">{t('topbar.options', { defaultValue: 'Options' })}</InputLabel>
+                                        <Select
+                                            labelId="topbar-actions-label"
+                                            value={selected}
+                                            label={t('topbar.options', { defaultValue: 'Options' })}
+                                            displayEmpty
+                                            onChange={(e) => {
+                                                const idx = e.target.value;
+                                                setSelected('');
+                                                if (idx === '') return;
+                                                const act = menuActions[idx];
+                                                if (act && !act.disabled) handleAction(act);
+                                            }}
+                                            renderValue={(v) => (v === '' ? t('topbar.options', { defaultValue: 'Options' }) : menuActions[v]?.label)}
+                                            inputProps={{ 'aria-label': t('topbar.actions_aria', { defaultValue: 'topbar-actions' }) }}
+                                        >
+                                            <MenuItem value="">{t('topbar.select_placeholder', { defaultValue: '--' })}</MenuItem>
+                                            {menuActions.map((act, idx) => (
+                                                <MenuItem key={`select-act-${idx}`} value={idx} disabled={act.disabled || false}>
+                                                    {act.label}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                )}
+                            </Box>
                         )}
                     </Box>
                 </Toolbar>

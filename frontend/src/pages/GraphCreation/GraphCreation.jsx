@@ -87,7 +87,6 @@ const GraphCreation = () => {
     const [quickGraphType, setQuickGraphType] = useState('full');
     const [quickGraphNodeCount, setQuickGraphNodeCount] = useState(5);
     const [quickGraphLayout, setQuickGraphLayout] = useState('circular');
-    const [quickGraphError, setQuickGraphError] = useState('');
 
     const handleLogout = () => {
         clearTokens();
@@ -391,6 +390,12 @@ const GraphCreation = () => {
 
     const handleQuickGraphCreate = (spec) => {
         // spec payload from QuickGraphDialog
+        if (spec.error) {
+            setCreateError(spec.error);
+            setQuickGraphModalOpen(false); // Diyaloğu kapat
+            setTimeout(() => setCreateError(''), 3000);
+            return;
+        }
         if (weighted) {
             skipWeightedResetRef.current = true; // prevent effect reset
             setWeighted(false);
@@ -570,7 +575,6 @@ const GraphCreation = () => {
                     
                     break;
                 default:
-                    setQuickGraphError(t('unsupported_graph_type'));
                     return;
             }
 
@@ -581,7 +585,6 @@ const GraphCreation = () => {
             setVertices(newVertices);
             setEdges(newEdges);
             setQuickGraphModalOpen(false);
-            setQuickGraphError('');
 
             // Build canvas nodes/edges with x,y from util positions
             const nodesForCanvas = newVertices.map((label, idx) => ({
@@ -652,8 +655,10 @@ const GraphCreation = () => {
             setCreateSuccess(msg);
             setTimeout(() => setCreateSuccess(''), 3000);
         } catch (e) {
-            setQuickGraphError(t('quickgraph_error'));
-            setTimeout(() => setQuickGraphError(''), 3000);
+            // setQuickGraphError(t('quickgraph_error')); // Bu satır setCreateError ile değiştirilecek
+            setCreateError(t('quickgraph_error'));
+            setQuickGraphModalOpen(false); // Diyaloğu kapat
+            setTimeout(() => setCreateError(''), 3000);
         }
     };
 
@@ -788,7 +793,6 @@ const GraphCreation = () => {
                     open={quickGraphModalOpen}
                     onClose={() => {
                         setQuickGraphModalOpen(false);
-                        setQuickGraphError('');
                     }}
                     quickGraphType={quickGraphType}
                     setQuickGraphType={setQuickGraphType}
@@ -796,8 +800,6 @@ const GraphCreation = () => {
                     setQuickGraphNodeCount={setQuickGraphNodeCount}
                     quickGraphLayout={quickGraphLayout}
                     setQuickGraphLayout={setQuickGraphLayout}
-                    quickGraphError={quickGraphError}
-                    setQuickGraphError={setQuickGraphError}
                     onCreate={handleQuickGraphCreate}
                 />
             </Container>

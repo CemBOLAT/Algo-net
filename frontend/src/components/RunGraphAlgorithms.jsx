@@ -344,14 +344,29 @@ export default function RunGraphAlgorithms({
     // Require all rows to be valid.
     // If UNHCR preset is active, send all entries; otherwise limit to first 5.
     const sourceEntries = standardOption === 'unhcr' ? entries : entries.slice(0, 5);
-    const list = sourceEntries.map((e) => ({
-       name: String(e.name || '').trim(),
-       color: String(e.color || '#1985d2ff'),
-       capacity: Number(e.capacity),
-       distance: Number(e.distance),
-       diameter: Number(e.diameter),
-       size: Number(e.size),
-     }));
+    const list = sourceEntries.map((e) => {
+      const name = String(e.name || '').trim();
+      const color = String(e.color || '#1985d2ff');
+      const capacity = Number(e.capacity);
+      const distance = Number(e.distance);
+      const diameter = Number(e.diameter);
+      const size = Number(e.size);
+      return {
+        name,
+        color,
+        capacity,
+        distance,
+        diameter,
+        size,
+        // provide attribute map so later save can read them
+        attributes: {
+          Kapasite: String(capacity),
+          Uzaklık: String(distance),
+          Yarıçap: String(diameter),
+          Boyut: String(size),
+        },
+      };
+    });
  
     if (list.some(e => e.name.length === 0)) {
       notify("error", "İsim boş olamaz.", 2000);
