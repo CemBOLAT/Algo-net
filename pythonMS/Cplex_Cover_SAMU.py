@@ -378,7 +378,7 @@ def build_model(V, T, G, A, S, non_res_types, r_type='R', name='residential_ilp'
     model = Model(name=name)
     
     # Configure Time Limit (300 seconds = 5 minutes)
-    model.parameters.timelimit = 3600 
+    model.parameters.timelimit = 21600  # 6 hours for testing, adjust as needed
     
     G_indexed = {}
     for t in non_res_types:
@@ -536,9 +536,50 @@ if __name__ == "__main__":
     # model.export_as_lp('residential_model.lp')
  
     try:
-        sol_0 =time.time() 
-        sol = model.solve()
-        print(f"Solve time {time.time()-sol_0}")
+        sol_0 = time.time() 
+        sol = model.solve() # Çözüm burada aranıyor
+        solve_time = time.time() - sol_0
+        print(f"Solve time {solve_time}")
+
+
+        # Gap Value:
+        details = model.solve_details
+        print(f"Solution gap: {details.mip_relative_gap}")
+
+        gap_value = details.mip_relative_gap
+        best_bound = details.best_bound
+        status = details.status
+
+        gap_info = {
+            "solve_time_seconds": solve_time,
+            "gap_relative": gap_value,    # 0.10 -> %10
+            "best_bound": best_bound,     # Teorik olarak ulaşılabilecek en yüksek skor
+            "status": status,
+            "entities": {
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+                "time_limit_seconds": model.parameters.timelimit,
+                "num_vertices": len(vertices),
+                "num_edges": len(edges),
+                "num_types": len(T),
+                "num_non_res_types": len(T_Without_R),
+                "subgraphs_per_type": { t: len(SubGraphs[t]) for t in T_Without_R }
+            }
+        }
+        
+        if sol:
+            gap_info["objective_value"] = sol.objective_value
+            print(f"\n>> Final MIP Gap: {gap_value:.4f} ({(gap_value*100):.2f}%)")
+        else:
+            gap_info["objective_value"] = None
+            print("\n>> No solution found, saving available stats.")
+
+        # Dosyaya kaydet (gap_report.json)
+        with open("gap_report.json", "a", encoding="utf-8") as f:
+            f.write(json.dumps(gap_info) + "\n")
+
+        print(">> Gap report saved to 'gap_report.json'")
+        # ==========================================
+
         if sol:
             print("\n*** SOLUTION FOUND ***")
             assigned_non_res = {}

@@ -43,14 +43,11 @@ export default function RunGraphAlgorithms({
   const UNHCR_STANDARD_PRESET = [
     { name: 'Communal Latrine', color: '#8e44ad', capacity: 4, distance: 50, diameter: 5, size: 1 }, // 1 per 20 persons
     { name: 'Shower', color: '#2980b9', capacity: 10, distance: 50, diameter: 5, size: 1 }, // 1 per 50 persons
-    { name: 'Water Tap', color: '#16a085', capacity: 20, distance: 200, diameter: 10, size: 4 }, // 1 per 80 persons
+    { name: 'Water Tap', color: '#16a085', capacity: 20, distance: 200, diameter: 30, size: 4 }, // 1 per 80 persons
     { name: 'Rubbish container', color: '#f39c12', capacity: 10, distance: 100, diameter: 5, size: 1 }, // 1 per 50 persons
-    { name: 'Refuse pit (2x5x2m)', color: '#d35400', capacity: 100, distance: 400, diameter: 10, size: 4 }, // 1 per 500 persons
-    { name: 'Health centre', color: '#e74c3c', capacity: 4000, distance: 1000, diameter: 50, size: 10 }, // 1 per 20,000
-    { name: 'School', color: '#2ecc71', capacity: 1000, distance: 500, diameter: 50, size: 10 }, // 1 per 5,000
-    { name: 'Distribution centre', color: '#27ae60', capacity: 1000, distance: 500, diameter: 50, size: 10 }, // 1 per 5,000
-    { name: 'Market place', color: '#f06292', capacity: 4000, distance: 1000, diameter: 50, size: 10 }, // 1 per 20,000
-    { name: 'Feeding centre', color: '#f48fb1', capacity: 4000, distance: 1000, diameter: 50, size: 10 }, // 1 per 20,000
+    { name: 'Health centre', color: '#e74c3c', capacity: 4000, distance: 370, diameter: 57, size: 9 }, // 1 per 20,000
+    { name: 'School', color: '#2ecc71', capacity: 1000, distance: 370, diameter: 57, size: 9 }, // 1 per 5,000
+    { name: 'Recreation area', color: '#8ba300ff', capacity: 25, distance: 100, diameter: 30, size: 4 }, // 1 per 2,500
   ];
 
   // Apply UNHCR preset into entries (assign stable ids and drafts). İkinci kez seçilince tekrar eklemesin.
