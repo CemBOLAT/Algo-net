@@ -377,8 +377,18 @@ def add_demand_constraints(model, y, u, x, Capacity, non_res_types, r_type="R"):
 def build_model(V, T, G, A, S, non_res_types, r_type='R', name='residential_ilp'):
     model = Model(name=name)
     
+    # 1. Focus on finding feasible solutions, not proving bounds
+    model.parameters.emphasis.mip = 1  # 1 = Feasibility, 4 = Hidden Feasibility
+
+    # 2. Aggressive Heuristics (RINS/Local Branching)
+    model.parameters.mip.strategy.heuristicfreq = 50  # Run heuristics every 50 nodes
+    model.parameters.mip.limits.submipnodelim = 500 # Search deeper in heuristics
+
+    # 3. Stronger Probing (Helps detect the logical conflicts automatically)
+    model.parameters.mip.strategy.probe = 3 # 3 = Full probing
+
     # Configure Time Limit (300 seconds = 5 minutes)
-    model.parameters.timelimit = 10800  # 6 hours for testing, adjust as needed
+    model.parameters.timelimit = 7200  # 2 hours for testing, adjust as needed
     
     G_indexed = {}
     for t in non_res_types:
