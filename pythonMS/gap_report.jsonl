@@ -1,0 +1,21 @@
+{
+    "solve_time_seconds": 0.019441843032836914, 
+    "gap_relative": 0.0, 
+    "best_bound": 12.0, 
+    "status": "integer optimal solution", 
+    "entities": 
+    {
+        "timestamp": "2025-11-30 12:28:51", 
+        "time_limit_seconds": 10800.0,
+        "num_vertices": 25,
+        "num_edges": 40,
+        "num_types": 2,
+        "num_non_res_types": 1,
+        "subgraphs_per_type":
+        {"hastane": 25}
+    }, 
+    "objective_value": 12.0
+}
+{"solve_time_seconds": 0.019961118698120117, "gap_relative": 0.0, "best_bound": 12.0, "status": "integer optimal solution", "entities": {"timestamp": "2025-11-30 12:30:26", "time_limit_seconds": 10800.0, "num_vertices": 25, "num_edges": 40, "num_types": 2, "num_non_res_types": 1, "subgraphs_per_type": {"hastane": 25}}, "objective_value": 12.0}
+{"solve_time_seconds": 30.25265097618103, "gap_relative": 0.0, "best_bound": 15.0, "status": "integer optimal solution", "entities": {"timestamp": "2025-11-30 12:31:18", "time_limit_seconds": 10800.0, "num_vertices": 25, "num_edges": 40, "num_types": 3, "num_non_res_types": 2, "subgraphs_per_type": {"hastane": 25, "okul": 39}}, "objective_value": 15.0}
+{"solve_time_seconds": 110.34424924850464, "gap_relative": 0.0, "best_bound": 15.0, "status": "integer optimal solution", "entities": {"timestamp": "2025-11-30 12:34:23", "time_limit_seconds": 10800.0, "num_vertices": 25, "num_edges": 40, "num_types": 3, "num_non_res_types": 2, "subgraphs_per_type": {"hastane": 25, "okul": 39}}, "objective_value": 15.0}

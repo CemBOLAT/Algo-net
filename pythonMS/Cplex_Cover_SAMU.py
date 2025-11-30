@@ -378,7 +378,7 @@ def build_model(V, T, G, A, S, non_res_types, r_type='R', name='residential_ilp'
     model = Model(name=name)
     
     # Configure Time Limit (300 seconds = 5 minutes)
-    model.parameters.timelimit = 21600  # 6 hours for testing, adjust as needed
+    model.parameters.timelimit = 10800  # 6 hours for testing, adjust as needed
     
     G_indexed = {}
     for t in non_res_types:
@@ -534,7 +534,7 @@ if __name__ == "__main__":
     )
     print("Building time : ", time.time() - time_build)
     # model.export_as_lp('residential_model.lp')
- 
+    vertex_colors = {vertex['id'] : "black" for vertex in vertices}
     try:
         sol_0 = time.time() 
         sol = model.solve() # Çözüm burada aranıyor
@@ -552,12 +552,18 @@ if __name__ == "__main__":
 
         gap_info = {
             "solve_time_seconds": solve_time,
-            "gap_relative": gap_value,    # 0.10 -> %10
-            "best_bound": best_bound,     # Teorik olarak ulaşılabilecek en yüksek skor
-            "status": status,
+            # Ensure these are floats/strings, not numpy/cplex types
+            "gap_relative": float(gap_value) if gap_value is not None else None,
+            "best_bound": float(best_bound) if best_bound is not None else None,
+            "status": str(status), 
             "entities": {
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
-                "time_limit_seconds": model.parameters.timelimit,
+                
+                # --- THE FIX IS HERE ---
+                # Use .get() to get the actual number from the parameter object
+                "time_limit_seconds": model.parameters.timelimit.get(), 
+                # -----------------------
+                
                 "num_vertices": len(vertices),
                 "num_edges": len(edges),
                 "num_types": len(T),
@@ -574,7 +580,7 @@ if __name__ == "__main__":
             print("\n>> No solution found, saving available stats.")
 
         # Dosyaya kaydet (gap_report.json)
-        with open("gap_report.json", "a", encoding="utf-8") as f:
+        with open("gap_report.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(gap_info) + "\n")
 
         print(">> Gap report saved to 'gap_report.json'")
@@ -610,3 +616,6 @@ if __name__ == "__main__":
             
     except Exception as e:
         print(f"Solve failed or skipped: {e}")
+        print("\n--- FINAL VERTEX COLORS ---")
+        print("$$$")
+        print(json.dumps(vertex_colors))
