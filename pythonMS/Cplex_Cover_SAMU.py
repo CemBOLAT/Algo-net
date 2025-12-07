@@ -2,6 +2,9 @@ import sys
 import json
 import math
 import time
+import random
+import os
+import sys
 import numpy as np
 from docplex.mp.model import Model
 from numba import njit, prange, uint64, int32, int64
@@ -378,17 +381,17 @@ def build_model(V, T, G, A, S, non_res_types, r_type='R', name='residential_ilp'
     model = Model(name=name)
     
     # 1. Focus on finding feasible solutions, not proving bounds
-    model.parameters.emphasis.mip = 1  # 1 = Feasibility, 4 = Hidden Feasibility
+    model.parameters.emphasis.mip = 4  # 1 = Feasibility, 4 = Hidden Feasibility
 
-    # 2. Aggressive Heuristics (RINS/Local Branching)
-    model.parameters.mip.strategy.heuristicfreq = 50  # Run heuristics every 50 nodes
-    model.parameters.mip.limits.submipnodelim = 500 # Search deeper in heuristics
+    # 2. Aggressive Heuristics
+    model.parameters.mip.strategy.heuristicfreq = 50   # Run heuristics every 50 nodes
+    model.parameters.mip.submip.nodelimit = 500      # Search deeper (500 nodes) inside each heuristic run
 
-    # 3. Stronger Probing (Helps detect the logical conflicts automatically)
-    model.parameters.mip.strategy.probe = 3 # 3 = Full probing
+    # 3. Symmetry Breaking (To stop the 625 vs 33 gap)
+    model.parameters.preprocessing.symmetry = 5      # Aggressive symmetry breaking
 
     # Configure Time Limit (300 seconds = 5 minutes)
-    model.parameters.timelimit = 7200  # 2 hours for testing, adjust as needed
+    model.parameters.timelimit = 21600  # 6 hours for testing, adjust as needed
     
     G_indexed = {}
     for t in non_res_types:
@@ -538,94 +541,207 @@ if __name__ == "__main__":
     
     # 5. Model Build & Solve
     print("\n--- 5. Building & Solving CPLEX Model (5min limit) ---")
-    time_build =time.time() 
-    model, G_indexed = build_model(
-        Nodes, T, SubGraphs, BuildingSize, S, T_Without_R, r_type='R'
-    )
-    print("Building time : ", time.time() - time_build)
-    # model.export_as_lp('residential_model.lp')
-    vertex_colors = {vertex['id'] : "black" for vertex in vertices}
-    try:
-        sol_0 = time.time() 
-        sol = model.solve() # Çözüm burada aranıyor
-        solve_time = time.time() - sol_0
-        print(f"Solve time {solve_time}")
+    
 
+    # ==========================================
+    # CONFIGURATION
+    # ==========================================
+    # Options: "HUNT" (Randomized Search) or "FINAL" (Warm Start Optimization)
+    RUN_MODE = "FINAL"  
 
-        # Gap Value:
+    # Files
+    HUNT_HISTORY_FILE = "randomized.jsonl" 
+    FINAL_REPORT_FILE = "gap_report.jsonl"
+    # ==========================================
+
+    def save_and_report(model, sol, solve_time, mode, output_file, nodes, edges):
+        """
+        Universal function to:
+        1. Print status to console
+        2. Extract variable values (if solution exists)
+        3. Save stats to JSONL file
+        4. Print the visualization JSON (Vertex Colors)
+        """
+        
+        # --- 1. Gather Statistics ---
         details = model.solve_details
-        print(f"Solution gap: {details.mip_relative_gap}")
-
         gap_value = details.mip_relative_gap
         best_bound = details.best_bound
         status = details.status
+        
+        # Calculate Objective safely
+        obj_val = sol.objective_value if sol else None
 
-        gap_info = {
-            "solve_time_seconds": solve_time,
-            # Ensure these are floats/strings, not numpy/cplex types
-            "gap_relative": float(gap_value) if gap_value is not None else None,
-            "best_bound": float(best_bound) if best_bound is not None else None,
-            "status": str(status), 
-            "entities": {
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
-                
-                # --- THE FIX IS HERE ---
-                # Use .get() to get the actual number from the parameter object
-                "time_limit_seconds": model.parameters.timelimit.get(), 
-                # -----------------------
-                
-                "num_vertices": len(vertices),
-                "num_edges": len(edges),
-                "num_types": len(T),
-                "num_non_res_types": len(T_Without_R),
-                "subgraphs_per_type": { t: len(SubGraphs[t]) for t in T_Without_R }
-            }
-        }
+        # --- 2. Extract Variable Values (Vector) ---
+        solution_vector = {}
+        vertex_colors = {v['id']: "black" for v in nodes} # Default black
         
         if sol:
-            gap_info["objective_value"] = sol.objective_value
-            print(f"\n>> Final MIP Gap: {gap_value:.4f} ({(gap_value*100):.2f}%)")
-        else:
-            gap_info["objective_value"] = None
-            print("\n>> No solution found, saving available stats.")
+            # We iterate once to do both: Save Vector AND Prepare Visualization
+            for var in model.iter_binary_vars():
+                if sol.get_value(var) > 0.5:
+                    # Save for Warm Start
+                    solution_vector[var.name] = 1.0
+                    
+                    # Logic for Vertex Colors (assuming var name format "x_NodeID_Type")
+                    # We need to parse the name. This depends on your naming convention!
+                    # Assuming: x_{v}_{t}
+                    parts = var.name.split('_')
+                    if parts[0] == 'x' and len(parts) >= 3:
+                        # Reconstruct ID. Be careful if IDs have underscores.
+                        # This is a safe approximation based on your previous code
+                        v_id = "_".join(parts[1:-1]) 
+                        t_type = parts[-1]
+                        
+                        # Update color if this node exists in our visual list
+                        # (You might need a lookup dict if IDs are complex)
+                        if v_id in vertex_colors: 
+                            # You need access to Type_colors here. 
+                            # Assuming Type_colors is global or passed in.
+                            if t_type in Type_colors:
+                                vertex_colors[v_id] = Type_colors[t_type]
 
-        # Dosyaya kaydet (gap_report.json)
-        with open("gap_report.jsonl", "a", encoding="utf-8") as f:
-            f.write(json.dumps(gap_info) + "\n")
+        # --- 3. Build Data Record ---
+        run_data = {
+            "mode": mode,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+            "solve_time_seconds": solve_time,
+            "objective_value": obj_val,
+            "gap_relative": float(gap_value) if gap_value is not None else None,
+            "best_bound": float(best_bound) if best_bound is not None else None,
+            "status": str(status),
+            "time_limit_seconds": model.parameters.timelimit.get(),
+            "stats": {
+                "num_vertices": len(nodes),
+                "num_edges": len(edges)
+            },
+            "solution_vector": solution_vector
+        }
 
-        print(">> Gap report saved to 'gap_report.json'")
-        # ==========================================
+        # --- 4. Write to File ---
+        try:
+            with open(output_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(run_data) + "\n")
+            print(f">> Results saved to {output_file}")
+        except Exception as e:
+            print(f"!! Error writing to file: {e}")
 
+        # --- 5. Console Output ---
         if sol:
-            print("\n*** SOLUTION FOUND ***")
-            assigned_non_res = {}
-            for t in T_Without_R:
-                total = 0
-                for v in Nodes:
-                    candidate_groups = S.get((v, t), [])
-                    if not candidate_groups: continue
-                    g_to_index = {g: gi for gi, g in G_indexed[t]}
-                    for g in candidate_groups:
-                        if g not in g_to_index: continue
-                        gi = g_to_index[g]
-                        val = model.solution.get_value(f"y_{v}_{t}_{gi}")
-                        if val: total += val
-                assigned_non_res[t] = int(round(total))
+            print(f"\n*** SOLUTION FOUND (Obj: {obj_val}) ***")
+            if gap_value:
+                print(f">> MIP Gap: {gap_value:.4f} ({(gap_value*100):.2f}%)")
             
-            # Helper for clean output
-            vertex_colors = {vertex['id'] : "black" for vertex in vertices}
-            for v in Nodes:
-                for t in T:
-                    if model.solution.get_value(f"x_{v}_{t}") > 0.5:
-                        vertex_colors[v] = Type_colors[t]
-
+            # Print Visualization Data for your external tool
             print("$$$")
             print(json.dumps(vertex_colors))
         else:
-            print("No solution found within time limit.")
+            print("\n>> No solution found within time limit.")
+            print("$$$")
+            print(json.dumps(vertex_colors)) # Print empty/black graph
+
+    def get_best_warm_start(filename):
+        """Reads the JSONL file and finds the solution vector with highest Objective"""
+        best_obj = -1
+        best_vector = {}
+        
+        if not os.path.exists(filename):
+            print(f"WARNING: {filename} not found. Starting without Warm Start.")
+            return None, -1
+
+        print(f">> Scanning {filename} for best solution...")
+        with open(filename, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    data = json.loads(line)
+                    if data.get("objective_value") is not None:
+                        obj = data["objective_value"]
+                        if obj > best_obj:
+                            best_obj = obj
+                            best_vector = data.get("solution_vector", {})
+                except json.JSONDecodeError:
+                    continue
+                    
+        if best_obj > -1:
+            print(f">> FOUND BEST WARM START: Objective {best_obj}")
+            return best_vector, best_obj
+        else:
+            print(">> No valid solutions found in file.")
+            return None, -1
+
+    # ==========================================
+    # MAIN EXECUTION
+    # ==========================================
+
+    # 1. Prepare Data (Sort once for consistency if needed, though Hunt shuffles)
+    # Ensure global variables (Nodes, T, vertices, etc.) are available here.
+
+    model = None
+    try:
+        if RUN_MODE == "HUNT":
+            print("--- STARTING MODE: HUNT (Randomized Search) ---")
             
+            # A. Shuffle
+            nodes_list = list(Nodes)
+            random.shuffle(nodes_list)
+            print(">> Nodes shuffled.")
+
+            # B. Build
+            model, _ = build_model(nodes_list, T, SubGraphs, BuildingSize, S, T_Without_R, r_type='R')
+            
+            # C. Configure
+            model.parameters.timelimit = 3600 # 1 Hour
+            model.parameters.emphasis.mip = 1 
+            
+            # D. Solve
+            sol_0 = time.time()
+            sol = model.solve()
+            solve_time = time.time() - sol_0
+
+            # E. Save (To Randomized History)
+            save_and_report(model, sol, solve_time, "HUNT", HUNT_HISTORY_FILE, vertices, edges)
+
+        elif RUN_MODE == "FINAL":
+            print("--- STARTING MODE: FINAL (Warm Start Optimization) ---")
+
+            # A. Find Warm Start
+            best_vector, best_obj_val = get_best_warm_start(HUNT_HISTORY_FILE)
+
+            # B. Build (Sorted/Logical)
+            sorted_nodes = sorted(list(Nodes))
+            model, G_indexed = build_model(sorted_nodes, T, SubGraphs, BuildingSize, S, T_Without_R, r_type='R')
+
+            # C. Configure
+            model.parameters.timelimit = 21600 # 6 Hours
+            model.parameters.emphasis.mip = 1 
+
+            # D. Inject Warm Start
+            if best_vector:
+                print(f">> Injecting Warm Start with {len(best_vector)} variables...")
+                warm_start = model.new_solution()
+                count_mapped = 0
+                for var_name, val in best_vector.items():
+                    target_var = model.get_var_by_name(var_name)
+                    if target_var:
+                        warm_start.add_var_value(target_var, val)
+                        count_mapped += 1
+                model.add_mip_start(warm_start)
+                print(f">> Successfully mapped {count_mapped} variables.")
+
+            # E. Solve
+            sol_0 = time.time()
+            sol = model.solve()
+            solve_time = time.time() - sol_0
+
+            # F. Save (To Final Report)
+            save_and_report(model, sol, solve_time, "FINAL", FINAL_REPORT_FILE, vertices, edges)
+
     except Exception as e:
-        print(f"Solve failed or skipped: {e}")
-        print("\n--- FINAL VERTEX COLORS ---")
-        print("$$$")
-        print(json.dumps(vertex_colors))
+        print(f"\n!! CRITICAL FAILURE: {e}")
+        # Optional: If you want to see partial results even on crash
+        if model:
+            print("Attempting to dump partial state...")
+            # You could call save_and_report here with sol=None to save the gap at crash time
+    finally:
+        if model:
+            model.end()
