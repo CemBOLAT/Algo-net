@@ -2,7 +2,8 @@ asgiref==3.9.2
 certifi==2025.10.5
 charset-normalizer==3.4.4
 cloudpickle==3.1.1
-cplex==22.1.1.0
+# Use the pip-available CPLEX wheel version
+cplex==22.1.2.0
 Django==5.2.7
 django-cors-headers==4.9.0
 djangorestframework==3.16.1

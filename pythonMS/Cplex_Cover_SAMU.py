@@ -677,6 +677,42 @@ if __name__ == "__main__":
     # Ensure global variables (Nodes, T, vertices, etc.) are available here.
 
     model = None
+    # helper to safely solve a DOcplex model and capture diagnostics on failure
+    def safe_solve(mdl, tag="run"):
+        import traceback, os
+        logs_dir = '/app/logs'
+        try:
+            return mdl.solve()
+        except Exception as exc:
+            # ensure logs dir exists
+            try:
+                os.makedirs(logs_dir, exist_ok=True)
+            except Exception:
+                pass
+            # write traceback
+            tb = traceback.format_exc()
+            try:
+                with open(os.path.join(logs_dir, f'layout_trace_{tag}.log'), 'w', encoding='utf-8') as fh:
+                    fh.write(tb)
+            except Exception:
+                pass
+            # attempt exporting model to LP for offline inspection
+            try:
+                lp_path = os.path.join(logs_dir, f'layout_model_{tag}.lp')
+                # docplex model has export_as_lp
+                try:
+                    mdl.export_as_lp(lp_path)
+                except Exception:
+                    # fallback: try write to .lp using write
+                    try:
+                        mdl.write(lp_path)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            print(f"!! SOLVE FAILURE ({tag}) - traceback written to {logs_dir}")
+            # re-raise so calling code can decide what to do
+            raise
     try:
         if RUN_MODE == "HUNT":
             print("--- STARTING MODE: HUNT (Randomized Search) ---")
@@ -695,7 +731,7 @@ if __name__ == "__main__":
             
             # D. Solve
             sol_0 = time.time()
-            sol = model.solve()
+            sol = safe_solve(model, tag="HUNT")
             solve_time = time.time() - sol_0
 
             # E. Save (To Randomized History)
@@ -730,7 +766,7 @@ if __name__ == "__main__":
 
             # E. Solve
             sol_0 = time.time()
-            sol = model.solve()
+            sol = safe_solve(model, tag="FINAL")
             solve_time = time.time() - sol_0
 
             # F. Save (To Final Report)

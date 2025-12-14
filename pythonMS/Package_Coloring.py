@@ -1,5 +1,6 @@
 import itertools
 import json
+import os
 
 import networkx as nx
 import pulp
@@ -77,7 +78,7 @@ def solve_packing_coloring(G):
             model += i * x[(v, i)] <= z, f"MaxColor_{v}_{i}"
 
     # Solve the model
-    model.solve(pulp.CPLEX_PY(msg=False))
+    solve_with_fallback(model)
 
     if model.status == pulp.LpStatusOptimal:  # Optimal solution found
         z_val = z.varValue
@@ -94,6 +95,48 @@ def solve_packing_coloring(G):
         return None, None
 
 
+def solve_with_fallback(problem):
+    """
+    Try to solve with CPLEX if available and requested; otherwise fallback to CBC, then GLPK.
+    If no solver available, write LP and raise an informative error.
+    """
+    # Respect explicit env var to try CPLEX: INSTALL_CPLEX=true or '1'
+    try_cplex_env = os.environ.get("INSTALL_CPLEX", "false").lower() in ("1", "true", "yes")
+    if try_cplex_env:
+        try:
+            import cplex  # check if python cplex module exists
+            solver = pulp.CPLEX_PY(msg=False)
+            print("Attempting solve with CPLEX_PY...")
+            return problem.solve(solver)
+        except Exception as e:
+            print(f"CPLEX requested but not available or failed: {e}. Falling back to CBC.")
+
+    # Fallback 1: CBC (local binary). Ensure coinor-cbc installed in image.
+    try:
+        solver = pulp.PULP_CBC_CMD(msg=False)
+        print("Attempting solve with PULP_CBC_CMD...")
+        return problem.solve(solver)
+    except Exception as e:
+        print(f"CBC solver failed or not available: {e}. Trying GLPK...")
+
+    # Fallback 2: GLPK if present
+    try:
+        solver = pulp.GLPK_CMD(msg=False)
+        print("Attempting solve with GLPK_CMD...")
+        return problem.solve(solver)
+    except Exception as e:
+        print(f"GLPK solver failed or not available: {e}.")
+
+    # Final fallback: export LP and raise
+    try:
+        problem.writeLP("package_coloring_fallback.lp")
+        print("No solver available. Wrote LP to 'package_coloring_fallback.lp'.")
+    except Exception as e:
+        print(f"Failed to write LP file: {e}")
+
+    raise RuntimeError("No available MIP solver (CPLEX/CBC/GLPK). Install a solver or set INSTALL_CPLEX appropriately.")
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Missing input file argument", file=sys.stderr)
@@ -103,5 +146,4 @@ if __name__ == '__main__':
         data_variable = json.load(f)
         colors, pcn = solve_packing_coloring(json_to_networkx_simple_undirected(data_variable))
         print("$$$")
-        print(json.dumps(colors)) 
-        
+        print(json.dumps(colors))

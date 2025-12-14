@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/algonet
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - APP_JWT_SECRET=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    depends_on:
+      - db
+      - pythonms
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+
+  pythonms:
+    platform: linux/amd64
+    build:
+      context: ./pythonMS
+      dockerfile: Dockerfile
+      args:
+        # enable installation of the `cplex` wheel from PyPI during image build
+        INSTALL_CPLEX: "true"
+    volumes:
+      - ./pythonMS:/app
+    environment:
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: algonet
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+    driver: local
