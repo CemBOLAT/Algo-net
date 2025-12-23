@@ -77,7 +77,7 @@ def _to_backend_payload(vertices, edges, name: str, legend_entries=None, user_id
     return payload
 
 def _save_graph_to_backend_safe(payload, auth_header=None):
-    backend_base = os.getenv("JAVA_BACKEND_BASE", "http://localhost:8080").rstrip("/")
+    backend_base = os.getenv("JAVA_BACKEND_BASE", "http://localhost:3000").rstrip("/")
     internal_key = os.getenv("INTERNAL_API_KEY")
     url = f"{backend_base}/api/graphs/save"
 

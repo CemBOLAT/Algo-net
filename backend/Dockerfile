@@ -23,6 +23,6 @@ COPY --from=build /app/build/libs/*.jar app.jar
 
 # Render (veya başka PaaS) PORT değişkeni set eder, Spring Boot bunu okuyacaksa
 ENV JAVA_OPTS=""
-EXPOSE 8080
+EXPOSE 3000
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

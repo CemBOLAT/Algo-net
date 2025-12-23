@@ -14,13 +14,13 @@ Etkileşimli graph düzenleyici ve algoritma çalıştırma platformu.
 - Backend
   - .env yapılandırın (DB, JWT, CORS).
   - Çalıştırın: `./gradlew bootRun`
-  - Varsayılan: http://localhost:8080
+  - Varsayılan: http://localhost:3000
 
 - Frontend
   - Kurulum: `npm install`
   - Çalıştırın: `npm run dev`
   - Python servisi adresi: `VITE_PYTHON_BASE=http://localhost:8000`
-  - Backend API adresi: `VITE_API_BASE=http://localhost:8080`
+  - Backend API adresi: `VITE_API_BASE=http://localhost:3000`
 
 - Python (Django + Gunicorn)
   - Kurulum: `pip install django djangorestframework django-cors-headers gunicorn pulp numpy`
