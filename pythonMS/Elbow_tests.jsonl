@@ -1,0 +1,74 @@
+{
+    "10x10":
+        {
+            "3_tip":
+                [                    
+                    {"timestamp": "2025-12-28 17:58:52", "solve_time_seconds": 3600.4728581905365, "objective_value": 60.0, "gap_relative": 0.04597701149417592, "best_bound": 62.75862068965515, "status": "time limit exceeded", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 100, "num_edges": 180}}
+                    {"timestamp": "2025-12-29 08:13:36", "solve_time_seconds": 7200.384374141693, "objective_value": 60.0, "gap_relative": 0.04597701149417604, "best_bound": 62.75862068965516, "status": "time limit exceeded", "time_limit_seconds": 7200.0, "stats": {"num_vertices": 100, "num_edges": 180}}
+                    {"timestamp": "2025-12-29 12:49:34", "solve_time_seconds": 14431.53082537651, "objective_value": 60.0, "gap_relative": 0.0459770114941758, "best_bound": 62.758620689655146, "status": "time limit exceeded", "time_limit_seconds": 14400.0, "stats": {"num_vertices": 100, "num_edges": 180}}                    
+                ],
+            "4_tip":
+                [
+                    {"timestamp": "2025-12-31 05:31:27", "solve_time_seconds": 153.28860473632812, "objective_value": 56.0, "gap_relative": 0.0, "best_bound": 56.0, "status": "integer optimal solution", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 100, "num_edges": 180}}
+                ]
+                
+        },
+    "15x15":
+        {
+            "3_tip":
+                [
+                    {"timestamp": "2025-12-28 19:08:40", "solve_time_seconds": 3600.4697210788727, "objective_value": 147.0, "gap_relative": 0.026108767529340476, "best_bound": 150.83798882681566, "status": "time limit exceeded", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    {"timestamp": "2025-12-29 08:12:48", "solve_time_seconds": 7200.449323415756, "objective_value": 147.0, "gap_relative": 0.026108767529339702, "best_bound": 150.83798882681555, "status": "time limit exceeded", "time_limit_seconds": 7200.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    {"timestamp": "2025-12-29 15:00:23", "solve_time_seconds": 14400.883051872253, "objective_value": 147.0, "gap_relative": 0.013370865587601147, "best_bound": 148.9655172413787, "status": "time limit exceeded", "time_limit_seconds": 14400.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    {"timestamp": "2025-12-30 15:38:15", "solve_time_seconds": 28800.62879061699, "objective_value": 147.0, "gap_relative": 0.013370865587600374, "best_bound": 148.9655172413786, "status": "time limit exceeded", "time_limit_seconds": 28800.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    
+                    
+                ],
+            "4_tip":
+                [
+                    {"timestamp": "2025-12-31 07:44:47", "solve_time_seconds": 3600.288381099701, "objective_value": 140.0, "gap_relative": 0.01970443349754177, "best_bound": 142.75862068965782, "status": "time limit exceeded", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    {"timestamp": "2025-12-31 10:06:17", "solve_time_seconds": 7200.644164800644, "objective_value": 140.0, "gap_relative": 0.038524400791081846, "best_bound": 145.3934161107553, "status": "time limit exceeded", "time_limit_seconds": 7200.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    {"timestamp": "2026-01-01 03:08:40", "solve_time_seconds": 14403.936426401138, "objective_value": 140.0, "gap_relative": 0.019704433497035656, "best_bound": 142.75862068958696, "status": "time limit exceeded", "time_limit_seconds": 14400.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                    {"timestamp": "2026-01-01 17:50:24", "solve_time_seconds": 28801.293825864792, "objective_value": 140.0, "gap_relative": 0.019704433497441276, "best_bound": 142.75862068964375, "status": "time limit exceeded", "time_limit_seconds": 28800.0, "stats": {"num_vertices": 225, "num_edges": 420}}
+                ]
+        },
+    "20x20":
+        {
+            "3_tip":
+                [
+                    {"timestamp": "2025-12-28 20:19:32", "solve_time_seconds": 3600.9303579330444, "objective_value": 222.0, "gap_relative": 0.2232042790249963, "best_bound": 271.5513499435715, "status": "time limit exceeded", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    {"timestamp": "2025-12-29 10:51:01", "solve_time_seconds": 7201.169415235519, "objective_value": 268.0, "gap_relative": 0.013251305759590186, "best_bound": 271.5513499435715, "status": "time limit exceeded", "time_limit_seconds": 7200.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    {"timestamp": "2025-12-29 23:32:35", "solve_time_seconds": 14400.519518375397, "objective_value": 268.0, "gap_relative": 0.013251305759589762, "best_bound": 271.5513499435714, "status": "time limit exceeded", "time_limit_seconds": 14400.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    {"timestamp": "2025-12-31 05:21:39", "solve_time_seconds": 28800.872978448868, "objective_value": 268.0, "gap_relative": 0.013251305759589762, "best_bound": 271.5513499435714, "status": "time limit exceeded", "time_limit_seconds": 28800.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                ],
+            "4_tip":
+                [
+                    {"timestamp": "2025-12-31 07:50:48", "solve_time_seconds": 3600.9829108715057, "objective_value": 123.0, "gap_relative": 1.1737665021738535, "best_bound": 267.37327976750134, "status": "time limit exceeded", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    {"timestamp": "2025-12-31 14:29:54", "solve_time_seconds": 7201.252437829971, "objective_value": 182.0, "gap_relative": 0.46908395476623416, "best_bound": 267.3732797675015, "status": "time limit exceeded", "time_limit_seconds": 7200.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    {"timestamp": "2025-12-31 22:46:49", "solve_time_seconds": 14402.425761699677, "objective_value": 260.0, "gap_relative": 0.028358768336533165, "best_bound": 267.37327976750146, "status": "time limit exceeded", "time_limit_seconds": 14400.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    {"timestamp": "2026-01-02 04:30:52", "solve_time_seconds": 28800.829701900482, "objective_value": 260.0, "gap_relative": 0.028358768336529446, "best_bound": 267.3732797675005, "status": "time limit exceeded", "time_limit_seconds": 28800.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                    
+                ],
+            "?":
+                [
+                    {"timestamp": "2025-12-31 11:56:38", "solve_time_seconds": 3600.8556294441223, "objective_value": 64.0, "gap_relative": 3.177707496362238, "best_bound": 267.373279767501, "status": "time limit exceeded", "time_limit_seconds": 3600.0, "stats": {"num_vertices": 400, "num_edges": 760}}
+                ]    
+            
+        }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
