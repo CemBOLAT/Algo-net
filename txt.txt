@@ -1,345 +1,289 @@
-şöyleki amacımız pulp kullanarak optimizasyon modeli geliştirmek. Olay residential saysıını max etmek bu kapsamda şimdilik şu kıonuları dikkate olmak lazım.
 
-
-
-1-> her binanın bir boyutu var. Hastane 4birim Okul 3birim gibi.
-
-2-> Her binanın bir yarıçapı var bu yarıçap kapsamında bir binanın iki node arası max o yarıçap kadar olabilir.
-
-3-> bir binanın hastane atanabilmesi için o binaya en fazla binanın distance değişkeni kadar uzak olabilir.
-
-4-> her bina etrafına her türden en az 1 yapı ister. rainbow coverage.
-
-5-> Demand yok. demand sonra eklenecek. 
-
-6-> amaç max sayıda residential sağlamak.
-
-
-
-Bu bağlamda hem ilp modelini oluştur hem kodu tamamla.
-
-
-
-```txt
-
-import pulp
-
-import json
-
-import sys
-
-import numpy as np
-
-import math
-
-
-
-vertices_json = sys.argv[1]
-
-edges_json = sys.argv[2]
-
-entries_json = sys.argv[3] if len(sys.argv) > 3 else "[]"
-
-
-
-vertices = json.loads(vertices_json)
-
-edges = json.loads(edges_json)
-
-entries = json.loads(entries_json) if entries_json else []
-
-
-
-print("Vertices:", vertices[0])
-
-print("Edges:", edges)
-
-print("Entries:", entries)
-
-
-
-# entries: [
-
-#     {'name': 'cemak', 'color': '#17fd32', 'capacity': 1, 'distance': 1, 'diameter': 1, 'size': 3}, 
-
-#     {'name': 'hastane', 'color': '#d21919', 'capacity': 1, 'distance': 1, 'diameter': 1, 'size': 2}, 
-
-#     {'name': 'okul', 'color': '#b319d2', 'capacity': 1, 'distance': 1, 'diameter': 1, 'size': 4}
-
-# ]
-
-
-
-T_Without_R = [ entry['name'] for entry in entries ]
-
-Capacity = { entry['name'] : entry['capacity'] for entry in entries }
-
-Type_distances = { entry['name'] : entry['distance'] for entry in entries }
-
-Type_colors = { entry['name'] : entry['color'] for entry in entries }
-
-Type_Diameter = { entry['name'] : entry['diameter'] for entry in entries }
-
-BuildingSize = { entry['name'] : entry['size'] for entry in entries }
-
-T = T_Without_R + ["R"]
-
-
-
-print("Types:", T_Without_R)
-
-print("Demands:", Capacity)
-
-print("Type_distances:", Type_distances)
-
-print("Type_colors:", Type_colors)
-
-print("Type_Diameter:", Type_Diameter)
-
-print("BuildingSize:", BuildingSize)
-
-print("TypesWithR:", T)
-
-
-
-
-
-def build_matrix(vertices, edges):
-
-    """
-
-    Build an adjacency matrix (numpy array) from vertex and edge lists.
-
-    Returns (matrix, index_map)
-
-    """
-
-    ids = [v['id'] for v in vertices]
-
-    id_to_idx = {v_id: i for i, v_id in enumerate(ids)}
-
-
-
-    n = len(ids)
-
-    mat = np.full((n, n), np.inf, dtype=float)
-
-    np.fill_diagonal(mat, 0)
-
-    
-
-    for e in edges:
-
-        i, j = id_to_idx[e['from']], id_to_idx[e['to']]
-
-        mat[i, j] = e.get('weight', 1)
-
-        if not e.get('directed', False):
-
-            mat[j, i] = e.get('weight', 1)
-
-
-
-    return mat, id_to_idx
-
-
-
-def enumerate_connected_subgraphs_matrix(mat, node_ids, x):
-
-    """
-
-    Enumerate all connected induced subgraphs of size x using adjacency matrix.
-
-    mat: np.ndarray (n x n)
-
-    node_ids: list of node labels (e.g. ['A','B','C',...])
-
-    """
-
-    n = len(node_ids)
-
-
-
-    def neighbors(idx):
-
-        """Return indices of neighbors of node idx"""
-
-        return set(np.where(mat[idx] > 0)[0])
-
-
-
-    def backtrack(root, S, ext):
-
-        if len(S) == x:
-
-            yield {node_ids[i] for i in S}
-
-            return
-
-
-
-        for v in list(ext):
-
-            S.add(v)
-
-            new_ext = (ext - {v}) | {w for w in neighbors(v) if w not in S and w > root}
-
-            yield from backtrack(root, S, new_ext)
-
-            S.remove(v)
-
-            ext.remove(v)
-
-
-
-    for u in range(n):
-
-        S = {u}
-
-        ext = {w for w in neighbors(u) if w > u}
-
-        yield from backtrack(u, S, ext)
-
-
-
-def build_grid_matrix(vertices, edges):
-
-    # Convert it to fully completed with floyd-warshall
-
-    mat, id_to_idx = build_matrix(vertices, edges)
-
-    n = mat.shape[0]
-
-    for k in range(n):
-
-        for i in range(n):
-
-            for j in range(n):
-
-                if mat[i, j] > mat[i, k] + mat[k, j]:
-
-                    mat[i, j] = mat[i, k] + mat[k, j]
-
-    return mat, id_to_idx
-
-
-
-#Define a function that takes all subgraphs for that size and type and returns the valid ones according to diameter constraints
-
-def filter_valid_subgraphs(subgraphs, max_diameter, grid_mat, id_to_idx):
-
-    valid_subgraphs = []
-
-    for subgraph in subgraphs:
-
-        indices = [id_to_idx[node_id] for node_id in subgraph]
-
-        max_dist = 0
-
-        for i in range(len(indices)):
-
-            for j in range(i + 1, len(indices)):
-
-                dist = grid_mat[indices[i], indices[j]]
-
-                print(f"dist-max_dist: {dist}-{max_dist}")
-
-                if dist > max_dist:
-
-                    max_dist = dist
-
-        if max_dist <= max_diameter:
-
-            valid_subgraphs.append(subgraph)
-
-    return valid_subgraphs
-
-
-
-
-
-
-
-mat, id_to_idx = build_matrix(vertices, edges)
-
-grid_mat, id_to_idx = build_grid_matrix(vertices, edges)
-
-# print(" atrix:")
-
-# print(mat)
-
-# print("------------")
-
-# print("Grid Matrix:")
-
-# print(grid_mat)
-
-# print("------------")
-
-node_ids = list(id_to_idx.keys())
-
-
-
-SubGraphs = {}
-
-
-
-for entry in entries:
-
-    name = entry.get('name')
-
-    size = entry.get('size')
-
-    # print("Finding subgraphs for", name, "with size:", size)
-
-    subgraphs_of_size = list(enumerate_connected_subgraphs_matrix(mat, node_ids, x=size))
-
-    # print(f"Total subgraphs of size {size} for {name}:", len(subgraphs_of_size))
-
-
-
-    # Now filter by diameter
-
-    max_diameter = entry.get('diameter')
-
-    #print(f"Filtering subgraphs for {name} with max diameter:", max_diameter)
-
-    valid_subgraphs = filter_valid_subgraphs(subgraphs_of_size, max_diameter, grid_mat, id_to_idx)
-
-    SubGraphs[name] = valid_subgraphs
-
-    #print(f"Valid subgraphs for {name} after diameter filter:", len(valid_subgraphs))
-
-
-
-# for name, subgraphs in SubGraphs.items():
-
-#     print(f"Subgraphs for {name}:", subgraphs)
-
- 
-
-
-
-Nodes = [v['id'] for v in vertices]
-
-
-
-vertex_colors = {vertex['id'] : "" for vertex in vertices}
-
-
-
-for v in Nodes:
-
-    for t in T_Without_R:
-
-        # Use solved value
-
-        vertex_colors[v] = Type_colors[t]
-
-
-
-print("$$$")
-
-print(json.dumps(vertex_colors))
-
-```
+const defaults = {
+  unhcr_info: 'UNHCR',
+  unhcr_title: 'UNHCR Acil Durum Kamp Planlama Standartları',
+  unhcr_intro: 'Bu sayfa, UNHCR Acil Durum El Kitabının 4. baskısından alınan planlı yerleşimler için temel standartları ve en iyi uygulamaları özetlemektedir.',
+  unhcr_pdf_name: 'UNHCR.pdf',
+};
+
+// 1. Ortalama Kamp Alanı Standartları (Renklendirme için)
+const areaStandards = [
+  { status: 'Standard', min: 45, max: Infinity, color: 'success', description: 'Kabul edilebilir minimum alan. Hane halkı bahçe alanı dahil.' },
+  { status: 'Acceptable', min: 35, max: 44, color: 'info', description: 'Yol, tesis ve barınak için ayrılmış minimum 30 m² alana ek olarak bahçe alanı hedeflenir.' },
+  { status: 'Unacceptable', min: 30, max: 34, color: 'warning', description: 'Bu aralıkta yoğunluk artar, hastalık riski yükselir.' },
+  { status: 'Critical', min: 0, max: 29, color: 'error', description: 'Kritik yoğunluk. Derhal müdahale gereklidir.' },
+];
+
+// 2. Minimum Barınak ve Yerleşim Standartları (Tablo 1'den)
+const minimumStandards = [
+  { description: 'Kapalı Yaşam Alanı (Minimum)', standard: '3.5 m² / kişi', detail: 'Soğuk iklimlerde/kentsel alanlarda: 4.5 m² - 5.5 m². Minimum tavan yüksekliği: 2m.' },
+  { description: 'Kamp Alanı (Hedeflenen)', standard: '45 m² / kişi', detail: 'Hizmetler (30 m²) ve Hane Bahçesi (15 m²) dahil.' },
+  { description: 'Yangın Şeridi', standard: '30 m / 300 m', detail: 'Yapılar arasında minimum 2 m veya yapının yüksekliğinin 2 katı mesafe.' },
+  { description: 'Kamp Yeri Eğim (İdeal)', standard: '2% - 4%', detail: 'İzin verilen aralık: 1% - 5%. İyi drenaj için kritik.' },
+];
+
+// 3. Modüler Planlama Birimleri (Tablo 2'den)
+const modularUnits = [
+  { module: 'Aile (Family)', structure: '1 x aile', approxPersons: '4 – 6 kişi' },
+  { module: 'Topluluk (Community)', structure: '16 x aile', approxPersons: '80 kişi' },
+  { module: 'Blok (Block)', structure: '16 x topluluk', approxPersons: '1.250 kişi' },
+  { module: 'Sektör (Sector)', structure: '4 x blok', approxPersons: '5.000 kişi' },
+  { module: 'Yerleşim (Settlement)', structure: '4 x sektör', approxPersons: '20.000 kişi' },
+];
+
+// 4. Hizmet ve Altyapı Standartları (PDF Tablo 3'ün TÜM verileri)
+const serviceStandards = [
+  { service: 'Ortak Tuvalet', standard: '1 / 20 kişi (Acil Durum)', distance: 'Ayrı alanlar. Uzun dönem için hane başına 1 latrine. Barınaktan maks. 50m, min. 6m.' },
+  { service: 'Duş', standard: '1 / 50 kişi', distance: 'Erkekler ve kadınlar için ayrı, iyi drene edilmiş alanlar.' },
+  { service: 'Su Temini', standard: '20 Litre / kişi / gün', distance: 'Su kaynağına yakınlık önemlidir.' },
+  { service: 'Su Dağıtım Noktası (Stand Tap)', standard: '1 / 80 kişi', distance: 'Haneden maksimum 200m. Topluluk başına 1 adet.' },
+  { service: 'Çöp Kutusu (100 Litre)', standard: '1 / 50 kişi', distance: '10 aile başına 1 adet.' },
+  { service: 'Çöp Çukuru (2mx5mx2m)', standard: '1 / 500 kişi', distance: '100 aile başına 1 adet.' },
+  { service: 'Sağlık Merkezi', standard: '1 / 20.000 kişi', distance: 'Yerleşim başına 1 adet. Su ve sanitasyon tesisleri içermeli.' },
+  { service: 'Sevk Hastanesi (Referral Hospital)', standard: '1 / 200.000 kişi', distance: '10 yerleşim başına 1 adet.' },
+  { service: 'Okul', standard: '1 / 5.000 kişi', distance: 'Sektör başına 1 adet. 3 sınıf, 50 m².' },
+  { service: 'Dağıtım Merkezi', standard: '1 / 5.000 kişi', distance: 'Sektör başına 1 adet.' },
+  { service: 'Pazar Yeri', standard: '1 / 20.000 kişi', distance: 'Yerleşim başına 1 adet.' },
+  { service: 'Beslenme Merkezi (Feeding Centre)', standard: '1 / 20.000 kişi', distance: 'Yerleşim başına 1 adet.' },
+  { service: 'Depolama Alanı (Storage)', standard: '15-20 m² / 100 kişi', distance: 'Mülteci depolama alanı.' },
+  { service: 'Aydınlatma', standard: 'Uygun olduğu şekilde', distance: 'Tuvalet, yıkama alanları, kamu hizmet alanları gibi öncelikli yerler.' },
+  { service: 'Kayıt Alanı', standard: 'Uygun olduğu şekilde', distance: 'Varış, tıbbi onay, dağıtım ve park alanı içerebilir.' },
+  { service: 'İdare / Ofis', standard: 'Uygun olduğu şekilde', distance: 'Gerektiği kadar.' },
+  { service: 'Güvenlik Noktası', standard: 'Uygun olduğu şekilde', distance: 'Gerektiği kadar.' },
+];
+
+const Unhcr = () => {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const tt = (k) => t(k) || defaults[k];
+
+  const handleDownload = () => {
+    alert(`PDF İndirme başlatılıyor: ${defaults.unhcr_pdf_name}`);
+  };
+
+  return (
+    <Box sx={{ bgcolor: '#f4f7f9', minHeight: '100vh' }}>
+      <TopBar
+        title={tt('unhcr_info')}
+        actions={[
+          { label: t('go_to_canvas') || 'Canvas', onClick: () => navigate('/graph'), variant: 'contained', color: 'primary', ariaLabel: 'canvas' },
+          { label: t('profile') || 'Profil', onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: 'profile' },
+          { label: t('create_graph') || 'Graf Oluştur', onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: 'create_graph' },
+          { label: t('array_algorithms') || 'Dizi', onClick: () => navigate('/array-algorithms'), variant: 'contained', color: 'primary', ariaLabel: 'array_algorithms' },
+          { label: t('tree_algorithms') || 'Ağaç', onClick: () => navigate('/tree-algorithms'), variant: 'contained', color: 'primary', ariaLabel: 'tree_algorithms' },
+          { label: t('logout') || 'Çıkış', onClick: () => navigate('/login'), variant: 'contained', color: 'error', ariaLabel: 'logout' }
+        ]}
+      />
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h3" gutterBottom sx={{ color: '#0070c7', fontWeight: '900', textAlign: 'center', mb: 1 }}>{tt('unhcr_title')}</Typography>
+        <Typography variant="subtitle1" paragraph sx={{ mb: 4, textAlign: 'center', color: 'text.secondary' }}>
+          {tt('unhcr_intro')}
+        </Typography>
+        
+        {/* PDF İndirme Butonu - Vurgulu */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
+          <Button 
+            variant="contained" 
+            startIcon={<DownloadIcon />}
+            onClick={handleDownload}
+            // UNHCR Mavi ve Sarı (Accent) renkleri
+            sx={{ 
+              bgcolor: '#0070c7', 
+              color: 'white', 
+              fontWeight: 'bold',
+              padding: '10px 30px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 112, 199, 0.4)',
+              '&:hover': { bgcolor: '#005a9c', boxShadow: '0 6px 15px rgba(0, 112, 199, 0.6)' } 
+            }}
+          >
+            {defaults.unhcr_pdf_name} İndir
+          </Button>
+        </Box>
+
+        <Grid container spacing={4}>
+          {/* 1. Standartlar */}
+          <Grid item xs={12} md={6}>
+            <Card component={Paper} elevation={6} sx={{ height: '100%', borderRadius: 3, borderLeft: '5px solid #ffcc00' }}>
+              <CardContent>
+                <Typography variant="h5" sx={{ mb: 2, color: '#2563eb', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+                  1. Temel İlkeler ve Barınak Standartları
+                </Typography>
+
+                <Box sx={{ mb: 3, bgcolor: '#e3f2fd', p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary">Anahtar Noktalar:</Typography>
+                  <ul style={{ listStyleType: 'disc', paddingLeft: 20 }}>
+                    <li><Typography variant="body2">UNHCR, mümkün olduğunda kamplara alternatifleri tercih eder.</Typography></li>
+                    <li><Typography variant="body2">Barınak, coğrafya, iklim, kültürel alışkanlıklar ve yerel malzeme erişimine göre uyarlanmalıdır.</Typography></li>
+                    <li><Typography variant="body2">Acil durum barınakları (çadır, plastik örtü) uzun süreli yerleşim için yeterli değildir.</Typography></li>
+                  </ul>
+                </Box>
+
+                <Typography variant="h6" sx={{ mt: 3, mb: 1, color: '#1976d2', fontWeight: '600' }}>
+                  Minimum Barınak ve Yerleşim Standartları
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: '#d6e6f2' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', color: '#1976d2' }}>Açıklama</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', color: '#1976d2' }}>Minimum Standart</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', color: '#1976d2' }}>Detay</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {minimumStandards.map((item, i) => (
+                        <TableRow key={i} sx={{ '&:nth-of-type(even)': { bgcolor: '#f5f5f5' } }}>
+                          <TableCell component="th" scope="row" sx={{ fontSize: '0.9rem' }}>{item.description}</TableCell>
+                          <TableCell sx={{ fontWeight: '600', color: '#333' }}>{item.standard}</TableCell>
+                          <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{item.detail}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* 2. Alan ve Modüller */}
+          <Grid item xs={12} md={6}>
+            <Card component={Paper} elevation={6} sx={{ height: '100%', borderRadius: 3, borderLeft: '5px solid #ffcc00' }}>
+              <CardContent>
+                <Typography variant="h5" sx={{ mb: 2, color: '#2563eb', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+                  2. Kamp Alanı Alanı (m²) ve Planlama Modülleri
+                </Typography>
+
+                <Typography variant="h6" sx={{ mb: 1, color: '#1976d2', fontWeight: '600' }}>
+                  Ortalama Kamp Alanı / Kişi (m²) - Durum
+                </Typography>
+                <Box sx={{ mb: 3, p: 2, bgcolor: '#fffde7', borderRadius: 2, border: '1px dashed #ffcc00' }}>
+                  <Grid container spacing={1}>
+                    {areaStandards.map((s, i) => (
+                      <Grid item xs={12} sm={6} key={i}>
+                        <Chip
+                          label={`${s.status} (${s.min} m² ${s.max === Infinity ? '+' : `- ${s.max} m²`})`}
+                          color={s.color}
+                          sx={{ width: '100%', fontWeight: 'bold', mb: 0.5 }}
+                        />
+                        <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 1 }}>
+                          {s.description}
+                        </Typography>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+                <Typography variant="h6" sx={{ mt: 3, mb: 1, color: '#1976d2', fontWeight: '600' }}>
+                  Gösterge Modüler Planlama Birimleri
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: '#d6e6f2' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', color: '#1976d2' }}>Modül</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', color: '#1976d2' }}>Yapı</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', color: '#1976d2' }}>Yaklaşık Kişi</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {modularUnits.map((m, i) => (
+                        <TableRow key={i} sx={{ '&:nth-of-type(even)': { bgcolor: '#f5f5f5' } }}>
+                          <TableCell component="th" scope="row" sx={{ fontWeight: '500' }}>{m.module}</TableCell>
+                          <TableCell>{m.structure}</TableCell>
+                          <TableCell sx={{ fontWeight: '600' }}>{m.approxPersons}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* 3. Hizmetler - GENİŞLETİLDİ */}
+          <Grid item xs={12}>
+            <Card component={Paper} elevation={6} sx={{ borderRadius: 3, borderTop: '5px solid #0070c7' }}>
+              <CardContent>
+                <Typography variant="h5" sx={{ mb: 3, color: '#2563eb', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+                  3. Hizmet ve Altyapı Yerleşim Standartları (Kapsamlı)
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Table>
+                    <TableHead sx={{ bgcolor: '#0070c7' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '20%' }}>Hizmet</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '20%' }}>Standart Miktar</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '60%' }}>Mesafe / Ek Hususlar</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {serviceStandards.map((item, index) => (
+                        <TableRow
+                          key={index}
+                          sx={{
+                            '&:nth-of-type(odd)': { bgcolor: '#f9f9f9' },
+                            '&:last-child td, &:last-child th': { border: 0 },
+                            '&:hover': { bgcolor: '#e8f5e9' } // Hafif Vurgu
+                          }}
+                        >
+                          <TableCell component="th" scope="row" sx={{ color: '#1976d2', fontWeight: '600' }}>{item.service}</TableCell>
+                          <TableCell sx={{ fontWeight: 'medium', color: '#333' }}>{item.standard}</TableCell>
+                          <TableCell sx={{ fontSize: '0.85rem' }}>{item.distance}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* 4. Site Seçim Kriterleri (Genişletildi ve Düzenlendi) */}
+          <Grid item xs={12}>
+            <Card component={Paper} elevation={6} sx={{ borderRadius: 3, borderRight: '5px solid #ffcc00' }}>
+              <CardContent>
+                <Typography variant="h5" sx={{ mb: 2, color: '#2563eb', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', pb: 1 }}>
+                  4. Önemli Site Seçim Kriterleri (PDF Özet)
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper elevation={2} sx={{ p: 2, bgcolor: '#ffe0b2' }}>
+                      <Typography variant="subtitle1" color="#e65100" fontWeight="bold">Topografi & Drenaj</Typography>
+                      <ul style={{ listStyleType: 'circle', paddingLeft: 20, margin: 0 }}>
+                          <li><Typography variant="body2">İdeal Eğim: %2-%4.</Typography></li>
+                          <li><Typography variant="body2">Su Seviyesi: Taban suyu yüzeyden min. 3m aşağıda olmalı.</Typography></li>
+                          <li><Typography variant="body2">Kaçınılması Gereken: Kayalık, bataklık veya geçirimsiz topraklar.</Typography></li>
+                      </ul>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper elevation={2} sx={{ p: 2, bgcolor: '#b2ebf2' }}>
+                      <Typography variant="subtitle1" color="#006064" fontWeight="bold">Su Kaynakları & Erişim</Typography>
+                      <ul style={{ listStyleType: 'circle', paddingLeft: 20, margin: 0 }}>
+                          <li><Typography variant="body2">Kaynak: Yeterli ve iyi kalitede su kaynağına yakınlık.</Typography></li>
+                          <li><Typography variant="body2">Dağıtım: Her 250 kişi için en az 1 su noktası.</Typography></li>
+                          <li><Typography variant="body2">Lojistik: Uzun mesafeli su taşımacılığından kaçınılmalı.</Typography></li>
+                      </ul>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper elevation={2} sx={{ p: 2, bgcolor: '#ffcdd2' }}>
+                      <Typography variant="subtitle1" color="#c62828" fontWeight="bold">Güvenlik & Çevre</Typography>
+                      <ul style={{ listStyleType: 'circle', paddingLeft: 20, margin: 0 }}>
+                          <li><Typography variant="body2">Güvenli Mesafe: Sınırlardan (50km) ve çatışma bölgelerinden uzaklık.</Typography></li>
+                          <li><Typography variant="body2">Çevresel Risk: Aşırı iklim, sıtma (malaria) ve tozlu alanlardan kaçınılmalı.</Typography></li>
+                          <li><Typography variant="body2">Doğal Yaşam: Bitki örtüsü (gölge, erozyon) ve yakacak odun erişimi sağlanmalı.</Typography></li>
+                      </ul>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+  );
+};
+
+export default Unhcr;

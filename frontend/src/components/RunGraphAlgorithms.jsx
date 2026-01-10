@@ -30,10 +30,54 @@ export default function RunGraphAlgorithms({
   // Dialog state for layout planning
   const [layoutDialogOpen, setLayoutDialogOpen] = useState(false);
 
+  // which standard is selected for layout planning: 'custom' or 'unhcr'
+  const [standardOption, setStandardOption] = useState('custom');
+
   // entries now have stable ids for animations and edit flow
   const [entries, setEntries] = useState([
   ]);
   const [entrySeq, setEntrySeq] = useState(2);
+
+  // Small built-in UNHCR standard examples (kullanıcının sağladığı listeye göre).
+  // capacity: person-per-unit (e.g. "1 per 20 persons" => capacity: 20), distance/diameter/size set to practical defaults.
+  const UNHCR_STANDARD_PRESET = [
+    { name: 'Communal Latrine', color: '#8e44ad', capacity: 4, distance: 50, diameter: 5, size: 1 }, // 1 per 20 persons
+    { name: 'Shower', color: '#2980b9', capacity: 10, distance: 50, diameter: 5, size: 1 }, // 1 per 50 persons
+    { name: 'Water Tap', color: '#16a085', capacity: 20, distance: 200, diameter: 30, size: 4 }, // 1 per 80 persons
+    { name: 'Rubbish container', color: '#f39c12', capacity: 10, distance: 100, diameter: 5, size: 1 }, // 1 per 50 persons
+    { name: 'Health centre', color: '#e74c3c', capacity: 4000, distance: 370, diameter: 57, size: 9 }, // 1 per 20,000
+    { name: 'School', color: '#2ecc71', capacity: 1000, distance: 370, diameter: 57, size: 9 }, // 1 per 5,000
+    { name: 'Recreation area', color: '#8ba300ff', capacity: 25, distance: 100, diameter: 30, size: 4 }, // 1 per 2,500
+  ];
+
+  // Apply UNHCR preset into entries (assign stable ids and drafts). İkinci kez seçilince tekrar eklemesin.
+  const applyUnhcrEntries = () => {
+    // if already UNHCR-sourced entries present, skip
+    if (entries.length > 0 && entries.every(e => e._source === 'unhcr')) return;
+    let nextId = entrySeq;
+    const mapped = UNHCR_STANDARD_PRESET.map((e, i) => ({ id: nextId + i, ...e, _source: 'unhcr' }));
+    setEntries(mapped);
+    const newDrafts = {};
+    mapped.forEach(e => { newDrafts[e.id] = { ...e }; });
+    setDrafts(newDrafts);
+    setEditing({});
+    setEntrySeq(nextId + mapped.length);
+  };
+
+  // Helper to change standard option and apply/reset accordingly
+  const handleStandardOption = (opt) => {
+    if (opt === 'unhcr') {
+      setStandardOption('unhcr');
+      applyUnhcrEntries();
+    } else {
+      // switch to custom: clear presets immediately as requested
+      setStandardOption('custom');
+      setEntries([]);
+      setDrafts({});
+      setEditing({});
+      setEntrySeq(2);
+    }
+  };
 
   // Per-row edit state and drafts (idx -> draft)
   const [editing, setEditing] = useState({});
@@ -42,7 +86,7 @@ export default function RunGraphAlgorithms({
   // Utility: detect algorithm category
   const getAlgorithmCategory = (algoName) => {
 
-    const coloringAlgos = ["ordered_coloring"];
+    const coloringAlgos = ["ordered_coloring", "package_coloring"];
     const searchingAlgos = ["dfs", "bfs"];
     const pathFindingAlgos = ["dijkstra"];
     const layoutAlgos = ["layout_planning"];
@@ -60,12 +104,35 @@ export default function RunGraphAlgorithms({
 
   // Coloring algorithms → recolor nodes
   const updateColoring = (data) => {
-    setNodes((prev) =>
-      prev.map((n) => ({
-        ...n,
-        color: data?.[n.id] ?? n.color,
-      }))
-    );
+    if (selectedAlgo === 'package_coloring') {
+      // Find the maximum number
+      const maxNum = Math.max(...Object.values(data));
+
+      // Generate distinct colors for each number
+      const colors = Array.from({ length: maxNum }, (_, i) => {
+        // You can use HSL for evenly spaced colors
+        const hue = (i * 360) / maxNum;
+        return `hsl(${hue}, 70%, 50%)`;
+      });
+
+      setNodes((prev) =>
+        prev.map((n) => {
+          const num = data[n.id];
+          return {
+            ...n,
+            color: num ? colors[num - 1] : n.color, // num-1 because array is 0-indexed
+            label: num ? String(num) : n.label, // set the label to the number
+          };
+        })
+      );
+    } else {
+      setNodes((prev) =>
+        prev.map((n) => ({
+          ...n,
+          color: data?.[n.id] ?? n.color,
+        }))
+      );
+    }
   };
 
   // Pathfinding algorithms → highlight selected edges
@@ -142,7 +209,8 @@ export default function RunGraphAlgorithms({
 
   // Helpers for dialog
   const addEntry = () => {
-    if (entries.length >= 5) return;
+    // when UNHCR standard active, allow adding beyond 5; otherwise keep 5 limit
+    if (standardOption !== 'unhcr' && entries.length >= 5) return;
     const newId = entrySeq;
     const next = { id: newId, name: '', color: '#1976d2', capacity: 1, distance: 1, diameter: 1, size: 1 };
     setEntries(prev => [...prev, next]);
@@ -235,7 +303,7 @@ export default function RunGraphAlgorithms({
 
     setIsLoading(true);
     try {
-      const resp = await http.post(`/api/${category}/`, formData, {
+      const resp = await http.post(selectedAlgo === "package_coloring" ? `/api/package_coloring/`: `/api/${category}/`, formData, {
         json: false,
         auth: true,
         apiBase: API_BASE,
@@ -270,18 +338,33 @@ export default function RunGraphAlgorithms({
 
   // Confirm handler for layout planning dialog
   const confirmLayout = async () => {
-    // Require all rows to be valid (name and positive numbers), limit to first 5
-    const list = entries.slice(0, 5).map((e) => ({
-      name: String(e.name || '').trim(),
-      color: String(e.color || '#1985d2ff'),
-      capacity: Number(e.capacity),
-      distance: Number(e.distance),
-      diameter: Number(e.diameter),
-      // send unitDistance explicitly for backend mapping
-      unitDistance: Number(e.diameter),
-      size: Number(e.size),
-    }));
-
+    // Require all rows to be valid.
+    // If UNHCR preset is active, send all entries; otherwise limit to first 5.
+    const sourceEntries = standardOption === 'unhcr' ? entries : entries.slice(0, 5);
+    const list = sourceEntries.map((e) => {
+      const name = String(e.name || '').trim();
+      const color = String(e.color || '#1985d2ff');
+      const capacity = Number(e.capacity);
+      const distance = Number(e.distance);
+      const diameter = Number(e.diameter);
+      const size = Number(e.size);
+      return {
+        name,
+        color,
+        capacity,
+        distance,
+        diameter,
+        size,
+        // provide attribute map so later save can read them
+        attributes: {
+          Kapasite: String(capacity),
+          Uzaklık: String(distance),
+          Yarıçap: String(diameter),
+          Boyut: String(size),
+        },
+      };
+    });
+ 
     if (list.some(e => e.name.length === 0)) {
       notify("error", "İsim boş olamaz.", 2000);
       return;
@@ -368,7 +451,7 @@ export default function RunGraphAlgorithms({
 
   return (
     <>
-      <Collapse in={!["ordered_coloring", "layout_planning"].includes(selectedAlgo)}>
+      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2, p: 1, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, }}>
             <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>From</InputLabel>
@@ -414,6 +497,32 @@ export default function RunGraphAlgorithms({
         <Dialog open={layoutDialogOpen} onClose={() => setLayoutDialogOpen(false)} fullWidth maxWidth="md">
           <DialogTitle>Layout Planning</DialogTitle>
           <DialogContent dividers>
+            {/* Standard seçimi: UNHCR veya Kendi Standartlarım */}
+            <Box sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
+              <FormControl component="fieldset" variant="standard" sx={{ width: '100%' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Standart seçimi</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant={standardOption === 'unhcr' ? 'contained' : 'outlined'}
+                    onClick={() => handleStandardOption('unhcr')}
+                  >
+                    UNHCR Standartları
+                  </Button>
+                  <Button
+                    variant={standardOption === 'custom' ? 'contained' : 'outlined'}
+                    onClick={() => handleStandardOption('custom')}
+                  >
+                    Kendi Standartlarım
+                  </Button>
+                </Box>
+                {standardOption === 'unhcr' && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    UNHCR standartları yüklendi — bu girdileri düzenleyebilir veya silebilirsiniz.
+                  </Typography>
+                )}
+              </FormControl>
+            </Box>
+
             {/* Fixed Residential card (non-editable) */}
             <Paper variant="outlined" sx={{ p: 1.5, mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Avatar sx={{ bgcolor: '#1976d2', width: 36, height: 36 }}>
@@ -548,20 +657,24 @@ export default function RunGraphAlgorithms({
             </TransitionGroup>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                En fazla 5 giriş
-              </Typography>
-              <Button variant="contained" onClick={addEntry} disabled={entries.length >= 5}>
+              {standardOption !== 'unhcr' ? (
+                <Typography variant="caption" color="text.secondary">
+                  En fazla 5 giriş
+                </Typography>
+              ) : (
+                <Box /> /* placeholder to keep layout */
+              )}
+              <Button variant="contained" onClick={addEntry} disabled={standardOption !== 'unhcr' && entries.length >= 5}>
                 Girdi Ekle
               </Button>
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setLayoutDialogOpen(false)}>Vazgeç</Button>
-            <Button onClick={confirmLayout} variant="contained">Çalıştır</Button>
-          </DialogActions>
-        </Dialog>
-    </>
-    );
-
-}
+             <Button onClick={() => setLayoutDialogOpen(false)}>Vazgeç</Button>
+             <Button onClick={confirmLayout} variant="contained">Çalıştır</Button>
+           </DialogActions>
+         </Dialog>
+     </>
+     );
+ 
+ }

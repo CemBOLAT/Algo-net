@@ -1,12 +1,19 @@
 asgiref==3.9.2
 certifi==2025.10.5
 charset-normalizer==3.4.4
+cloudpickle==3.1.1
+# Use the pip-available CPLEX wheel version
+cplex==22.1.2.0
 Django==5.2.7
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
+docplex==2.30.251
 gunicorn==23.0.0
 idna==3.11
-numpy==2.3.3
+llvmlite==0.45.1
+networkx==3.4.2
+numba==0.62.1
+numpy==2.2.6
 packaging==25.0
 pandas==2.3.3
 PuLP==3.3.0
@@ -16,5 +23,6 @@ pytz==2025.2
 requests==2.32.5
 six==1.17.0
 sqlparse==0.5.3
+typing_extensions==4.15.0
 tzdata==2025.2
 urllib3==2.5.0

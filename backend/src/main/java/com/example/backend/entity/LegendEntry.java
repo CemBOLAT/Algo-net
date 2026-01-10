@@ -2,6 +2,8 @@ package com.example.backend.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import java.util.Map;
+import java.util.HashMap;
 
 @Entity
 @Table(name = "legend_entries")
@@ -17,17 +19,29 @@ public class LegendEntry {
     @Column(nullable = false, length = 32)
     private String color;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Double capacity;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Double distance;
 
-    @Column(name = "unit_distance", nullable = false)
+    // Allow null from JPA perspective; we'll normalize to 0.0 on persist/update.
+    @Column(name = "unit_distance", nullable = true)
     private Double diameter;
 
     @Column(name = "size")
     private Double size;
+
+    // New: arbitrary attributes (key/value) persisted in a separate table.
+    // Keep it EAGER to avoid LazyInitializationException during JSON serialization.
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "legend_entry_attributes",
+        joinColumns = @JoinColumn(name = "legend_entry_id")
+    )
+    @MapKeyColumn(name = "attr_key")
+    @Column(name = "attr_value", length = 255)
+    private Map<String, String> attributes = new HashMap<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "graph_id", nullable = false)
@@ -35,6 +49,21 @@ public class LegendEntry {
     private Graph graph;
 
     public LegendEntry() {}
+
+    @PrePersist
+    @PreUpdate
+    protected void normalize() {
+        // Avoid NOT NULL DB failures
+        if (this.name == null || this.name.isBlank()) this.name = "Legend";
+        if (this.color == null || this.color.isBlank()) this.color = "#1976d2";
+        if (this.capacity == null) this.capacity = 0.0;
+        if (this.distance == null) this.distance = 0.0;
+        if (this.diameter == null) this.diameter = 0.0;
+
+        if (this.attributes == null) this.attributes = new HashMap<>();
+        // Trim invalid keys, keep zero values as they are allowed.
+        this.attributes.entrySet().removeIf(e -> e.getKey() == null || e.getKey().trim().isEmpty());
+    }
 
     // getters/setters
     public Long getId() { return id; }
@@ -55,10 +84,16 @@ public class LegendEntry {
     public Double getUnitDistance() { return diameter; }
     public void setUnitDistance(Double diameter) { this.diameter = diameter; }
 
+    public Double getDiameter() { return diameter; } // convenience for Jackson/backward compatibility
+    public void setDiameter(Double diameter) { this.diameter = diameter; }
+
     public Graph getGraph() { return graph; }
     public void setGraph(Graph graph) { this.graph = graph; }
 
     public Double getSize() { return size; }
     public void setSize(Double size) { this.size = size; }
 
+    // New getters/setters for attributes
+    public Map<String, String> getAttributes() { return attributes; }
+    public void setAttributes(Map<String, String> attributes) { this.attributes = attributes; }
 }

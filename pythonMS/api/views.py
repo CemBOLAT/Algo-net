@@ -77,7 +77,7 @@ def _to_backend_payload(vertices, edges, name: str, legend_entries=None, user_id
     return payload
 
 def _save_graph_to_backend_safe(payload, auth_header=None):
-    backend_base = os.getenv("JAVA_BACKEND_BASE", "http://localhost:8080").rstrip("/")
+    backend_base = os.getenv("JAVA_BACKEND_BASE", "http://localhost:3000").rstrip("/")
     internal_key = os.getenv("INTERNAL_API_KEY")
     url = f"{backend_base}/api/graphs/save"
 
@@ -356,7 +356,7 @@ def run_algorithm_layoutplanning(request):
     user_email = request.data.get("userEmail")
     if should_notify and not user_email:
         user_email = _get_email_from_auth(request.META.get("HTTP_AUTHORIZATION"))
-    script_path = os.path.join(settings.BASE_DIR, os.environ.get("LAYOUT_PLANNING_SCRIPT", "deneme.py"))
+    script_path = os.path.join(settings.BASE_DIR, os.environ.get("LAYOUT_PLANNING_SCRIPT", "Cplex_Cover_SAMU.py"))
 
     if should_notify and user_email:
         thread_args = (
@@ -390,7 +390,21 @@ def run_algorithm_layoutplanning(request):
             )
             threading.Thread(target=_perform_async_side_effects, args=thread_args).start()
         return Response({"result": color_map})
-
+    
+@api_view(["POST"])
+@parser_classes([MultiPartParser, FormParser])
+def run_algorithm_package_coloring(request):
+    serializer = ColorSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+    script_path = os.path.join(settings.BASE_DIR, os.environ.get("LAYOUT_PLANNING_SCRIPT", "Package_Coloring.py"))
+    try:
+        result = run_fixed_python_script(script_path, data["vertices"], data["edges"], data.get("entries", []))
+        if not result: raise ScriptExecutionError("Empty result from script")
+        return Response({"result": result})
+    except ScriptExecutionError as e:
+        print("layout planning error (sync):", e)
+        return Response({"result": {}})
 
 # --- DİĞER ALGORİTMA ENDPOINT'LERİ (DEĞİŞİKLİK YOK) ---
 @api_view(["POST"])

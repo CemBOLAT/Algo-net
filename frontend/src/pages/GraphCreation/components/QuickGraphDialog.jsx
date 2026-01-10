@@ -24,8 +24,6 @@ const QuickGraphDialog = ({
   setQuickGraphNodeCount,
   quickGraphLayout,
   setQuickGraphLayout,
-  quickGraphError,
-  setQuickGraphError,
   onCreate 
 }) => {
   // Local params for extra types
@@ -36,6 +34,9 @@ const QuickGraphDialog = ({
   const [gridRows, setGridRows] = useState(2);
   const [gridCols, setGridCols] = useState(2);
   const [gridWeight, setGridWeight] = useState(1);
+  const [pathLength, setpathLength] = useState(2);
+  const [graphPathLength, setgraphPathLength] = useState(2);
+  const [graphSize, setgraphSize] = useState(1);
 
   const { t } = useI18n();
   // formatter for placeholders like {n}, {m}, {max}
@@ -46,12 +47,10 @@ const QuickGraphDialog = ({
 
   const handleNodeCountChange = (e) => {
     setQuickGraphNodeCount(Number(e.target.value));
-    if (quickGraphError) setQuickGraphError('');
   };
 
   const handleTypeChange = (e) => {
     setQuickGraphType(e.target.value);
-    if (quickGraphError) setQuickGraphError('');
     // Reset layout to sensible default for full; others will be auto in Graph.jsx
     if (e.target.value === 'full' && !quickGraphLayout) setQuickGraphLayout?.('circular');
   };
@@ -88,21 +87,31 @@ const QuickGraphDialog = ({
   }, [quickGraphType, totalNodes, treeChildCount, starCenterCount, bipartiteA, bipartiteB, gridRows, gridCols, gridWeight, t]);
 
   const handleCreate = () => {
+
     // basic validations
     if (quickGraphType === 'bipartite') {
-      if (Number(bipartiteA) < 1 || Number(bipartiteB) < 1) return setQuickGraphError?.(t('quickgraph_err_bipartite_min'));
-    } else if (quickGraphType !== 'random') {
-      if (Number(quickGraphNodeCount) < 1) return setQuickGraphError?.(t('quickgraph_err_nodecount'));
+        if (Number(bipartiteA) < 1 || Number(bipartiteB) < 1) return onCreate?.({ error: t('quickgraph_err_bipartite_min') }); // setQuickGraphError yerine
     }
-    if (quickGraphType === 'tree' && Number(treeChildCount) < 1) return setQuickGraphError?.(t('quickgraph_err_tree_k'));
+    else if (quickGraphType !== 'random') {
+      if (Number(quickGraphNodeCount) < 1) return onCreate?.({ error: t('quickgraph_err_nodecount') }); // setQuickGraphError yerine
+    }
+    if (quickGraphType === 'tree' && Number(treeChildCount) < 1) return onCreate?.({ error: t('quickgraph_err_tree_k') }); // setQuickGraphError yerine
     if (quickGraphType === 'star') {
       const n = Number(quickGraphNodeCount || 1);
       const c = Number(starCenterCount || 1);
-      if (c < 1 || c >= n) return setQuickGraphError?.(tf('quickgraph_err_star_centers_range', { max: Math.max(1, n - 1) }));
+      if (c < 1 || c >= n) return onCreate?.({ error: tf('quickgraph_err_star_centers_range', { max: Math.max(1, n - 1) }) }); // setQuickGraphError yerine
     }
     if (quickGraphType === 'grid') {
-      if (Number(gridRows) < 1 || Number(gridCols) < 1) return setQuickGraphError?.(t('quickgraph_err_grid_dims_min'));
-      if (Number(gridWeight) < 1) return setQuickGraphError?.(t('quickgraph_err_grid_weight_min'));
+      if (Number(gridRows) < 1 || Number(gridCols) < 1) return onCreate?.({ error: t('quickgraph_err_grid_dims_min') }); // setQuickGraphError yerine
+      if (Number(gridWeight) < 1) return onCreate?.({ error: t('quickgraph_err_grid_weight_min') }); // setQuickGraphError yerine
+    }
+    if (quickGraphType === 'Melih' ){
+      console.log("graphPathLength, pathLength, graphSize:", graphPathLength, pathLength, graphSize);
+      if (Number(graphPathLength) <= 0) return onCreate?.({ error: t('quickgraph_err_Melih_Bn') }); // setQuickGraphError yerine
+      if (Number(pathLength) <= 0) return onCreate?.({ error: t('quickgraph_err_Melih_Bn') }); // setQuickGraphError yerine
+      if (Number(graphSize) <= 0) return onCreate?.({ error: t('quickgraph_err_Melih_Kn_positive') }); // setQuickGraphError yerine
+      if (Number(graphPathLength) > Number(graphSize)) {console.log("graphPathLength,", graphPathLength, graphSize); return onCreate?.({ error: t('quickgraph_err_Melih_Bn_Kn') })}; // setQuickGraphError yerine
+      if (Number(pathLength) % Number(graphPathLength) !== 0 ) {console.log("bba"); return onCreate?.({ error: t('quickgraph_err_Melih_Pn_Bn') });} // setQuickGraphError yerine
     }
     if (quickGraphType === 'random') return;
 
@@ -115,6 +124,8 @@ const QuickGraphDialog = ({
           ? Number(bipartiteA) + Number(bipartiteB)
           : quickGraphType === 'grid'
           ? Number(gridRows) * Number(gridCols)
+          : quickGraphType === 'Melih'
+          ? Number(pathLength) / Number(graphPathLength) 
           : Number(quickGraphNodeCount),
       treeChildCount: quickGraphType === 'tree' ? Number(treeChildCount) : undefined,
       starCenterCount: quickGraphType === 'star' ? Number(starCenterCount) : undefined,
@@ -122,15 +133,18 @@ const QuickGraphDialog = ({
       bipartiteB: quickGraphType === 'bipartite' ? Number(bipartiteB) : undefined,
       gridRows: quickGraphType === 'grid' ? Number(gridRows) : undefined,
       gridCols: quickGraphType === 'grid' ? Number(gridCols) : undefined,
-      gridWeight: quickGraphType === 'grid' ? Number(gridWeight) : undefined
+      gridWeight: quickGraphType === 'grid' ? Number(gridWeight) : undefined,
+      pathLength : quickGraphType === 'Melih' ? Number(pathLength): undefined,
+      graphPathLength : quickGraphType === 'Melih' ? Number(graphPathLength): undefined,
+      graphSize : quickGraphType === 'Melih' ? Number(graphSize): undefined             
     });
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog open={open} onClose={onClose} fullWidth >
       <DialogTitle>{t('quickgraph_title')}</DialogTitle>
       <DialogContent>
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3}}>
           <FormControl fullWidth>
             <InputLabel>{t('quickgraph_graph_type')}</InputLabel>
             <Select 
@@ -145,6 +159,7 @@ const QuickGraphDialog = ({
               <MenuItem value="bipartite">{t('quickgraph_type_bipartite')}</MenuItem>
               <MenuItem value="grid">{t('quickgraph_type_grid')}</MenuItem>
               <MenuItem value="random">{t('quickgraph_type_random')}</MenuItem>
+              <MenuItem value="Melih"> {t('quickgraph_Ahmet_Melih')}</MenuItem>
             </Select>
           </FormControl>
 
@@ -164,7 +179,7 @@ const QuickGraphDialog = ({
           )}
 
           {/* n input for non-bipartite and non-random */}
-          {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && quickGraphType !== 'grid' && (
+          {quickGraphType !== 'bipartite' && quickGraphType !== 'random' && quickGraphType !== 'grid' && quickGraphType !== 'Melih' && (
             <TextField
               label={t('quickgraph_node_count')}
               type="number"
@@ -172,8 +187,7 @@ const QuickGraphDialog = ({
               value={quickGraphNodeCount}
               onChange={handleNodeCountChange}
               inputProps={{ min: 1, max: 200 }}
-              error={!!quickGraphError}
-              helperText={quickGraphError || t('quickgraph_node_helper')}
+              helperText={t('quickgraph_node_helper')} // Bu güncellenecek
             />
           )}
 
@@ -183,8 +197,9 @@ const QuickGraphDialog = ({
               type="number"
               fullWidth
               value={treeChildCount}
-              onChange={(e) => { setTreeChildCount(Number(e.target.value)); setQuickGraphError?.(''); }}
+              onChange={(e) => { setTreeChildCount(Number(e.target.value)); }}
               inputProps={{ min: 1, max: 10 }}
+              helperText={t('quickgraph_tree_k_helper')} // Bu güncellenecek
             />
           )}
 
@@ -194,8 +209,9 @@ const QuickGraphDialog = ({
               type="number"
               fullWidth
               value={starCenterCount}
-              onChange={(e) => { setStarCenterCount(Number(e.target.value)); setQuickGraphError?.(''); }}
+              onChange={(e) => { setStarCenterCount(Number(e.target.value)); }}
               inputProps={{ min: 1, max: Math.max(1, Number(quickGraphNodeCount || 1) - 1) }}
+              helperText={t('quickgraph_star_centers_helper')} // Bu güncellenecek
             />
           )}
 
@@ -206,24 +222,59 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={gridRows}
-                onChange={(e) => { setGridRows(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setGridRows(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 20 }}
+                helperText={t('quickgraph_grid_rows_helper')} // Bu güncellenecek
               />
               <TextField
                 label={t('quickgraph_grid_cols')}
                 type="number"
                 fullWidth
                 value={gridCols}
-                onChange={(e) => { setGridCols(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setGridCols(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 20 }}
+                helperText={t('quickgraph_grid_cols_helper')} // Bu güncellenecek
               />
               <TextField
                 label={t('quickgraph_grid_weight')}
                 type="number"
                 fullWidth
                 value={gridWeight}
-                onChange={(e) => { setGridWeight(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setGridWeight(Number(e.target.value));  }}
                 inputProps={{ min: 1, max: 100 }}
+                helperText={t('quickgraph_grid_weight_helper')} // Bu güncellenecek
+              />
+            </Box>
+          )}
+
+          {quickGraphType === 'Melih' && (
+            <Box sx={{ display: 'flex', gap: 2}}>
+              <TextField
+                label={t('quickgraph_Pn')}
+                type="number"
+                fullWidth
+                value={pathLength}
+                onChange={(e) => { setpathLength(Number(e.target.value));  }}
+                inputProps={{ min: 1, max: 100 }}
+                helperText={t('quickgraph_Pn_helper')} // Bu güncellenecek
+              />
+              <TextField
+                label={t('quickgraph_Bn')}
+                type="number"
+                fullWidth
+                value={graphPathLength}
+                onChange={(e) => { setgraphPathLength(Number(e.target.value));}}
+                inputProps={{ min: 1, max: 100 }}
+                helperText={t('quickgraph_Bn_helper')} // Bu güncellenecek
+              />
+              <TextField
+                label={t('quickgraph_Kn')}
+                type="number"
+                fullWidth
+                value={graphSize}
+                onChange={(e) => { setgraphSize(Number(e.target.value));}}
+                inputProps={{ min: 1, max: 100 }}
+                helperText={t('quickgraph_Kn_helper')} // Bu güncellenecek
               />
             </Box>
           )}
@@ -235,16 +286,18 @@ const QuickGraphDialog = ({
                 type="number"
                 fullWidth
                 value={bipartiteA}
-                onChange={(e) => { setBipartiteA(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setBipartiteA(Number(e.target.value));}}
                 inputProps={{ min: 1, max: 200 }}
+              helperText={t('quickgraph_bipartite_a_helper')} // Bu güncellenecek
               />
               <TextField
                 label={t('quickgraph_bipartite_b')}
                 type="number"
                 fullWidth
                 value={bipartiteB}
-                onChange={(e) => { setBipartiteB(Number(e.target.value)); setQuickGraphError?.(''); }}
+                onChange={(e) => { setBipartiteB(Number(e.target.value)); }}
                 inputProps={{ min: 1, max: 200 }}
+                helperText={t('quickgraph_bipartite_b_helper')} // Bu güncellenecek
               />
             </Box>
           )}
@@ -267,12 +320,15 @@ const QuickGraphDialog = ({
               <Typography variant="body2" sx={{ mt: 1 }}>
                 {t('quickgraph_random_info_line5')}
               </Typography>
+              
             </Box>
           )}
           
           <Typography variant="caption" color="text.secondary">
             {edgeSummary}
           </Typography>
+
+          
         </Box>
       </DialogContent>
       <DialogActions>

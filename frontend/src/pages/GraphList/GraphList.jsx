@@ -5,6 +5,7 @@ import {
   DialogActions, DialogContent, DialogContentText, DialogTitle, Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import { clearTokens, http } from '../../utils/auth';
@@ -208,6 +209,33 @@ const GraphList = () => {
 
   const handleFeedbackClose = () => setFeedbackOpen(false);
 
+  // Download a single graph as JSON
+  const handleDownload = async (graph) => {
+    try {
+      // If needed, fetch full detail:
+      // const detail = await http.get(`/api/graphs/${graph.id}`, { auth: true });
+      const payload = graph; // use listed data; replace with `detail` if using API above
+      const json = JSON.stringify(payload, null, 2);
+      const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+
+      const base = (graph.name?.trim() || 'graph').replace(/[^\w\-]+/g, '_').slice(0, 50);
+      const filename = `${base}_${graph.id}.json`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setFeedbackSeverity('error');
+      setFeedbackMessage(t('download_failed') || 'Download failed');
+      setFeedbackOpen(true);
+    }
+  };
+
   if (loading) {
     return (
       <Container sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -225,6 +253,7 @@ const GraphList = () => {
           { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
           { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
           { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+          { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
           { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
         ]}
       />
@@ -330,6 +359,13 @@ const GraphList = () => {
                     <CardActions>
                       <Button size="small" onClick={() => handleEdit(graph.id)}>
                         {t('view_edit')}
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleDownload(graph)}
+                        startIcon={<DownloadIcon fontSize="small" />}
+                      >
+                        {t('download')}
                       </Button>
                       <Button size="small" color="error" onClick={() => handleDelete(graph.id)}>
                         {t('delete')}

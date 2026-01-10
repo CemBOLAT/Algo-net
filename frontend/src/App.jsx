@@ -17,6 +17,7 @@ import Admin from './pages/Admin/Admin';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminPrivateRoute from './components/AdminPrivateRoute';
 import Profile from './pages/Profile/Profile';
+import Unhcr from './pages/Unhcr/Unhcr'; // yeni import
 
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
           <Route path="/tree-algorithms" element={<PrivateRoute><TreeAlgorithms /></PrivateRoute>} />
           <Route path="/admin" element={<AdminPrivateRoute><Admin /></AdminPrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/unhcr" element={<Unhcr />} /> {/* yeni rota */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

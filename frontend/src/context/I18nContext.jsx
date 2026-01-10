@@ -18,7 +18,9 @@ const translations = {
     create_graph: 'Graph Oluştur',
     tree_algorithms: 'Ağaç Algoritmaları',
     array_algorithms: 'Dizi Algoritmaları',
-
+    unhcr_info: 'UNHCR Bilgi Sayfası',
+    download: 'İndir',
+    download_pdf_unhcr: 'UNHCR PDF\'ini İndir',
     // Login/Register shared
     password: 'Şifre',
     confirm_password: 'Şifre Tekrar',
@@ -72,7 +74,6 @@ const translations = {
     no_graphs_message: 'Henüz hiç graph bulunamadı. İlk graphı oluşturun!',
     view_edit: 'Görüntüle/Düzenle',
     delete: 'Sil',
-    cancel: 'İptal',
     close: 'Kapat',
     delete_graphs_title: 'Graphları Sil',
     graphs_delete_confirm_suffix: 'adet graphı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
@@ -123,6 +124,11 @@ const translations = {
     quickgraph_grid_created: 'Grid oluşturuldu ({r}x{c}, toplam={n}, kenar={m}, w={w})',
     quickgraph_error: 'Hızlı graph oluşturulurken hata oluştu',
 
+    // Melih:
+    quickgraph_Bn_helper: 'Graph içindeki path üzerindeki düğüm sayısı',
+    quickgraph_Kn_helper: 'Tam graph boyutu',
+    quickgraph_Pn_helper: 'Path üzerindeki düğüm sayısı',
+
     // weight editor
     edit_weight_title: 'Kenar Ağırlığını Düzenle',
     weight_label: 'Ağırlık',
@@ -167,6 +173,7 @@ const translations = {
     quickgraph_type_grid: 'Grid (m, n, w)',
     quickgraph_type_random: 'Random (öneri)',
     quickgraph_layout: 'Layout',
+    quickgraph_Ahmet_Melih: 'Packing Coloring (Pn, Bn, Kn)', 
     quickgraph_layout_circular: 'Dairesel (Circular)',
     quickgraph_layout_grid: 'Izgara (Grid)',
     quickgraph_node_count: 'Düğüm Sayısı (n)',
@@ -175,6 +182,9 @@ const translations = {
     quickgraph_star_centers: 'Merkez Sayısı',
     quickgraph_grid_rows: 'Satır Sayısı (m)',
     quickgraph_grid_cols: 'Sütun Sayısı (n)',
+    quickgraph_Pn: 'Yol Uzunluğu (Pn)',
+    quickgraph_Bn: 'Graph Yol Uzunuluğu (Bn)',
+    quickgraph_Kn : 'Tam Graph Boyutu (Kn)', 
     quickgraph_grid_weight: 'Kenar Ağırlığı (w)',
     quickgraph_bipartite_a: 'A kümesi (a)',
     quickgraph_bipartite_b: 'B kümesi (b)',
@@ -207,13 +217,28 @@ const translations = {
     quickgraph_err_star_centers_range: 'Merkez sayısı 1..{max} aralığında olmalı.',
     quickgraph_err_grid_dims_min: 'Grid için satır ve sütun sayısı en az 1 olmalı.',
     quickgraph_err_grid_weight_min: 'Grid için kenar ağırlığı en az 1 olmalı.',
+    quickgraph_err_Melih_Bn:'K Graphı içinden geçen path uzunluğu 0 olamaz',
+    quickgraph_err_Melih_Bn_Kn: 'K Graphı içinden geçen path uzunluğu graph boyutundan büyük olamaz',
+    quickgraph_err_Melih_Pn_Bn: 'Path uzunluğu K graphı içindeki path uzunluğuna tam bölünebilmelidir', 
     quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): her kenar p olasılıkla eklenir (O(n^2) olası kenar; seyrek graph için örnekleme).',
     quickgraph_random_info_line2: 'G(n, m): tam m adet kenar rastgele seçilir (kenar sayısı kontrolü için).',
     quickgraph_random_info_line3: 'Barabási–Albert: tercihli bağlanma (ölçekten bağımsız).',
     quickgraph_random_info_line4: 'Watts–Strogatz: küçük-dünya, yüksek kümeleşme.',
     quickgraph_random_info_line5: 'Uygulama: tohumlu RNG, O(n + m) üretim, self-loop/çoklu-kenar opsiyonu ve yön/yük ayarları ekleyin.',
+    quickgraph_grid_rows_helper: 'Grid graph için satır sayısı (m)',
+    quickgraph_grid_cols_helper: 'Grid graph için sütun sayısı (n)',
+    quickgraph_tree_k_helper: 'Ağaç graph için çocuk sayısı (k)',
+    quickgraph_star_centers_helper: 'Star graph için merkez sayısı',
+    quickgraph_bipartite_a_helper: 'Bipartite graph için A kümesi düğüm sayısı',
+    quickgraph_bipartite_b_helper: 'Bipartite graph için B kümesi düğüm sayısı',
+    quickgraph_grid_weight_helper: 'Grid graph için kenar ağırlığı (w)',
   },
   en: {
+    quickgraph_grid_weight_helper: 'Edge weight (w) for the grid graph',
+    quickgraph_bipartite_a_helper: 'Set A node count for bipartite graph',
+    quickgraph_bipartite_b_helper: 'Set B node count for bipartite graph',
+    quickgraph_star_centers_helper: 'Number of centers for star graph',
+    quickgraph_tree_k_helper: 'Child count (k) for tree graph',
     profile: 'Profile',
     user: 'User',
     email: 'Email',
@@ -274,7 +299,7 @@ const translations = {
     update_password: 'Update Password',
     reset_failed: 'Password could not be reset.',
     password_updated_redirect: 'Your password has been updated! Redirecting to login in 2 seconds.',
-
+    download_pdf_unhcr: 'Download UNHCR PDF',
     // GraphList
     all_graphs: 'All Graphs',
     select_all: 'Select All',
@@ -300,6 +325,7 @@ const translations = {
 
     prev: 'Previous',
     next: 'Next',
+    download: 'Download',
     
     graph_simulator: 'Graph Simulator',
 
@@ -336,7 +362,6 @@ const translations = {
     // weight editor
     edit_weight_title: 'Edit Edge Weight',
     weight_label: 'Weight',
-    cancel: 'Cancel',
     save: 'Save',
 
     // Weighted example / File info
@@ -377,6 +402,7 @@ const translations = {
     quickgraph_type_grid: 'Grid (m, n, w)',
     quickgraph_type_random: 'Random (suggest)',
     quickgraph_layout: 'Layout',
+    quickgraph_Ahmet_Melih: 'Packing Coloring (Pn, Bn, Kn)',
     quickgraph_layout_circular: 'Circular',
     quickgraph_layout_grid: 'Grid',
     quickgraph_node_count: 'Node Count (n)',
@@ -385,6 +411,9 @@ const translations = {
     quickgraph_star_centers: 'Number of centers',
     quickgraph_grid_rows: 'Rows (m)',
     quickgraph_grid_cols: 'Columns (n)',
+    quickgraph_Pn: 'Vertices on Path (Pn)',
+    quickgraph_Bn: 'Vertices on Path Within Graph (Bn)',
+    quickgraph_Kn : 'Full Graph Size (Kn)',
     quickgraph_grid_weight: 'Edge weight (w)',
     quickgraph_bipartite_a: 'Set A (a)',
     quickgraph_bipartite_b: 'Set B (b)',
@@ -392,11 +421,18 @@ const translations = {
     quickgraph_create: 'Create',
     quickgraph_cancel: 'Cancel',
 
+
+    // Melih:
+    quickgraph_Bn_helper: 'Number of vertices on the path within the graph',
+    quickgraph_Kn_helper: 'Full graph size',
+    quickgraph_Pn_helper: 'Number of vertices on the path',
+
     // Bottom actions
     quick_graph_btn: 'Quick Graph',
     reset_btn: 'Reset',
     file_add_btn: 'Add File',
     create_btn: 'Create',
+    unhcr_info: 'UNHCR Information Page',
 
     // GraphNameOptions
     graph_name_label: 'Graph Name',
@@ -417,11 +453,16 @@ const translations = {
     quickgraph_err_star_centers_range: 'Center count must be in 1..{max}.',
     quickgraph_err_grid_dims_min: 'Grid rows and columns must be at least 1.',
     quickgraph_err_grid_weight_min: 'Grid edge weight must be at least 1.',
+    quickgraph_err_Melih_Bn:'The length of path within the graph K can not be 0',
+    quickgraph_err_Melih_Bn_Kn: 'The length of path within the K graph can not exceed K graph size.',
+    quickgraph_err_Melih_Pn_Bn: 'The mod of dividing path length with the path length within graph K must be 0',
     quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): add each edge with probability p (O(n^2) possible edges; sample for sparse).',
     quickgraph_random_info_line2: 'G(n, m): choose exactly m edges uniformly (to control edge count).',
     quickgraph_random_info_line3: 'Barabási–Albert: preferential attachment (scale-free).',
     quickgraph_random_info_line4: 'Watts–Strogatz: small-world, high clustering.',
     quickgraph_random_info_line5: 'Implementation: seeded RNG, O(n + m) generation, self-loop/multiedge options, direction/weight settings.',
+    quickgraph_grid_rows_helper: 'Number of rows (m) for the grid graph',
+    quickgraph_grid_cols_helper: 'Number of columns (n) for the grid graph',
   },
 };
 

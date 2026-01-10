@@ -121,15 +121,13 @@ public class GraphController {
         private Double capacity;
         private Double distance;
 
-        // Prefer unitDistance; accept legacy 'diameter' too
-        @JsonProperty("unitDistance")
-        @JsonAlias({"diameter"})
-        private Double unitDistance;
-
-        // Keep diameter for backward compatibility with any serializers
+        @JsonAlias({"unitDist", "unitDistance"})
         private Double diameter;
 
         private Double size;
+
+        // New: arbitrary attributes
+        private Map<String, String> attributes;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -141,14 +139,14 @@ public class GraphController {
         public void setDistance(Double distance) { this.distance = distance; }
 
         // Unified accessors
-        public Double getUnitDistance() { return unitDistance != null ? unitDistance : diameter; }
-        public void setUnitDistance(Double unitDistance) { this.unitDistance = unitDistance; this.diameter = unitDistance; }
-
         public Double getDiameter() { return diameter; }
-        public void setDiameter(Double diameter) { this.diameter = diameter; if (this.unitDistance == null) this.unitDistance = diameter; }
+        public void setDiameter(Double diameter) { this.diameter = diameter; }
 
         public Double getSize() { return size; }
         public void setSize(Double size) { this.size = size; }
+
+        public Map<String, String> getAttributes() { return attributes; }
+        public void setAttributes(Map<String, String> attributes) { this.attributes = attributes; }
     }
 
     @Value("${app.internal.api-key:}")
@@ -252,12 +250,13 @@ public class GraphController {
                     le.setGraph(graph);
                     le.setName(dto.getName());
                     le.setColor(dto.getColor());
-                    le.setCapacity(dto.getCapacity());
-                    le.setDistance(dto.getDistance());
-                    // ensure not-null for DB constraint
-                    Double unitDist = dto.getUnitDistance() != null ? dto.getUnitDistance() : 1.0;
-                    le.setUnitDistance(unitDist);
-                    le.setSize(dto.getSize());
+                    le.setCapacity(dto.getCapacity() != null ? dto.getCapacity() : 0.0);
+                    le.setDistance(dto.getDistance() != null ? dto.getDistance() : 0.0);
+                    le.setDiameter(dto.getDiameter() != null ? dto.getDiameter() : 0.0);
+                    le.setSize(dto.getSize() != null ? dto.getSize() : 0.0);
+                    if (dto.getAttributes() != null) {
+                        le.setAttributes(new HashMap<>(dto.getAttributes()));
+                    }
                     graph.getLegendEntries().add(le);
                 }
             }
@@ -613,12 +612,13 @@ public class GraphController {
                     le.setGraph(graph);
                     le.setName(dto.getName());
                     le.setColor(dto.getColor());
-                    le.setCapacity(dto.getCapacity());
-                    le.setDistance(dto.getDistance());
-                    // ensure not-null for DB constraint
-                    Double unitDist = dto.getUnitDistance() != null ? dto.getUnitDistance() : 1.0;
-                    le.setUnitDistance(unitDist);
-                    le.setSize(dto.getSize());
+                    le.setCapacity(dto.getCapacity() != null ? dto.getCapacity() : 0.0);
+                    le.setDistance(dto.getDistance() != null ? dto.getDistance() : 0.0);
+                    le.setDiameter(dto.getDiameter() != null ? dto.getDiameter() : 0.0);
+                    le.setSize(dto.getSize() != null ? dto.getSize() : 0.0);
+                    if (dto.getAttributes() != null) {
+                        le.setAttributes(new HashMap<>(dto.getAttributes()));
+                    }
                     graph.getLegendEntries().add(le);
                 }
             }

@@ -87,7 +87,6 @@ const GraphCreation = () => {
     const [quickGraphType, setQuickGraphType] = useState('full');
     const [quickGraphNodeCount, setQuickGraphNodeCount] = useState(5);
     const [quickGraphLayout, setQuickGraphLayout] = useState('circular');
-    const [quickGraphError, setQuickGraphError] = useState('');
 
     const handleLogout = () => {
         clearTokens();
@@ -391,6 +390,12 @@ const GraphCreation = () => {
 
     const handleQuickGraphCreate = (spec) => {
         // spec payload from QuickGraphDialog
+        if (spec.error) {
+            setCreateError(spec.error);
+            setQuickGraphModalOpen(false); // Diyaloğu kapat
+            setTimeout(() => setCreateError(''), 3000);
+            return;
+        }
         if (weighted) {
             skipWeightedResetRef.current = true; // prevent effect reset
             setWeighted(false);
@@ -478,8 +483,98 @@ const GraphCreation = () => {
                     result = { vertices, edges, positions };
                     break;
                 }
+                case 'Melih': {
+                    
+                    const Pn = Number(spec.pathLength)
+                    const Bn = Number(spec.graphPathLength)    
+                    const Kn = Number(spec.graphSize) 
+                    console.log("Bankaii")
+                    const nOfKCompleteGraphs = Pn / Bn;
+
+                    const vertices = [];
+                    const edges = [];
+                    const positions = [];
+
+                    let vertexOffset = 0;
+                    let edgeId = 0;
+
+                    // --- Dynamic scaling ---
+                    // Inner radius grows gently with the size of Kₙ
+                    const innerRadius = 40 + Kn * 10; 
+                    // Outer radius scales with both number of graphs and inner radius
+                    const outerRadius = innerRadius * (2.2 + nOfKCompleteGraphs / 2);
+
+                    for (let i = 0; i < nOfKCompleteGraphs; i++) {
+                        // Center of this subgraph on a large circle
+                        const angle = (2 * Math.PI * i) / nOfKCompleteGraphs;
+                        const centerX = outerRadius * Math.cos(angle);
+                        const centerY = outerRadius * Math.sin(angle);
+
+                        // --- Create K_{K_n} complete graph ---
+                        const subVertices = Array.from({ length: Kn }, (_, j) => `v${vertexOffset + j}`);
+                        const subEdges = [];
+
+                        for (let a = 0; a < Kn; a++) {
+                            for (let b = a + 1; b < Kn; b++) {
+                                subEdges.push({
+                                    id: edgeId++,
+                                    name: `e_${subVertices[a]}_${subVertices[b]}`,
+                                    from: subVertices[a],
+                                    to: subVertices[b],
+                                    showDelete: false,
+                                    directed: false,
+                                    weight: 1,
+                                });
+                            }
+                        }
+
+                        // --- Circular positions for this subgraph ---
+                        const subPositions = subVertices.map((_, j) => {
+                            const theta = (2 * Math.PI * j) / Kn;
+                            return {
+                                x: centerX + innerRadius * Math.cos(theta),
+                                y: centerY + innerRadius * Math.sin(theta),
+                            };
+                        });
+
+                        // --- Connect this K_n to the previous one ---
+                        if (i > 0) {
+                            const prevStart = vertexOffset - (Kn - Bn + 1);
+                            const prevVertex = `v${prevStart}`;
+                            const currentVertex = `v${vertexOffset}`;
+                            subEdges.push({
+                                id: edgeId++,
+                                name: `bridge_${i - 1}_${i}`,
+                                from: prevVertex,
+                                to: currentVertex,
+                                showDelete: false,
+                                directed: false,
+                                weight: 1
+                            });
+                        }
+
+                        vertices.push(...subVertices);
+                        edges.push(...subEdges);
+                        positions.push(...subPositions);
+
+                        vertexOffset += Kn;
+                    }
+
+                    // --- Shift all positions to positive coordinates ---
+                    const minX = Math.min(...positions.map(p => p.x));
+                    const minY = Math.min(...positions.map(p => p.y));
+                    const shiftX = minX < 0 ? -minX + 50 : 0;
+                    const shiftY = minY < 0 ? -minY + 50 : 0;
+                    const shiftedPositions = positions.map(p => ({
+                        x: p.x + shiftX,
+                        y: p.y + shiftY,
+                    }));
+                    
+                    result =  { vertices, edges, positions: shiftedPositions };
+                }
+                    
+                    break;
                 default:
-                    setQuickGraphError(t('unsupported_graph_type'));
                     return;
             }
 
@@ -490,7 +585,6 @@ const GraphCreation = () => {
             setVertices(newVertices);
             setEdges(newEdges);
             setQuickGraphModalOpen(false);
-            setQuickGraphError('');
 
             // Build canvas nodes/edges with x,y from util positions
             const nodesForCanvas = newVertices.map((label, idx) => ({
@@ -561,8 +655,10 @@ const GraphCreation = () => {
             setCreateSuccess(msg);
             setTimeout(() => setCreateSuccess(''), 3000);
         } catch (e) {
-            setQuickGraphError(t('quickgraph_error'));
-            setTimeout(() => setQuickGraphError(''), 3000);
+            // setQuickGraphError(t('quickgraph_error')); // Bu satır setCreateError ile değiştirilecek
+            setCreateError(t('quickgraph_error'));
+            setQuickGraphModalOpen(false); // Diyaloğu kapat
+            setTimeout(() => setCreateError(''), 3000);
         }
     };
 
@@ -602,7 +698,8 @@ const GraphCreation = () => {
 					{ label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
 					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
 					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-					{ label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+                    { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
 				]}
 			/>
             <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -697,7 +794,6 @@ const GraphCreation = () => {
                     open={quickGraphModalOpen}
                     onClose={() => {
                         setQuickGraphModalOpen(false);
-                        setQuickGraphError('');
                     }}
                     quickGraphType={quickGraphType}
                     setQuickGraphType={setQuickGraphType}
@@ -705,8 +801,6 @@ const GraphCreation = () => {
                     setQuickGraphNodeCount={setQuickGraphNodeCount}
                     quickGraphLayout={quickGraphLayout}
                     setQuickGraphLayout={setQuickGraphLayout}
-                    quickGraphError={quickGraphError}
-                    setQuickGraphError={setQuickGraphError}
                     onCreate={handleQuickGraphCreate}
                 />
             </Container>
