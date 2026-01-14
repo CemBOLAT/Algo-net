@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --silent
 COPY . .
+ENV VITE_PYTHON_BASE=/pythonms
 RUN npm run build
 
 # Production stage

@@ -1,11 +1,22 @@
 version: '3.8'
 services:
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    ports:
+      - "60000:80"
+    depends_on:
+      - backend
+      - frontend
+      - pythonms
+      - db
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    # backend is reachable only internally; proxy will expose a single external port
     env_file:
       - ./backend/.env
     environment:
@@ -14,6 +25,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
       - APP_JWT_SECRET=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      # allow CORS from the proxy (set to '*' to permit proxy-origin and simplify dev)
+      - APP_CORS_ALLOWED_ORIGIN=*
     depends_on:
       - db
       - pythonms
@@ -22,8 +35,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "8080:80"
+    # frontend served internally; proxy will forward external traffic to it
 
   pythonms:
     platform: linux/amd64
@@ -37,8 +49,7 @@ services:
       - ./pythonMS:/app
     environment:
       - PYTHONPATH=/app
-    ports:
-      - "8000:8000"
+    # pythonms is internal; proxy will forward requests for python endpoints
 
   db:
     image: postgres:15-alpine
