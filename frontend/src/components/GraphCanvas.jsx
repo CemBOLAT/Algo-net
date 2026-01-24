@@ -8,6 +8,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import { Stage, Layer, Circle, Line, Arrow, Text, Group } from 'react-konva';
+import { useI18n } from '../context/I18nContext';
 
 const GraphCanvas = ({
   nodes,
@@ -23,6 +24,8 @@ const GraphCanvas = ({
   tempEdge,
   setTempEdge,
   disabled = false,
+  showNodeLabels = true,
+  showEdgeWeights = true,
 }) => {
   // --- LAYOUT FIX: Parent Container Boyutlandırma ---
   const containerRef = useRef(null);
@@ -37,17 +40,17 @@ const GraphCanvas = ({
         });
       }
     };
-    
+
     // İlk yüklemede boyutu al
     updateSize();
-    
+
     // Pencere değişirse yeniden hesapla
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
   // --- (Buradan sonrası önceki performans koduyla aynı) ---
-  
+
   const stageRef = useRef(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const isPanningRef = useRef(false);
@@ -60,10 +63,11 @@ const GraphCanvas = ({
   const MIN_SCALE = 0.1;
   const MAX_SCALE = 5;
   const [inputZoom, setInputZoom] = useState('100');
-  
+
   const EDGE_STROKE = 2;
   // Zoom seviyesi 0.6'nın altındaysa yazıları gizle
-  const showLabels = scale > 0.6;
+  const showLabels = scale > 0.6 && showNodeLabels;
+  const showWeights = scale > 0.6 && showEdgeWeights;
 
   // ... (Helper fonksiyonlar aynen kalıyor) ...
   const getPointerInContent = useCallback(() => {
@@ -233,15 +237,18 @@ const GraphCanvas = ({
     return map;
   }, [edges]);
 
+  // --- i18n ---
+  const { t } = useI18n();
+
   // --- RETURN BLOĞU GÜNCELLENDİ ---
   // Box: containerRef'i tutar ve parent'ın boyutunu alır (%100 width/height)
   // Stage: containerRef'ten gelen boyutları (dimensions.width/height) kullanır.
   return (
-    <Box 
-      ref={containerRef} 
-      sx={{ 
-        width: '100%', 
-        height: '100%', 
+    <Box
+      ref={containerRef}
+      sx={{
+        width: '100%',
+        height: '100%',
         position: 'relative',
         overflow: 'hidden', // Taşan kısımları gizle
         bgcolor: '#e5e7eb',
@@ -271,33 +278,33 @@ const GraphCanvas = ({
             if (!from || !to) return null;
 
             if (from.id === to.id) {
-               // Self Loop Logic
-               const n = from;
-               const r = n.size || 15;
-               const loopR = r * 2.5;
-               const startA = (220 * Math.PI) / 180;
-               const endA = (320 * Math.PI) / 180;
-               const sx = n.x + Math.cos(startA) * r;
-               const sy = n.y + Math.sin(startA) * r;
-               const ex = n.x + Math.cos(endA) * r;
-               const ey = n.y + Math.sin(endA) * r;
-               const c1x = n.x - loopR; const c1y = n.y - loopR;
-               const c2x = n.x + loopR; const c2y = n.y - loopR;
-               const isSelected = selectedEdge && selectedEdge.id === edge.id;
-               const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `(${edge.weight})` : `${n.label}`;
-               
-               return (
-                 <Group key={edge.id}>
-                    <Line
-                       points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5}
-                       stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE}
-                       hitStrokeWidth={10} listening={!disabled}
-                       onClick={(e) => { e.cancelBubble = true; if(!disabled) {setSelectedEdge(edge); setSelectedNode(null);} }}
-                     />
-                     {edge.directed && <Arrow points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} listening={false} />}
-                     {showLabels && <Text x={n.x} y={n.y - loopR - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
-                 </Group>
-               );
+              // Self Loop Logic
+              const n = from;
+              const r = n.size || 15;
+              const loopR = r * 2.5;
+              const startA = (220 * Math.PI) / 180;
+              const endA = (320 * Math.PI) / 180;
+              const sx = n.x + Math.cos(startA) * r;
+              const sy = n.y + Math.sin(startA) * r;
+              const ex = n.x + Math.cos(endA) * r;
+              const ey = n.y + Math.sin(endA) * r;
+              const c1x = n.x - loopR; const c1y = n.y - loopR;
+              const c2x = n.x + loopR; const c2y = n.y - loopR;
+              const isSelected = selectedEdge && selectedEdge.id === edge.id;
+              const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `(${edge.weight})` : `${n.label}`;
+
+              return (
+                <Group key={edge.id}>
+                  <Line
+                    points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5}
+                    stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE}
+                    hitStrokeWidth={10} listening={!disabled}
+                    onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }}
+                  />
+                  {edge.directed && <Arrow points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} listening={false} />}
+                  {showWeights && <Text x={n.x} y={n.y - loopR - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
+                </Group>
+              );
             }
 
             // Normal Edge Logic
@@ -308,16 +315,16 @@ const GraphCanvas = ({
             const groupAll = parallelGroups.get(key) || [edge];
 
             if (groupAll.length === 1) {
-                const isSelected = selectedEdge && selectedEdge.id === edge.id;
-                const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `${edge.weight}` : '';
-                const mx = (sx0 + ex0) / 2; const my = (sy0 + ey0) / 2;
-                return (
-                   <Group key={edge.id}>
-                       <Line points={[sx0, sy0, ex0, ey0]} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if(!disabled) {setSelectedEdge(edge); setSelectedNode(null);} }} />
-                       {edge.directed && <Arrow points={[sx0, sy0, ex0, ey0]} pointerLength={10} pointerWidth={8} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} listening={false} />}
-                       {showLabels && labelText && <Text x={mx} y={my - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
-                   </Group>
-                )
+              const isSelected = selectedEdge && selectedEdge.id === edge.id;
+              const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `${edge.weight}` : '';
+              const mx = (sx0 + ex0) / 2; const my = (sy0 + ey0) / 2;
+              return (
+                <Group key={edge.id}>
+                  <Line points={[sx0, sy0, ex0, ey0]} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
+                  {edge.directed && <Arrow points={[sx0, sy0, ex0, ey0]} pointerLength={10} pointerWidth={8} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} listening={false} />}
+                  {showWeights && labelText && <Text x={mx} y={my - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
+                </Group>
+              )
             }
 
             // Parallel/Bezier Logic
@@ -329,14 +336,14 @@ const GraphCanvas = ({
             const dirTotal = dirList.length || 1;
             const otherTotal = isForward ? backwardList.length : forwardList.length;
             const dirSign = isForward ? +1 : -1;
-            const gap = 16; 
+            const gap = 16;
             let offsetIndex = (dirIndex - (dirTotal - 1) / 2);
             if (otherTotal > 0) offsetIndex += 0.5 * dirSign;
             const baseOffset = offsetIndex * gap;
-            
+
             const cdx = to.x - from.x; const cdy = to.y - from.y;
             const clen = Math.hypot(cdx, cdy) || 1;
-            const perpX = -cdy / clen; const perpY =  cdx / clen;
+            const perpX = -cdy / clen; const perpY = cdx / clen;
             const sx = sx0 + perpX * baseOffset; const sy = sy0 + perpY * baseOffset;
             const ex = ex0 + perpX * baseOffset; const ey = ey0 + perpY * baseOffset;
             const mx = (sx + ex) / 2; const my = (sy + ey) / 2;
@@ -349,11 +356,11 @@ const GraphCanvas = ({
             return (
               <Group key={edge.id}>
                 {edge.directed ? (
-                  <Arrow points={[sx, sy, cx, cy, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if(!disabled) {setSelectedEdge(edge); setSelectedNode(null);} }} />
+                  <Arrow points={[sx, sy, cx, cy, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
                 ) : (
-                  <Line points={[sx, sy, cx, cy, ex, ey]} tension={0.5} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if(!disabled) {setSelectedEdge(edge); setSelectedNode(null);} }} />
+                  <Line points={[sx, sy, cx, cy, ex, ey]} tension={0.5} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
                 )}
-                {showLabels && labelText && <Text x={labelX} y={labelY - 8} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
+                {showWeights && labelText && <Text x={labelX} y={labelY - 8} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
               </Group>
             );
           })}
@@ -375,12 +382,12 @@ const GraphCanvas = ({
                 setNodes(prev => prev.map(n => n.id === node.id ? { ...n, x: nx, y: ny } : n));
               }}
               onClick={(e) => {
-                 e.cancelBubble = true; if (disabled) return;
-                 if (mode === 'add-edge' && tempEdge && node.id !== tempEdge.from.id) {
-                    setEdges(prev => [...prev, { id: `${prev.length + 1}_${Date.now()}`, from: tempEdge.from.id, to: node.id, label: '', weight: 1, directed: false, showWeight: true }]);
-                    setMode(null); setTempEdge(null); return;
-                 }
-                 setSelectedNode(node); setSelectedEdge(null);
+                e.cancelBubble = true; if (disabled) return;
+                if (mode === 'add-edge' && tempEdge && node.id !== tempEdge.from.id) {
+                  setEdges(prev => [...prev, { id: `${prev.length + 1}_${Date.now()}`, from: tempEdge.from.id, to: node.id, label: '', weight: 1, directed: false, showWeight: true }]);
+                  setMode(null); setTempEdge(null); return;
+                }
+                setSelectedNode(node); setSelectedEdge(null);
               }}
               onContextMenu={(e) => {
                 e.cancelBubble = true; if (disabled) return; e.evt.preventDefault();
@@ -398,14 +405,14 @@ const GraphCanvas = ({
       {/* Zoom controls */}
       <Box sx={{ position: 'absolute', right: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 1 }}>
         <Paper elevation={3} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.5, borderRadius: 1 }}>
-          <Tooltip title="Zoom in"><IconButton size="small" onClick={zoomIn}><ZoomInIcon fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="Zoom out"><IconButton size="small" onClick={zoomOut}><ZoomOutIcon fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title={t('zoom_in')}><IconButton size="small" onClick={zoomIn}><ZoomInIcon fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title={t('zoom_out')}><IconButton size="small" onClick={zoomOut}><ZoomOutIcon fontSize="small" /></IconButton></Tooltip>
         </Paper>
         <Paper elevation={6} sx={{ bgcolor: 'rgba(0,0,0,0.75)', color: '#fff', px: 1.25, py: 0.5, borderRadius: 1 }}>
           <TextField
             value={inputZoom} onChange={(e) => setInputZoom(e.target.value)} onBlur={(e) => applyZoomFromInput(e.target.value)}
             size="small" variant="standard"
-            InputProps={{ endAdornment: <InputAdornment position="end" sx={{'& p':{color:'white'}}}>%</InputAdornment>, sx: { color: '#fff', '& .MuiInput-input': { color: '#fff' } } }}
+            InputProps={{ endAdornment: <InputAdornment position="end" sx={{ '& p': { color: 'white' } }}>%</InputAdornment>, sx: { color: '#fff', '& .MuiInput-input': { color: '#fff' } } }}
             sx={{ width: 64 }}
           />
         </Paper>

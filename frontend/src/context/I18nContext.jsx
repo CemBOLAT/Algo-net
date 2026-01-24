@@ -173,7 +173,7 @@ const translations = {
     quickgraph_type_grid: 'Grid (m, n, w)',
     quickgraph_type_random: 'Random (öneri)',
     quickgraph_layout: 'Layout',
-    quickgraph_Ahmet_Melih: 'Packing Coloring (Pn, Bn, Kn)', 
+    quickgraph_Ahmet_Melih: 'Packing Coloring (Pn, Bn, Kn)',
     quickgraph_layout_circular: 'Dairesel (Circular)',
     quickgraph_layout_grid: 'Izgara (Grid)',
     quickgraph_node_count: 'Düğüm Sayısı (n)',
@@ -184,7 +184,7 @@ const translations = {
     quickgraph_grid_cols: 'Sütun Sayısı (n)',
     quickgraph_Pn: 'Yol Uzunluğu (Pn)',
     quickgraph_Bn: 'Graph Yol Uzunuluğu (Bn)',
-    quickgraph_Kn : 'Tam Graph Boyutu (Kn)', 
+    quickgraph_Kn: 'Tam Graph Boyutu (Kn)',
     quickgraph_grid_weight: 'Kenar Ağırlığı (w)',
     quickgraph_bipartite_a: 'A kümesi (a)',
     quickgraph_bipartite_b: 'B kümesi (b)',
@@ -217,9 +217,9 @@ const translations = {
     quickgraph_err_star_centers_range: 'Merkez sayısı 1..{max} aralığında olmalı.',
     quickgraph_err_grid_dims_min: 'Grid için satır ve sütun sayısı en az 1 olmalı.',
     quickgraph_err_grid_weight_min: 'Grid için kenar ağırlığı en az 1 olmalı.',
-    quickgraph_err_Melih_Bn:'K Graphı içinden geçen path uzunluğu 0 olamaz',
+    quickgraph_err_Melih_Bn: 'K Graphı içinden geçen path uzunluğu 0 olamaz',
     quickgraph_err_Melih_Bn_Kn: 'K Graphı içinden geçen path uzunluğu graph boyutundan büyük olamaz',
-    quickgraph_err_Melih_Pn_Bn: 'Path uzunluğu K graphı içindeki path uzunluğuna tam bölünebilmelidir', 
+    quickgraph_err_Melih_Pn_Bn: 'Path uzunluğu K graphı içindeki path uzunluğuna tam bölünebilmelidir',
     quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): her kenar p olasılıkla eklenir (O(n^2) olası kenar; seyrek graph için örnekleme).',
     quickgraph_random_info_line2: 'G(n, m): tam m adet kenar rastgele seçilir (kenar sayısı kontrolü için).',
     quickgraph_random_info_line3: 'Barabási–Albert: tercihli bağlanma (ölçekten bağımsız).',
@@ -232,6 +232,70 @@ const translations = {
     quickgraph_bipartite_a_helper: 'Bipartite graph için A kümesi düğüm sayısı',
     quickgraph_bipartite_b_helper: 'Bipartite graph için B kümesi düğüm sayısı',
     quickgraph_grid_weight_helper: 'Grid graph için kenar ağırlığı (w)',
+
+    // Graph Page specific
+    default_graph_name: 'Graph Adı',
+    saving: 'Kaydediliyor...',
+    loading: 'Yükleniyor...',
+    add_legend: 'Legend Ekle',
+    legend_entry_deleted: 'Legend girdisi silindi',
+    add_legend_title: 'Legend Ekle',
+    title: 'Başlık',
+    color_hex: 'Renk (#hex)',
+    properties: 'Özellikler',
+    key: 'Anahtar',
+    value: 'Değer',
+    add_property: 'Özellik Ekle',
+    enter_legend_title: 'Lütfen legend başlığı girin.',
+    legend_entry_added: 'Legend girdisi eklendi',
+    enter_graph_name_error: 'Lütfen graph için bir isim girin.',
+    enter_node_error: 'Lütfen en az bir düğüm ekleyin.',
+    graph_loaded_success: 'Graph başarıyla yüklendi!',
+    graph_not_found: 'Graph bulunamadı',
+    graph_access_denied: 'Bu graph\'a erişim yetkiniz yok',
+    graph_load_error: 'Graph yüklenirken hata oluştu',
+    graph_saved_success: 'Graph başarıyla kaydedildi!',
+    graph_updated_success: 'Graph başarıyla güncellendi!',
+    save_error: 'Kaydetme hatası: {msg}',
+    legend_title: 'Legend',
+
+    // Components
+    // GraphCanvas
+    zoom_in: 'Yakınlaştır',
+    zoom_out: 'Uzaklaştır',
+
+    // Sidebar
+    algorithm: 'Algoritma',
+    edit: 'Düzenle',
+    save_btn: 'Kaydet',
+    saving_btn: 'Kaydediliyor...',
+    cancel_btn: 'İptal',
+    dfs: 'Derinlik Öncelikli Arama (DFS)',
+    dijkstra: 'Dijkstra Algoritması',
+    ordered_coloring: 'Sıralı Boyama',
+    layout_planning: 'Yerleşim Planlama',
+    package_coloring: 'Paket Boyama',
+
+    // VertexSettings
+    vertex_settings_title: 'Düğüm Ayarları',
+    label_label: 'Etiket',
+    size_label: 'Boyut',
+    color_label: 'Renk',
+    delete_vertex: 'Sil',
+
+    // EdgeSettings
+    edge_settings_title: 'Kenar Ayarları',
+    show_weight_label: 'Ağırlığı göster',
+    directed_toggle_label: 'Yönlü',
+    source_label: 'Kaynak',
+    target_label: 'Hedef',
+    delete_edge: 'Sil',
+
+    // LegendPanel
+    capacity_label: 'Kapasite',
+    distance_label: 'Uzaklık',
+    radius_label: 'Yarıçap',
+    size_legend_label: 'Boyut',
   },
   en: {
     quickgraph_grid_weight_helper: 'Edge weight (w) for the grid graph',
@@ -326,7 +390,7 @@ const translations = {
     prev: 'Previous',
     next: 'Next',
     download: 'Download',
-    
+
     graph_simulator: 'Graph Simulator',
 
     // TopBar
@@ -413,7 +477,7 @@ const translations = {
     quickgraph_grid_cols: 'Columns (n)',
     quickgraph_Pn: 'Vertices on Path (Pn)',
     quickgraph_Bn: 'Vertices on Path Within Graph (Bn)',
-    quickgraph_Kn : 'Full Graph Size (Kn)',
+    quickgraph_Kn: 'Full Graph Size (Kn)',
     quickgraph_grid_weight: 'Edge weight (w)',
     quickgraph_bipartite_a: 'Set A (a)',
     quickgraph_bipartite_b: 'Set B (b)',
@@ -453,7 +517,7 @@ const translations = {
     quickgraph_err_star_centers_range: 'Center count must be in 1..{max}.',
     quickgraph_err_grid_dims_min: 'Grid rows and columns must be at least 1.',
     quickgraph_err_grid_weight_min: 'Grid edge weight must be at least 1.',
-    quickgraph_err_Melih_Bn:'The length of path within the graph K can not be 0',
+    quickgraph_err_Melih_Bn: 'The length of path within the graph K can not be 0',
     quickgraph_err_Melih_Bn_Kn: 'The length of path within the K graph can not exceed K graph size.',
     quickgraph_err_Melih_Pn_Bn: 'The mod of dividing path length with the path length within graph K must be 0',
     quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): add each edge with probability p (O(n^2) possible edges; sample for sparse).',
@@ -463,12 +527,76 @@ const translations = {
     quickgraph_random_info_line5: 'Implementation: seeded RNG, O(n + m) generation, self-loop/multiedge options, direction/weight settings.',
     quickgraph_grid_rows_helper: 'Number of rows (m) for the grid graph',
     quickgraph_grid_cols_helper: 'Number of columns (n) for the grid graph',
+
+    // Graph Page specific
+    default_graph_name: 'Graph Name',
+    saving: 'Saving...',
+    loading: 'Loading...',
+    add_legend: 'Add Legend',
+    legend_entry_deleted: 'Legend entry deleted',
+    add_legend_title: 'Add Legend',
+    title: 'Title',
+    color_hex: 'Color (#hex)',
+    properties: 'Properties',
+    key: 'Key',
+    value: 'Value',
+    add_property: 'Add Property',
+    enter_legend_title: 'Please enter a legend title.',
+    legend_entry_added: 'Legend entry added',
+    enter_graph_name_error: 'Please enter a name for the graph.',
+    enter_node_error: 'Please add at least one node.',
+    graph_loaded_success: 'Graph loaded successfully!',
+    graph_not_found: 'Graph not found',
+    graph_access_denied: 'You do not have permission to access this graph',
+    graph_load_error: 'Error loading graph',
+    graph_saved_success: 'Graph saved successfully!',
+    graph_updated_success: 'Graph updated successfully!',
+    save_error: 'Save error: {msg}',
+    legend_title: 'Legend',
+
+    // Components
+    // GraphCanvas
+    zoom_in: 'Zoom in',
+    zoom_out: 'Zoom out',
+
+    // Sidebar
+    algorithm: 'Algorithm',
+    edit: 'Edit',
+    save_btn: 'Save',
+    saving_btn: 'Saving...',
+    cancel_btn: 'Cancel',
+    dfs: 'Depth-First Search',
+    dijkstra: 'Dijkstra\'s Algorithm',
+    ordered_coloring: 'Ordered Coloring',
+    layout_planning: 'Layout Planning',
+    package_coloring: 'Packing Coloring',
+
+    // VertexSettings
+    vertex_settings_title: 'Vertex Settings',
+    label_label: 'Label',
+    size_label: 'Size',
+    color_label: 'Color',
+    delete_vertex: 'Delete',
+
+    // EdgeSettings
+    edge_settings_title: 'Edge Settings',
+    show_weight_label: 'Show weight',
+    directed_toggle_label: 'Directed',
+    source_label: 'Source',
+    target_label: 'Target',
+    delete_edge: 'Delete',
+
+    // LegendPanel
+    capacity_label: 'Capacity',
+    distance_label: 'Distance',
+    radius_label: 'Radius',
+    size_legend_label: 'Size',
   },
 };
 
 const I18nContext = createContext({
   language: 'tr',
-  setLanguage: () => {},
+  setLanguage: () => { },
   t: (k) => k,
 });
 
@@ -479,7 +607,13 @@ export const I18nProvider = ({ children }) => {
     localStorage.setItem(LANG_KEY, language);
   }, [language]);
 
-  const t = useCallback((key) => translations[language]?.[key] ?? key, [language]);
+  const fmt = (s, vars) => Object.entries(vars || {}).reduce((acc, [k, v]) => acc.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v)), s);
+
+  const t = useCallback((key, vars) => {
+    const text = translations[language]?.[key] ?? key;
+    if (vars) return fmt(text, vars);
+    return text;
+  }, [language]);
 
   const value = useMemo(() => ({ language, setLanguage, t }), [language, t]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

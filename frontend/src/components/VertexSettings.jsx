@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Typography, TextField, Slider, Button, Box } from '@mui/material';
+import { useI18n } from '../context/I18nContext';
 
 const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, setTempEdge }) => {
+  const { t } = useI18n();
   const [label, setLabel] = useState(selectedNode?.label || '');
   const [size, setSize] = useState(selectedNode?.size || 15);
   const [color, setColor] = useState(selectedNode?.color || '#2563eb');
@@ -39,7 +41,7 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
     setSelectedNode(null);
   };
 
-  const handleDeleteVertex = () =>{
+  const handleDeleteVertex = () => {
     setNodes(prevNodes => prevNodes.filter(n => n.id !== selectedNode.id));
     setEdges(prevEdges => prevEdges.filter(e => e.from !== selectedNode.id && e.to !== selectedNode.id));
     setSelectedNode(null);
@@ -50,10 +52,10 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
 
   return (
     <Paper id="vertex-settings" sx={{ position: 'absolute', top: 16, right: 16, width: 280, p: 2 }} elevation={6} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); } }}>
-      <Typography variant="h6" gutterBottom>Vertex Settings</Typography>
+      <Typography variant="h6" gutterBottom>{t('vertex_settings_title')}</Typography>
 
       <TextField
-        label="Label"
+        label={t('label_label')}
         value={label}
         size="small"
         fullWidth
@@ -62,7 +64,7 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
         sx={{ mb: 2 }}
       />
 
-      <Typography variant="caption">Size</Typography>
+      <Typography variant="caption">{t('size_label')}</Typography>
       <Slider
         value={size}
         min={5}
@@ -73,7 +75,7 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
       />
 
       <Box sx={{ mb: 2 }}>
-        <Typography variant="caption" display="block">Color</Typography>
+        <Typography variant="caption" display="block">{t('color_label')}</Typography>
         <input
           type="color"
           id="v-color"
@@ -84,8 +86,8 @@ const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, set
         />
       </Box>
 
-      <Button type="button" variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeleteVertex}>Delete</Button>
-      <Button type="button" variant="outlined" fullWidth onClick={handleClose}>Close</Button>
+      <Button type="button" variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeleteVertex}>{t('delete_vertex')}</Button>
+      <Button type="button" variant="outlined" fullWidth onClick={handleClose}>{t('close')}</Button>
     </Paper>
   );
 };

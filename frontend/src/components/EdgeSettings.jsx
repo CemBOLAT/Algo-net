@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Typography, TextField, Button, Switch, FormControlLabel, Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { useI18n } from '../context/I18nContext';
 
 const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, nodes }) => {
+  const { t } = useI18n();
   const [weight, setWeight] = useState(selectedEdge?.weight || 1);
   const [directed, setDirected] = useState(selectedEdge?.directed || false);
   const [fromId, setFromId] = useState(selectedEdge?.from || '');
@@ -47,18 +49,18 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
 
   return (
     <Paper id="edge-settings" sx={{ position: 'absolute', top: 16, right: 16, width: 320, p: 2 }} elevation={6}>
-      <Typography variant="h6" gutterBottom>Edge Settings</Typography>
+      <Typography variant="h6" gutterBottom>{t('edge_settings_title')}</Typography>
 
       {/* label is not important for edges in this app, hide it */}
 
       <FormControlLabel
         control={<Switch checked={(selectedEdge.showWeight ?? true)} onChange={(e) => handleEdgeUpdate('showWeight', e.target.checked)} />}
-        label="Show weight on edge"
+        label={t('show_weight_label')}
       />
 
-      { (selectedEdge.showWeight ?? true) && (
+      {(selectedEdge.showWeight ?? true) && (
         <TextField
-          label="Weight"
+          label={t('weight_label')}
           value={weight}
           size="small"
           type="number"
@@ -73,18 +75,18 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
 
       <FormControlLabel
         control={<Switch checked={directed} onChange={(e) => handleEdgeUpdate('directed', e.target.checked)} />}
-        label="Directed"
+        label={t('directed_toggle_label')}
       />
 
       {/* Show source/target selectors only for directed edges */}
       {directed && (
         <Box sx={{ mt: 1, mb: 2, display: 'flex', gap: 1 }}>
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="from-label">Source</InputLabel>
+            <InputLabel id="from-label">{t('source_label')}</InputLabel>
             <Select
               labelId="from-label"
               value={fromId}
-              label="Source"
+              label={t('source_label')}
               onChange={(e) => handleEdgeUpdate('from', e.target.value)}
             >
               {nodes.map(n => (
@@ -94,11 +96,11 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel id="to-label">Target</InputLabel>
+            <InputLabel id="to-label">{t('target_label')}</InputLabel>
             <Select
               labelId="to-label"
               value={toId}
-              label="Target"
+              label={t('target_label')}
               onChange={(e) => handleEdgeUpdate('to', e.target.value)}
             >
               {nodes.map(n => (
@@ -109,8 +111,8 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
         </Box>
       )}
 
-      <Button variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeletingEdge}>Delete</Button>
-      <Button variant="outlined" fullWidth onClick={handleClose}>Close</Button>
+      <Button variant="contained" color="error" fullWidth sx={{ mb: 1 }} onClick={handleDeletingEdge}>{t('delete_edge')}</Button>
+      <Button variant="outlined" fullWidth onClick={handleClose}>{t('close')}</Button>
     </Paper>
   );
 };

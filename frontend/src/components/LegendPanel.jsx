@@ -1,8 +1,11 @@
 import React from 'react';
 import { Paper, Box, Typography, Chip, Stack, IconButton } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { useI18n } from '../context/I18nContext';
 
 const LegendPanel = ({ entries = [], onDelete }) => {
+  const { t } = useI18n();
+
   if (!entries?.length) return null;
 
   const toPairs = (e) => {
@@ -12,18 +15,18 @@ const LegendPanel = ({ entries = [], onDelete }) => {
     }
     // Backward compatibility: fold known fields into displayable pairs
     const pairs = [];
-    if ('capacity' in e) pairs.push(['Kapasite', String(e.capacity)]);
-    if ('distance' in e) pairs.push(['Uzaklık', String(e.distance)]);
+    if ('capacity' in e) pairs.push([t('capacity_label'), String(e.capacity)]);
+    if ('distance' in e) pairs.push([t('distance_label'), String(e.distance)]);
     // diameter may come as unitDistance from backend mapping
     const d = e.diameter ?? e.unitDistance;
-    if (d !== undefined) pairs.push(['Yarıçap', String(d)]);
-    if ('size' in e) pairs.push(['Boyut', String(e.size)]);
+    if (d !== undefined) pairs.push([t('radius_label'), String(d)]);
+    if ('size' in e) pairs.push([t('size_legend_label'), String(e.size)]);
     return pairs;
   };
 
   return (
     <Paper elevation={4} sx={{ p: 1.5, minWidth: 260, maxWidth: 360, maxHeight: 280, overflowY: 'auto' }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Legend</Typography>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('legend_title')}</Typography>
       <Stack spacing={1}>
         {entries.map((e, idx) => (
           <Box

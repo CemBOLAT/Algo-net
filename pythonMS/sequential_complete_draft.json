@@ -1,0 +1,77 @@
+{
+    "u": [
+        {
+            "t": "Communal Latrine",
+            "v_list": [
+                4,
+                [
+                    "E"
+                ]
+            ]
+        }
+    ],
+    "x": [
+        {
+            "v": "E",
+            "t": "Communal Latrine"
+        },
+        {
+            "v": "A",
+            "t": "R"
+        },
+        {
+            "v": "B",
+            "t": "R"
+        },
+        {
+            "v": "C",
+            "t": "R"
+        },
+        {
+            "v": "D",
+            "t": "R"
+        }
+    ],
+    "y": [
+        {
+            "v": "A",
+            "t": "Communal Latrine",
+            "v_list": [
+                4,
+                [
+                    "E"
+                ]
+            ]
+        },
+        {
+            "v": "B",
+            "t": "Communal Latrine",
+            "v_list": [
+                4,
+                [
+                    "E"
+                ]
+            ]
+        },
+        {
+            "v": "C",
+            "t": "Communal Latrine",
+            "v_list": [
+                4,
+                [
+                    "E"
+                ]
+            ]
+        },
+        {
+            "v": "D",
+            "t": "Communal Latrine",
+            "v_list": [
+                4,
+                [
+                    "E"
+                ]
+            ]
+        }
+    ]
+}

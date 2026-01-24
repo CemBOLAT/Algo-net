@@ -15,7 +15,7 @@ const Graph = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t } = useI18n();
-    
+
     // Graph Data States (Canvas'ı etkileyenler)
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
@@ -25,7 +25,7 @@ const Graph = () => {
     const [tempEdge, setTempEdge] = useState(null);
 
     // UI States (Canvas'ı ETKİLEMEMESİ gerekenler)
-    const [graphName, setGraphName] = useState('Graph Adı');
+    const [graphName, setGraphName] = useState(t('default_graph_name'));
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [graphId, setGraphId] = useState(null);
@@ -39,6 +39,10 @@ const Graph = () => {
         attributes: [{ key: '', value: '' }],
     });
     const [showLegendEditor, setShowLegendEditor] = useState(false);
+
+    // Visibility States
+    const [showNodeLabels, setShowNodeLabels] = useState(true);
+    const [showEdgeWeights, setShowEdgeWeights] = useState(true);
 
     // --- Helper Functions (useCallback ile sarmalandı) ---
 
@@ -103,7 +107,7 @@ const Graph = () => {
             const graph = await http.get(`/api/graphs/${id}`, { auth: true });
             setGraphId(graph.id);
             setGraphName(graph.name);
-            
+
             const loadedNodes = graph.nodes?.map(node => ({
                 id: node.nodeId,
                 label: node.label,
@@ -112,7 +116,7 @@ const Graph = () => {
                 size: node.size || 20,
                 color: node.color || '#1976d2'
             })) || [];
-            
+
             const loadedEdges = graph.edges?.map(edge => {
                 const hasWeight = edge.weight !== null && edge.weight !== undefined;
                 return {
@@ -124,40 +128,40 @@ const Graph = () => {
                     showWeight: edge.showWeight !== undefined ? edge.showWeight : hasWeight
                 };
             }) || [];
-            
+
             setNodes(loadedNodes);
             setEdges(loadedEdges);
-            
+
             if (graph.hasLegend && Array.isArray(graph.legendEntries)) {
                 setHasLegend(true);
                 setLegendEntries(graph.legendEntries.map((le) => {
-                     const attrs = le.attributes && typeof le.attributes === 'object'
+                    const attrs = le.attributes && typeof le.attributes === 'object'
                         ? le.attributes
                         : (() => {
-                                const a = {};
-                                if (le.capacity !== undefined) a['Kapasite'] = String(le.capacity);
-                                if (le.distance !== undefined) a['Uzaklık'] = String(le.distance);
-                                const d = le.diameter ?? le.unitDistance;
-                                if (d !== undefined) a['Yarıçap'] = String(d);
-                                if (le.size !== undefined) a['Boyut'] = String(le.size);
-                                return a;
-                          })();
+                            const a = {};
+                            if (le.capacity !== undefined) a['Kapasite'] = String(le.capacity);
+                            if (le.distance !== undefined) a['Uzaklık'] = String(le.distance);
+                            const d = le.diameter ?? le.unitDistance;
+                            if (d !== undefined) a['Yarıçap'] = String(d);
+                            if (le.size !== undefined) a['Boyut'] = String(le.size);
+                            return a;
+                        })();
                     return { name: le.name, color: le.color, attributes: attrs };
                 }));
             } else {
                 setHasLegend(false);
                 setLegendEntries([]);
             }
-            showSuccess('Graph başarıyla yüklendi!');
+            showSuccess(t('graph_loaded_success'));
         } catch (error) {
             if (error.status === 404) {
-                showError('Graph bulunamadı');
+                showError(t('graph_not_found'));
                 navigate('/graph-list');
             } else if (error.status === 403) {
-                showError('Bu graph\'a erişim yetkiniz yok');
+                showError(t('graph_access_denied'));
                 navigate('/graph-list');
             } else {
-                showError('Graph yüklenirken hata oluştu');
+                showError(t('graph_load_error'));
             }
         } finally {
             setIsLoading(false);
@@ -193,16 +197,16 @@ const Graph = () => {
     const addDraftAttrRow = () => {
         setLegendDraft(prev => ({ ...prev, attributes: [...prev.attributes, { key: '', value: '' }] }));
     };
-    
+
     const removeDraftAttrRow = (idx) => {
         setLegendDraft(prev => ({ ...prev, attributes: prev.attributes.filter((_, i) => i !== idx) }));
     };
-    
+
     const addLegendEntryFromDraft = () => {
         // ... (Logic same as before)
         const name = legendDraft.name?.trim();
         const color = legendDraft.color || '#1976d2';
-        if (!name) { showError('Lütfen legend başlığı girin.'); return; }
+        if (!name) { showError(t('enter_legend_title')); return; }
         const attrs = {};
         (legendDraft.attributes || []).forEach(({ key, value }) => {
             const k = (key ?? '').trim();
@@ -212,17 +216,17 @@ const Graph = () => {
         setLegendEntries(prev => [...prev, { name, color, attributes: attrs }]);
         setHasLegend(true);
         setLegendDraft({ name: '', color: '#1976d2', attributes: [{ key: '', value: '' }] });
-        showSuccess('Legend girdisi eklendi');
+        showSuccess(t('legend_entry_added'));
     };
 
     const handleSaveGraph = useCallback(async () => {
         if (isSaving) return;
-        
+
         // State'e erişmek için ref kullanılabilir veya dependency array'e eklenir.
         // Burada nodes ve edges değiştikçe fonksiyon yeniden oluşacak ama bu kabul edilebilir.
-        if (!graphName || graphName.trim() === '') { showError('Lütfen graph için bir isim girin.'); return; }
-        if (!nodes || nodes.length === 0) { showError('Lütfen en az bir düğüm ekleyin.'); return; }
-        
+        if (!graphName || graphName.trim() === '') { showError(t('enter_graph_name_error')); return; }
+        if (!nodes || nodes.length === 0) { showError(t('enter_node_error')); return; }
+
         setIsLoading(true); // isSaving yerine loading overlay kullanalım veya ikisini yönetelim
         setIsSaving(true);
 
@@ -274,10 +278,10 @@ const Graph = () => {
                 setGraphId(data.graphId);
                 window.history.replaceState({}, '', `/graph?id=${data.graphId}`);
             }
-            showSuccess(`Graph başarıyla ${graphId ? 'güncellendi' : 'kaydedildi'}!`);
+            showSuccess(graphId ? t('graph_updated_success') : t('graph_saved_success'));
         } catch (error) {
-            const msg = error.data?.message || 'Graph kaydedilirken hata oluştu.';
-            showError(`Kaydetme hatası: ${msg}`);
+            const msg = error.data?.message || t('graph_load_error'); // Default generic error if msg missing
+            showError(t('save_error', { msg }));
         } finally {
             setIsSaving(false);
             setIsLoading(false);
@@ -307,7 +311,7 @@ const Graph = () => {
     // --- PERFORMANCE OPTIMIZATION: Memoize GraphCanvas ---
     // Bu kısım çok önemli. Sadece graph datası değiştiğinde render edilecek.
     // UI state'leri (graphName, legendDraft, messages vb.) değiştiğinde Canvas donmayacak.
-    
+
     const MemoizedGraphCanvas = useMemo(() => (
         <GraphCanvas
             nodes={nodes}
@@ -323,8 +327,10 @@ const Graph = () => {
             tempEdge={tempEdge}
             setTempEdge={setTempEdge}
             disabled={isSaving}
+            showNodeLabels={showNodeLabels}
+            showEdgeWeights={showEdgeWeights}
         />
-    ), [nodes, edges, selectedNode, selectedEdge, mode, tempEdge, isSaving]);
+    ), [nodes, edges, selectedNode, selectedEdge, mode, tempEdge, isSaving, showNodeLabels, showEdgeWeights]);
 
 
     return (
@@ -342,7 +348,7 @@ const Graph = () => {
             )}
             {(isLoading || isSaving) && (
                 <Box sx={{ position: 'fixed', inset: 0, bgcolor: 'rgba(0,0,0,0.3)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                    {isSaving ? 'Kaydediliyor...' : 'Yükleniyor...'}
+                    {isSaving ? t('saving') : t('loading')}
                 </Box>
             )}
 
@@ -354,19 +360,19 @@ const Graph = () => {
                     { label: t('array_algorithms'), onClick: () => navigate('/array-algorithms'), variant: 'contained', color: 'primary' },
                     { label: t('tree_algorithms'), onClick: () => navigate('/tree-algorithms'), variant: 'contained', color: 'primary' },
                     { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary' },
-                    { label: 'Legend Ekle', onClick: () => setShowLegendEditor(v => !v), variant: 'contained', color: 'primary', isButton: true },
+                    { label: t('add_legend'), onClick: () => setShowLegendEditor(v => !v), variant: 'contained', color: 'primary', isButton: true },
                     { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error' }
                 ]}
             />
 
             <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
                 <Box sx={{ borderColor: 'divider' }}>
-                    <Sidebar 
-                        onReset={handleResetGraph} 
+                    <Sidebar
+                        onReset={handleResetGraph}
                         onSave={handleSaveGraph}
                         isSaving={isSaving}
-                        graphName={graphName} 
-                        setGraphName={setGraphName} 
+                        graphName={graphName}
+                        setGraphName={setGraphName}
                         setNodes={setNodes}
                         nodes={nodes}
                         setEdges={setEdges}
@@ -378,11 +384,15 @@ const Graph = () => {
                         setHasLegend={setHasLegend}
                         legendEntries={legendEntries}
                         setLegendEntries={setLegendEntries}
+                        showNodeLabels={showNodeLabels}
+                        setShowNodeLabels={setShowNodeLabels}
+                        showEdgeWeights={showEdgeWeights}
+                        setShowEdgeWeights={setShowEdgeWeights}
                     />
                 </Box>
 
                 <Box component="main" sx={{ flex: 1, position: 'relative', p: 2 }}>
-                    
+
                     {/* OPTIMIZED CANVAS RENDER */}
                     {MemoizedGraphCanvas}
 
@@ -397,7 +407,7 @@ const Graph = () => {
                                         if (next.length === 0) setHasLegend(false);
                                         return next;
                                     });
-                                    showSuccess('Legend girdisi silindi');
+                                    showSuccess(t('legend_entry_deleted'));
                                 }}
                             />
                         </Box>
@@ -407,42 +417,42 @@ const Graph = () => {
                     {showLegendEditor && (
                         <Box sx={{ position: 'absolute', right: 16, top: 200, width: 360, maxWidth: '90vw', zIndex: 10 }}>
                             <Paper elevation={3} sx={{ p: 1.5 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Legend Ekle</Typography>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{t('add_legend_title')}</Typography>
                                 <Stack spacing={1}>
                                     <TextField
                                         size="small"
-                                        label="Başlık"
+                                        label={t('title')}
                                         value={legendDraft.name}
                                         onChange={e => setLegendDraft(prev => ({ ...prev, name: e.target.value }))}
                                     />
                                     <TextField
                                         size="small"
-                                        label="Renk (#hex)"
+                                        label={t('color_hex')}
                                         value={legendDraft.color}
                                         onChange={e => setLegendDraft(prev => ({ ...prev, color: e.target.value }))}
                                     />
                                     <Box>
-                                        <Typography variant="caption" sx={{ fontWeight: 600 }}>Özellikler</Typography>
+                                        <Typography variant="caption" sx={{ fontWeight: 600 }}>{t('properties')}</Typography>
                                         <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                                             {legendDraft.attributes.map((row, idx) => (
                                                 <Box key={idx} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 0.5 }}>
                                                     <TextField
-                                                        size="small" placeholder="Anahtar" value={row.key}
+                                                        size="small" placeholder={t('key')} value={row.key}
                                                         onChange={e => updateDraftAttr(idx, 'key', e.target.value)}
                                                     />
                                                     <TextField
-                                                        size="small" placeholder="Değer" value={row.value}
+                                                        size="small" placeholder={t('value')} value={row.value}
                                                         onChange={e => updateDraftAttr(idx, 'value', e.target.value)}
                                                     />
-                                                    <Button color="error" variant="outlined" size="small" onClick={() => removeDraftAttrRow(idx)}>Sil</Button>
+                                                    <Button color="error" variant="outlined" size="small" onClick={() => removeDraftAttrRow(idx)}>{t('delete')}</Button>
                                                 </Box>
                                             ))}
-                                            <Button variant="text" size="small" onClick={addDraftAttrRow}>Özellik Ekle</Button>
+                                            <Button variant="text" size="small" onClick={addDraftAttrRow}>{t('add_property')}</Button>
                                         </Stack>
                                     </Box>
                                     <Stack direction="row" spacing={1}>
-                                        <Button variant="contained" size="small" onClick={addLegendEntryFromDraft}>Ekle</Button>
-                                        <Button variant="outlined" size="small" onClick={() => setShowLegendEditor(false)}>Kapat</Button>
+                                        <Button variant="contained" size="small" onClick={addLegendEntryFromDraft}>{t('add')}</Button>
+                                        <Button variant="outlined" size="small" onClick={() => setShowLegendEditor(false)}>{t('close')}</Button>
                                     </Stack>
                                 </Stack>
                             </Paper>
