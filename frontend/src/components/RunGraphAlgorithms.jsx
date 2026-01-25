@@ -1,14 +1,14 @@
 const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || 'http://localhost:8000';
 
-import { useRef , useState} from "react";
+import { useRef, useState } from "react";
 import {
-  Button, Container , Collapse, Box, FormControl, InputLabel, Select, MenuItem, TextField,
+  Button, Container, Collapse, Box, FormControl, InputLabel, Select, MenuItem, TextField,
   Dialog, DialogTitle, DialogContent, DialogActions, Stack, Typography, Avatar, Chip, Divider, Paper
 } from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import { TransitionGroup } from 'react-transition-group';
-import { http, getTokens } from "../utils/auth"; // Adjust the import path as necessary
-
+import { http, getTokens } from "../utils/auth";
+import { useI18n } from '../context/I18nContext';
 
 export default function RunGraphAlgorithms({
   setNodes,
@@ -17,11 +17,12 @@ export default function RunGraphAlgorithms({
   edges,
   selectedAlgo,
   isLoading = false,
-  setIsLoading = () => {},
-  notify = () => {},
-  onLegendChange = () => {},
+  setIsLoading = () => { },
+  notify = () => { },
+  onLegendChange = () => { },
   graphName, // ADDED: receive graphName from Sidebar
 }) {
+  const { t } = useI18n();
 
 
   const [edgeFrom, setEdgeFrom] = useState('');
@@ -95,7 +96,7 @@ export default function RunGraphAlgorithms({
     if (searchingAlgos.includes(algoName)) return "searching";
     if (pathFindingAlgos.includes(algoName)) return "pathfinding";
     if (layoutAlgos.includes(algoName)) return "layout";
-    
+
 
     return "other";
   };
@@ -105,26 +106,72 @@ export default function RunGraphAlgorithms({
   // Coloring algorithms → recolor nodes
   const updateColoring = (data) => {
     if (selectedAlgo === 'package_coloring') {
-      // Find the maximum number
-      const maxNum = Math.max(...Object.values(data));
+      // New structure support: { assignments: {...}, pcn: int, legend: [...] }
+      const assignments = data.assignments || data; // Fallback to old format (direct map) if assignments key missing
 
-      // Generate distinct colors for each number
-      const colors = Array.from({ length: maxNum }, (_, i) => {
-        // You can use HSL for evenly spaced colors
-        const hue = (i * 360) / maxNum;
-        return `hsl(${hue}, 70%, 50%)`;
+      // If we have a legend from backend, update it
+      if (data.legend && Array.isArray(data.legend)) {
+        onLegendChange(data.legend);
+      }
+
+      // Always generate color lookup for values 1..PCN
+      // The legend is now 'summary only' so we cannot rely on it for value->color mapping.
+      let colorLookup = {};
+
+      // Get all unique values assigned to nodes
+      const distinctValues = [...new Set(Object.values(assignments).map(String))].sort((a, b) => Number(a) - Number(b));
+
+      distinctValues.forEach((val, idx) => {
+        // Distribute hue evenly based on the number of distinct values
+        const hue = Math.floor((idx * 360) / distinctValues.length);
+        colorLookup[val] = `hsl(${hue}, 70%, 50%)`;
       });
 
-      setNodes((prev) =>
-        prev.map((n) => {
-          const num = data[n.id];
+      console.log('UpdateColoring debug:', {
+        assignmentsKeys: Object.keys(assignments),
+        hasColors: !!data.colors,
+        colorsKeys: data.colors ? Object.keys(data.colors) : []
+      });
+
+      setNodes((prev) => {
+        return prev.map((n) => {
+          const strId = String(n.id);
+          // 1. Try to find assignment (for label)
+          let num = assignments[strId];
+          if (num === undefined && assignments[n.id] !== undefined) {
+            num = assignments[n.id];
+          }
+
+          // 2. Determine Color
+          let finalColor = n.color; // Start with current color
+
+          // Try backend explicit color first (most trusted)
+          let backendColor = null;
+          if (data.colors) {
+            // Try strict string match first
+            if (data.colors[strId]) backendColor = data.colors[strId];
+            // Try raw ID match
+            else if (data.colors[n.id]) backendColor = data.colors[n.id];
+          }
+
+          if (backendColor) {
+            finalColor = backendColor;
+          } else if (num !== undefined) {
+            // Fallback to local lookup if valid assignment exists but no explicit color
+            const lookup = colorLookup[String(num)];
+            if (lookup) finalColor = lookup;
+          }
+
+          // Debug for specific problematic nodes if needed
+          // if (strId.startsWith('5_')) console.log(`Node ${strId}: num=${num}, backendColor=${backendColor}, final=${finalColor}`);
+
           return {
             ...n,
-            color: num ? colors[num - 1] : n.color, // num-1 because array is 0-indexed
-            label: num ? String(num) : n.label, // set the label to the number
+            color: finalColor,
+            label: num ? String(num) : n.label,
           };
-        })
-      );
+        });
+      });
     } else {
       setNodes((prev) =>
         prev.map((n) => ({
@@ -151,13 +198,13 @@ export default function RunGraphAlgorithms({
       }))
     );
 
-    
+
     setNodes((prevNodes) =>
-        prevNodes.map((node) =>
-            data["path_nodes"].includes(node.id)
-            ? { ...node, color: 'red' }   // highlight path
-            : { ...node, color: "#1976d2" } // reset others
-        )
+      prevNodes.map((node) =>
+        data["path_nodes"].includes(node.id)
+          ? { ...node, color: 'red' }   // highlight path
+          : { ...node, color: "#1976d2" } // reset others
+      )
     );
   };
 
@@ -168,7 +215,7 @@ export default function RunGraphAlgorithms({
     const pathEdges = new Set(
       (data?.edges ?? []).map(([a, b]) => `${a}-${b}`)
     );
-    
+
 
     const pathNodes = new Set(data?.path ?? []);
     console.log("Path Nodes:", pathNodes);
@@ -181,8 +228,8 @@ export default function RunGraphAlgorithms({
         color: pathNodes.has(n.id)
           ? "#D32F2F" // red for path nodes
           : visited.has(n.id)
-          ? "#FFA000" // orange for visited nodes
-          : "#1976d2", // default color
+            ? "#FFA000" // orange for visited nodes
+            : "#1976d2", // default color
       }))
     );
 
@@ -191,15 +238,15 @@ export default function RunGraphAlgorithms({
     console.log("all edges before update:", edges);
 
     setEdges((prev) =>
-    prev.map((e) => {
-      // Edge'i yazdır
-      console.log("Edge:", e);
+      prev.map((e) => {
+        // Edge'i yazdır
+        console.log("Edge:", e);
 
-      return {
-        ...e,
-        color: pathEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
-      };
-    })
+        return {
+          ...e,
+          color: pathEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
+        };
+      })
     );
 
   };
@@ -271,7 +318,7 @@ export default function RunGraphAlgorithms({
   // ---- Main onRun handler ----
   const onRun = async () => {
     console.log("Algo  runned :", selectedAlgo);
-    
+
     if (isLoading) return;
 
     const category = getAlgorithmCategory(selectedAlgo);
@@ -303,14 +350,14 @@ export default function RunGraphAlgorithms({
 
     setIsLoading(true);
     try {
-      const resp = await http.post(selectedAlgo === "package_coloring" ? `/api/package_coloring/`: `/api/${category}/`, formData, {
+      const resp = await http.post(selectedAlgo === "package_coloring" ? `/api/package_coloring/` : `/api/${category}/`, formData, {
         json: false,
         auth: true,
         apiBase: API_BASE,
       });
 
       const data = resp?.result;
-      
+
       switch (category) {
         case "coloring":
           updateColoring(data);
@@ -364,7 +411,7 @@ export default function RunGraphAlgorithms({
         },
       };
     });
- 
+
     if (list.some(e => e.name.length === 0)) {
       notify("error", "İsim boş olamaz.", 2000);
       return;
@@ -453,228 +500,228 @@ export default function RunGraphAlgorithms({
     <>
       <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2, p: 1, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, }}>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>From</InputLabel>
             <Select
-                value={edgeFrom}
-                label="From"
-                onChange={(e) => setEdgeFrom(e.target.value)}
+              value={edgeFrom}
+              label="From"
+              onChange={(e) => setEdgeFrom(e.target.value)}
             >
-                {nodes.map((v) => (
+              {nodes.map((v) => (
                 <MenuItem key={`from-${v.id}`} value={v.id}>{v.id}</MenuItem>
-                ))}
+              ))}
             </Select>
-            </FormControl>
+          </FormControl>
 
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>To</InputLabel>
             <Select
-                value={edgeTo}
-                label="To"
-                onChange={(e) => setEdgeTo(e.target.value)}
+              value={edgeTo}
+              label="To"
+              onChange={(e) => setEdgeTo(e.target.value)}
             >
-                {nodes.map((v) => (
+              {nodes.map((v) => (
                 <MenuItem key={`to-${v.id}`} value={v.id}>{v.id}</MenuItem>
-                ))}
+              ))}
             </Select>
-            </FormControl>
+          </FormControl>
         </Box>
 
-        </Collapse>
+      </Collapse>
 
-        <Button
-            id="run-btn"
-            variant="contained"
-            color="primary"
-            fullWidth
-            onClick={onRun}
-            disabled={isLoading}
-        >
-            Run
-        </Button>
+      <Button
+        id="run-btn"
+        variant="contained"
+        color="primary"
+        fullWidth
+        onClick={onRun}
+        disabled={isLoading}
+      >
+        {t('run')}
+      </Button>
 
-        {/* Layout Planning Dialog */}
-        <Dialog open={layoutDialogOpen} onClose={() => setLayoutDialogOpen(false)} fullWidth maxWidth="md">
-          <DialogTitle>Layout Planning</DialogTitle>
-          <DialogContent dividers>
-            {/* Standard seçimi: UNHCR veya Kendi Standartlarım */}
-            <Box sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
-              <FormControl component="fieldset" variant="standard" sx={{ width: '100%' }}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>Standart seçimi</Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant={standardOption === 'unhcr' ? 'contained' : 'outlined'}
-                    onClick={() => handleStandardOption('unhcr')}
-                  >
-                    UNHCR Standartları
-                  </Button>
-                  <Button
-                    variant={standardOption === 'custom' ? 'contained' : 'outlined'}
-                    onClick={() => handleStandardOption('custom')}
-                  >
-                    Kendi Standartlarım
-                  </Button>
-                </Box>
-                {standardOption === 'unhcr' && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    UNHCR standartları yüklendi — bu girdileri düzenleyebilir veya silebilirsiniz.
-                  </Typography>
-                )}
-              </FormControl>
-            </Box>
-
-            {/* Fixed Residential card (non-editable) */}
-            <Paper variant="outlined" sx={{ p: 1.5, mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar sx={{ bgcolor: '#1976d2', width: 36, height: 36 }}>
-                <HomeIcon sx={{ color: '#fff' }} />
-              </Avatar>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1 }}>
-                  Residential
-                </Typography>
-                <Typography variant="caption" color="text.secondary">Sabit, değiştirilemez</Typography>
+      {/* Layout Planning Dialog */}
+      <Dialog open={layoutDialogOpen} onClose={() => setLayoutDialogOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Layout Planning</DialogTitle>
+        <DialogContent dividers>
+          {/* Standard seçimi: UNHCR veya Kendi Standartlarım */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
+            <FormControl component="fieldset" variant="standard" sx={{ width: '100%' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Standart seçimi</Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant={standardOption === 'unhcr' ? 'contained' : 'outlined'}
+                  onClick={() => handleStandardOption('unhcr')}
+                >
+                  UNHCR Standartları
+                </Button>
+                <Button
+                  variant={standardOption === 'custom' ? 'contained' : 'outlined'}
+                  onClick={() => handleStandardOption('custom')}
+                >
+                  Kendi Standartlarım
+                </Button>
               </Box>
-              <Chip size="small" label="Mavi" sx={{ bgcolor: '#1976d2', color: '#fff' }} />
-            </Paper>
+              {standardOption === 'unhcr' && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  UNHCR standartları yüklendi — bu girdileri düzenleyebilir veya silebilirsiniz.
+                </Typography>
+              )}
+            </FormControl>
+          </Box>
 
-            <Divider sx={{ mb: 2 }} />
+          {/* Fixed Residential card (non-editable) */}
+          <Paper variant="outlined" sx={{ p: 1.5, mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: '#1976d2', width: 36, height: 36 }}>
+              <HomeIcon sx={{ color: '#fff' }} />
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1 }}>
+                Residential
+              </Typography>
+              <Typography variant="caption" color="text.secondary">Sabit, değiştirilemez</Typography>
+            </Box>
+            <Chip size="small" label="Mavi" sx={{ bgcolor: '#1976d2', color: '#fff' }} />
+          </Paper>
 
-            {/* Animated list of entries */}
-            <TransitionGroup>
-              {entries.map((entry) => {
-                const isEditing = !!editing[entry.id];
-                const view = isEditing ? (drafts[entry.id] || entry) : entry;
+          <Divider sx={{ mb: 2 }} />
 
-                // Validation flags for edit mode
-                const nameErr = isEditing && String(view.name || '').trim().length === 0;
-                const capErr = isEditing && !isPositive(view.capacity);
-                const distErr = isEditing && !isPositive(view.distance);
-                const unitErr = isEditing && !isPositive(view.diameter);
-                const sizeErr = isEditing && !isPositive(view.size);
+          {/* Animated list of entries */}
+          <TransitionGroup>
+            {entries.map((entry) => {
+              const isEditing = !!editing[entry.id];
+              const view = isEditing ? (drafts[entry.id] || entry) : entry;
 
-                return (
-                  <Collapse key={entry.id} timeout={200}>
-                    {/* Edit mode */}
-                    {isEditing ? (
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: '1.6fr 120px 1fr 1fr 1fr auto',
-                          gap: 1,
-                          alignItems: 'center',
-                          minWidth: 760,
-                          mb: 1,
-                        }}
-                      >
-                        <TextField
-                          label="İsim"
-                          size="small"
-                          value={view.name}
-                          onChange={(e) => updateDraft(entry.id, 'name', e.target.value)}
-                          error={nameErr}
-                          helperText={nameErr ? 'Zorunlu' : ''}
-                          fullWidth
-                        />
-                        <TextField
-                          label="Renk"
-                          size="small"
-                          type="color"
-                          value={view.color}
-                          onChange={(e) => updateDraft(entry.id, 'color', e.target.value)}
-                          inputProps={{ style: { padding: 0, height: 40 } }}
-                        />
-                        <TextField
-                          label="Kapasite"
-                          size="small"
-                          type="number"
-                          value={view.capacity}
-                          onChange={(e) => updateDraft(entry.id, 'capacity', e.target.value)}
-                          error={capErr}
-                          helperText={capErr ? "0'dan büyük olmalı" : ''}
-                          inputProps={{ min: 1, step: 1 }}
-                        />
-                        <TextField
-                          label="Uzaklık"
-                          size="small"
-                          type="number"
-                          value={view.distance}
-                          onChange={(e) => updateDraft(entry.id, 'distance', e.target.value)}
-                          error={distErr}
-                          helperText={distErr ? "0'dan büyük olmalı" : ''}
-                          inputProps={{ min: 1, step: 1 }}
-                        />
-                        <TextField
-                          label="Yarıçap"
-                          size="small"
-                          type="number"
-                          value={view.diameter}
-                          onChange={(e) => updateDraft(entry.id, 'diameter', e.target.value)}
-                          error={unitErr}
-                          helperText={unitErr ? "0'dan büyük olmalı" : ''}
-                          inputProps={{ min: 1, step: 1 }}
-                        />
-                        <TextField
-                          label="Boyut"
-                          size="small"
-                          type="number"
-                          value={view.size}
-                          onChange={(e) => updateDraft(entry.id, 'size', e.target.value)}
-                          error={sizeErr}
-                          helperText={sizeErr ? "0'dan büyük olmalı" : ''}
-                          inputProps={{ min: 1, step: 1 }}
-                        />
+              // Validation flags for edit mode
+              const nameErr = isEditing && String(view.name || '').trim().length === 0;
+              const capErr = isEditing && !isPositive(view.capacity);
+              const distErr = isEditing && !isPositive(view.distance);
+              const unitErr = isEditing && !isPositive(view.diameter);
+              const sizeErr = isEditing && !isPositive(view.size);
+
+              return (
+                <Collapse key={entry.id} timeout={200}>
+                  {/* Edit mode */}
+                  {isEditing ? (
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: '1.6fr 120px 1fr 1fr 1fr auto',
+                        gap: 1,
+                        alignItems: 'center',
+                        minWidth: 760,
+                        mb: 1,
+                      }}
+                    >
+                      <TextField
+                        label="İsim"
+                        size="small"
+                        value={view.name}
+                        onChange={(e) => updateDraft(entry.id, 'name', e.target.value)}
+                        error={nameErr}
+                        helperText={nameErr ? 'Zorunlu' : ''}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Renk"
+                        size="small"
+                        type="color"
+                        value={view.color}
+                        onChange={(e) => updateDraft(entry.id, 'color', e.target.value)}
+                        inputProps={{ style: { padding: 0, height: 40 } }}
+                      />
+                      <TextField
+                        label="Kapasite"
+                        size="small"
+                        type="number"
+                        value={view.capacity}
+                        onChange={(e) => updateDraft(entry.id, 'capacity', e.target.value)}
+                        error={capErr}
+                        helperText={capErr ? "0'dan büyük olmalı" : ''}
+                        inputProps={{ min: 1, step: 1 }}
+                      />
+                      <TextField
+                        label="Uzaklık"
+                        size="small"
+                        type="number"
+                        value={view.distance}
+                        onChange={(e) => updateDraft(entry.id, 'distance', e.target.value)}
+                        error={distErr}
+                        helperText={distErr ? "0'dan büyük olmalı" : ''}
+                        inputProps={{ min: 1, step: 1 }}
+                      />
+                      <TextField
+                        label="Yarıçap"
+                        size="small"
+                        type="number"
+                        value={view.diameter}
+                        onChange={(e) => updateDraft(entry.id, 'diameter', e.target.value)}
+                        error={unitErr}
+                        helperText={unitErr ? "0'dan büyük olmalı" : ''}
+                        inputProps={{ min: 1, step: 1 }}
+                      />
+                      <TextField
+                        label="Boyut"
+                        size="small"
+                        type="number"
+                        value={view.size}
+                        onChange={(e) => updateDraft(entry.id, 'size', e.target.value)}
+                        error={sizeErr}
+                        helperText={sizeErr ? "0'dan büyük olmalı" : ''}
+                        inputProps={{ min: 1, step: 1 }}
+                      />
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button variant="contained" onClick={() => saveEdit(entry.id)}>Kaydet</Button>
+                        <Button variant="text" color="inherit" onClick={() => cancelEdit(entry.id)}>İptal</Button>
+                      </Box>
+                    </Box>
+                  ) : (
+                    // View mode (compact card)
+                    <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 28, height: 28, borderRadius: '6px', bgcolor: entry.color, border: '1px solid rgba(0,0,0,0.1)' }} />
+                        <Box sx={{ overflow: 'hidden' }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry.name || '—'}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                            <Chip size="small" label={`Kapasite: ${entry.capacity}`} />
+                            <Chip size="small" label={`Uzaklık: ${entry.distance}`} />
+                            <Chip size="small" label={`Yarıçap: ${entry.diameter}`} />
+                            <Chip size="small" label={`Büyüklük: ${entry.size}`} />
+                          </Box>
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button variant="contained" onClick={() => saveEdit(entry.id)}>Kaydet</Button>
-                          <Button variant="text" color="inherit" onClick={() => cancelEdit(entry.id)}>İptal</Button>
+                          <Button size="small" variant="outlined" onClick={() => startEdit(entry.id)}>Düzenle</Button>
+                          <Button size="small" color="error" variant="outlined" onClick={() => deleteEntry(entry.id)}>Sil</Button>
                         </Box>
                       </Box>
-                    ) : (
-                      // View mode (compact card)
-                      <Paper variant="outlined" sx={{ p: 1, mb: 1 }}>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ width: 28, height: 28, borderRadius: '6px', bgcolor: entry.color, border: '1px solid rgba(0,0,0,0.1)' }} />
-                          <Box sx={{ overflow: 'hidden' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {entry.name || '—'}
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-                              <Chip size="small" label={`Kapasite: ${entry.capacity}`} />
-                              <Chip size="small" label={`Uzaklık: ${entry.distance}`} />
-                              <Chip size="small" label={`Yarıçap: ${entry.diameter}`} />
-                              <Chip size="small" label={`Büyüklük: ${entry.size}`} />
-                            </Box>
-                          </Box>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button size="small" variant="outlined" onClick={() => startEdit(entry.id)}>Düzenle</Button>
-                            <Button size="small" color="error" variant="outlined" onClick={() => deleteEntry(entry.id)}>Sil</Button>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    )}
-                  </Collapse>
-                );
-              })}
-            </TransitionGroup>
+                    </Paper>
+                  )}
+                </Collapse>
+              );
+            })}
+          </TransitionGroup>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-              {standardOption !== 'unhcr' ? (
-                <Typography variant="caption" color="text.secondary">
-                  En fazla 5 giriş
-                </Typography>
-              ) : (
-                <Box /> /* placeholder to keep layout */
-              )}
-              <Button variant="contained" onClick={addEntry} disabled={standardOption !== 'unhcr' && entries.length >= 5}>
-                Girdi Ekle
-              </Button>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-             <Button onClick={() => setLayoutDialogOpen(false)}>Vazgeç</Button>
-             <Button onClick={confirmLayout} variant="contained">Çalıştır</Button>
-           </DialogActions>
-         </Dialog>
-     </>
-     );
- 
- }
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+            {standardOption !== 'unhcr' ? (
+              <Typography variant="caption" color="text.secondary">
+                En fazla 5 giriş
+              </Typography>
+            ) : (
+              <Box /> /* placeholder to keep layout */
+            )}
+            <Button variant="contained" onClick={addEntry} disabled={standardOption !== 'unhcr' && entries.length >= 5}>
+              Girdi Ekle
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLayoutDialogOpen(false)}>Vazgeç</Button>
+          <Button onClick={confirmLayout} variant="contained">Çalıştır</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+
+}

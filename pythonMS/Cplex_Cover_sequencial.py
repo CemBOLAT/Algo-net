@@ -768,8 +768,9 @@ if __name__ == "__main__":
     }
 
     
-   # --- 2. Create the MIP Start structure ---
+    # --- 2. Create the MIP Start structure ---
     mip_start = full_model.new_solution()
+    vars_added_to_mip_start = 0
 
     # A. Map u variables
     for item in warm_start_u_content:
@@ -781,12 +782,14 @@ if __name__ == "__main__":
         if t in group_fingerprint_to_gi and f_set in group_fingerprint_to_gi[t]:
             gi = group_fingerprint_to_gi[t][f_set]
             mip_start.add_var_value(u_full[(t, gi)], 1.0)
+            vars_added_to_mip_start += 1
 
     # B. Map x variables (No changes needed, strings/ints are already hashable)
     for item in warm_start_x_content:
         v, t = item['v'], item['t']
         if (v, t) in x_full:
             mip_start.add_var_value(x_full[(v, t)], 1.0)
+            vars_added_to_mip_start += 1
 
     # C. Map y variables
     for item in warm_start_y_content:
@@ -800,9 +803,13 @@ if __name__ == "__main__":
             key = (v, (t, gi))
             if key in y_full:
                 mip_start.add_var_value(y_full[key], 1.0)
+                vars_added_to_mip_start += 1
                 
-
-    full_model.add_mip_start(mip_start)
+    if vars_added_to_mip_start > 0:
+        print(f">>> Applying MIP Start with {vars_added_to_mip_start} variables.")
+        full_model.add_mip_start(mip_start)
+    else:
+        print(">>> MIP Start is empty (no matching variables found). Skipping.")
     full_model.context.solver.log_output = True
 
     # 3. Configure and Solve

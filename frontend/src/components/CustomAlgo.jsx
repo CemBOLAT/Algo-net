@@ -73,25 +73,28 @@ export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = f
     };
 
     return (
-        <Container style={{ padding: "0", marginTop: "10px" }}>
-            <Button
-                id="custom-btn"
-                variant="contained"
-                color="inherit"
-                fullWidth
-                onClick={onCustom}
-                disabled={isLoading}
-            >
-                Custom
-            </Button>
-
-            <input 
-                type="file"
-                accept=".py,.ipynb"
-                style={{ display: "none" }}
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-            />
+        <Container>
+            
         </Container>
+        // <Container style={{ padding: "0", marginTop: "10px" }}>
+        //     <Button
+        //         id="custom-btn"
+        //         variant="contained"
+        //         color="inherit"
+        //         fullWidth
+        //         onClick={onCustom}
+        //         disabled={isLoading}
+        //     >
+        //         Custom
+        //     </Button>
+
+        //     <input 
+        //         type="file"
+        //         accept=".py,.ipynb"
+        //         style={{ display: "none" }}
+        //         ref={fileInputRef}
+        //         onChange={handleFileSelect}
+        //     />
+        // </Container>
     );
 }

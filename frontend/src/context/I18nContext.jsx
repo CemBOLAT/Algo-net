@@ -4,6 +4,7 @@ const LANG_KEY = 'app_language';
 
 const translations = {
   tr: {
+    add: 'Ekle',
     profile: 'Profil',
     user: 'Kullanıcı',
     email: 'E-posta',
@@ -275,6 +276,7 @@ const translations = {
     ordered_coloring: 'Sıralı Boyama',
     layout_planning: 'Yerleşim Planlama',
     package_coloring: 'Paket Boyama',
+    run: 'Çalıştır',
 
     // VertexSettings
     vertex_settings_title: 'Düğüm Ayarları',
@@ -298,6 +300,7 @@ const translations = {
     size_legend_label: 'Boyut',
   },
   en: {
+    add: 'Add',
     quickgraph_grid_weight_helper: 'Edge weight (w) for the grid graph',
     quickgraph_bipartite_a_helper: 'Set A node count for bipartite graph',
     quickgraph_bipartite_b_helper: 'Set B node count for bipartite graph',
@@ -570,6 +573,7 @@ const translations = {
     ordered_coloring: 'Ordered Coloring',
     layout_planning: 'Layout Planning',
     package_coloring: 'Packing Coloring',
+    run: 'Run',
 
     // VertexSettings
     vertex_settings_title: 'Vertex Settings',
