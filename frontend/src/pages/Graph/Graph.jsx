@@ -44,21 +44,28 @@ const Graph = () => {
     const [showNodeLabels, setShowNodeLabels] = useState(true);
     const [showEdgeWeights, setShowEdgeWeights] = useState(true);
 
-    // Undo history state (stores previous node/edge snapshots)
+    // Undo/Redo history state (stores previous node/edge snapshots)
     const historyRef = useRef([]);
+    const redoRef = useRef([]);
     const MAX_HISTORY = 50;
 
-    // Save current state to history before changes
+    // Save current state to history before changes (clears redo stack)
     const saveToHistory = useCallback(() => {
         historyRef.current = [
             ...historyRef.current.slice(-MAX_HISTORY + 1),
             { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }
         ];
+        redoRef.current = []; // Clear redo stack on new action
     }, [nodes, edges]);
 
-    // Undo function
+    // Undo function - saves current state to redo stack before restoring
     const undo = useCallback(() => {
         if (historyRef.current.length === 0) return;
+        // Save current state to redo stack before undoing
+        redoRef.current = [
+            ...redoRef.current.slice(-MAX_HISTORY + 1),
+            { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }
+        ];
         const prevState = historyRef.current.pop();
         if (prevState) {
             setNodes(prevState.nodes);
@@ -66,7 +73,24 @@ const Graph = () => {
             setSelectedNode(null);
             setSelectedEdge(null);
         }
-    }, []);
+    }, [nodes, edges]);
+
+    // Redo function - restores from redo stack
+    const redo = useCallback(() => {
+        if (redoRef.current.length === 0) return;
+        // Save current state to undo stack before redoing
+        historyRef.current = [
+            ...historyRef.current.slice(-MAX_HISTORY + 1),
+            { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }
+        ];
+        const nextState = redoRef.current.pop();
+        if (nextState) {
+            setNodes(nextState.nodes);
+            setEdges(nextState.edges);
+            setSelectedNode(null);
+            setSelectedEdge(null);
+        }
+    }, [nodes, edges]);
 
     // --- Helper Functions (useCallback ile sarmalandı) ---
 
@@ -321,6 +345,12 @@ const Graph = () => {
                 undo();
                 return;
             }
+            // Ctrl+Y for redo (also Ctrl+Shift+Z / Cmd+Shift+Z on Mac)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) {
+                e.preventDefault();
+                redo();
+                return;
+            }
             if (e.key === 'Enter') {
                 if (selectedNode) {
                     saveToHistory();
@@ -336,7 +366,7 @@ const Graph = () => {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [selectedNode, selectedEdge, undo, saveToHistory]); // setters are stable
+    }, [selectedNode, selectedEdge, undo, redo, saveToHistory]); // setters are stable
 
     const handleLogout = () => { clearTokens(); navigate('/login'); };
 
