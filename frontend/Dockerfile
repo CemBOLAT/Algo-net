@@ -13,6 +13,7 @@ COPY . .
 
 # Set build-time variables
 ENV VITE_PYTHON_BASE=/pythonms
+ENV VITE_API_BASE=
 RUN npm run build
 
 # Production stage

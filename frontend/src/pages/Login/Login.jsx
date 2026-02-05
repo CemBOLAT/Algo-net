@@ -6,7 +6,7 @@ import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
 import { useI18n } from '../../context/I18nContext';
 
-const API_BASE = import.meta?.env?.VITE_API_BASE || '';
+const API_BASE = (import.meta?.env?.VITE_API_BASE || '').replace(/\/$/, '');
 import { setTokens, ensureAccessToken } from '../../utils/auth';
 
 const Login = () => {
@@ -210,19 +210,19 @@ const Login = () => {
                                     input: {
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                            <Lock />
+                                                <Lock />
                                             </InputAdornment>
                                         ),
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                            <IconButton
-                                                aria-label="toggle password visibility"
-                                                onClick={handleClickShowPassword}
-                                                edge="end"
-                                                disabled={isRedirecting}
-                                            >
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
+                                                <IconButton
+                                                    aria-label="toggle password visibility"
+                                                    onClick={handleClickShowPassword}
+                                                    edge="end"
+                                                    disabled={isRedirecting}
+                                                >
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
                                             </InputAdornment>
                                         ),
                                     },

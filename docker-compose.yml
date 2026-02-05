@@ -14,11 +14,13 @@ services:
       - frontend
       - pythonms
       - db
+    restart: always
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      network: host
     # backend is reachable only internally; proxy will expose a single external port
     env_file:
       - ./backend/.env
@@ -33,12 +35,14 @@ services:
     depends_on:
       - db
       - pythonms
+    restart: always
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     # frontend served internally; proxy will forward external traffic to it
+    restart: always
 
   pythonms:
     platform: linux/amd64
@@ -53,6 +57,7 @@ services:
     environment:
       - PYTHONPATH=/app
     # pythonms is internal; proxy will forward requests for python endpoints
+    restart: always
 
   db:
     image: postgres:15-alpine

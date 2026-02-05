@@ -45,7 +45,7 @@ export function isTokenExpired(token, skewSec = 30) {
     return nowSec >= (claims.exp - skewSec);
 }
 
-const DEFAULT_API_BASE = import.meta?.env?.VITE_API_BASE || '';
+const DEFAULT_API_BASE = (import.meta?.env?.VITE_API_BASE || '').replace(/\/$/, '');
 
 // Deduplicate parallel refresh calls
 let refreshInFlight = null;
