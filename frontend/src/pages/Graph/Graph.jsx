@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react'; // useMemo ve useCallback eklendi
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'; // useMemo ve useCallback eklendi
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clearTokens, getTokens, isTokenExpired, http } from '../../utils/auth';
 import GraphCanvas from '../../components/GraphCanvas';
@@ -43,6 +43,30 @@ const Graph = () => {
     // Visibility States
     const [showNodeLabels, setShowNodeLabels] = useState(true);
     const [showEdgeWeights, setShowEdgeWeights] = useState(true);
+
+    // Undo history state (stores previous node/edge snapshots)
+    const historyRef = useRef([]);
+    const MAX_HISTORY = 50;
+
+    // Save current state to history before changes
+    const saveToHistory = useCallback(() => {
+        historyRef.current = [
+            ...historyRef.current.slice(-MAX_HISTORY + 1),
+            { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }
+        ];
+    }, [nodes, edges]);
+
+    // Undo function
+    const undo = useCallback(() => {
+        if (historyRef.current.length === 0) return;
+        const prevState = historyRef.current.pop();
+        if (prevState) {
+            setNodes(prevState.nodes);
+            setEdges(prevState.edges);
+            setSelectedNode(null);
+            setSelectedEdge(null);
+        }
+    }, []);
 
     // --- Helper Functions (useCallback ile sarmalandı) ---
 
@@ -125,7 +149,7 @@ const Graph = () => {
                     to: edge.toNode,
                     weight: hasWeight ? edge.weight : undefined,
                     directed: edge.isDirected ?? false,
-                    showWeight: edge.showWeight !== undefined ? edge.showWeight : hasWeight
+                    showWeight: edge.showWeight !== undefined ? edge.showWeight : true
                 };
             }) || [];
 
@@ -246,7 +270,7 @@ const Graph = () => {
                 toNode: edge.to,
                 weight: edge.weight !== undefined ? edge.weight : null,
                 isDirected: edge.directed ?? false,
-                showWeight: edge.showWeight !== undefined ? edge.showWeight : (edge.weight !== undefined)
+                showWeight: edge.showWeight !== undefined ? edge.showWeight : true
             }));
 
             const requestBody = {
@@ -291,12 +315,20 @@ const Graph = () => {
     // Keyboard handler
     useEffect(() => {
         const onKey = (e) => {
+            // Ctrl+Z for undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+                return;
+            }
             if (e.key === 'Enter') {
                 if (selectedNode) {
+                    saveToHistory();
                     setNodes(prev => prev.filter(n => n.id !== selectedNode.id));
                     setEdges(prev => prev.filter(ed => ed.from !== selectedNode.id && ed.to !== selectedNode.id));
                     setSelectedNode(null);
                 } else if (selectedEdge) {
+                    saveToHistory();
                     setEdges(prev => prev.filter(ed => ed.id !== selectedEdge.id));
                     setSelectedEdge(null);
                 }
@@ -304,7 +336,7 @@ const Graph = () => {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [selectedNode, selectedEdge]); // setters are stable
+    }, [selectedNode, selectedEdge, undo, saveToHistory]); // setters are stable
 
     const handleLogout = () => { clearTokens(); navigate('/login'); };
 
@@ -352,7 +384,7 @@ const Graph = () => {
                 </Box>
             )}
 
-            <TopBar title={t('graph_simulator')}
+            <TopBar title=""
                 actions={[
                     { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary' },
                     { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary' },

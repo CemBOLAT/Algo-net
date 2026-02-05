@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Paper, Typography, Stack, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, Divider, Grid, Button } from '@mui/material';
+import { Box, Paper, Typography, Stack, FormControlLabel, Switch, Divider, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -10,7 +10,7 @@ const NOTIF_KEY = 'notifications_enabled';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { t, language, setLanguage } = useI18n();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     localStorage.getItem(NOTIF_KEY) === 'true'
@@ -40,9 +40,7 @@ const Profile = () => {
     return () => { mounted = false; };
   }, [decodeEmailFromToken]);
 
-  const handleLangChange = (val) => {
-    setLanguage(val);
-  };
+
 
   const handleNotificationsChange = async (val) => {
     setNotificationsEnabled(val);
@@ -76,15 +74,15 @@ const Profile = () => {
   return (
     <>
       <TopBar title={t('profile')}
-              actions={[
-                { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
-                { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
-                { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
-                { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
-                { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-                { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
-                { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
-              ]}
+        actions={[
+          { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+          { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
+          { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
+          { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
+          { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+          { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+          { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+        ]}
       />
       <Box sx={{ p: { xs: 2, sm: 3 }, display: 'flex', justifyContent: 'center' }}>
         <Paper sx={{ width: '100%', maxWidth: 920, p: { xs: 2, sm: 3 } }} elevation={2}>
@@ -101,20 +99,6 @@ const Profile = () => {
 
             {/* Settings row */}
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md="auto">
-                <FormControl size="small" sx={{ minWidth: 200 }}>
-                  <InputLabel id="lang-label">{t('language')}</InputLabel>
-                  <Select
-                    labelId="lang-label"
-                    value={language}
-                    label={t('language')}
-                    onChange={(e) => handleLangChange(e.target.value)}
-                  >
-                    <MenuItem value="tr">Türkçe</MenuItem>
-                    <MenuItem value="en">English</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
               <Grid item xs={12} md="auto">
                 <ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
               </Grid>

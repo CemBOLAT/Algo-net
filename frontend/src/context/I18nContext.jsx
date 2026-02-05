@@ -1,341 +1,7 @@
-import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useCallback } from 'react';
 
-const LANG_KEY = 'app_language';
-
+// English-only translations (i18n system kept for future language additions)
 const translations = {
-  tr: {
-    add: 'Ekle',
-    profile: 'Profil',
-    user: 'Kullanıcı',
-    email: 'E-posta',
-    language: 'Dil',
-    notifications: 'Bildirimler',
-    receive_notifications: 'Bildirim almak istiyorum',
-    theme: 'Tema',
-    go_to_canvas: 'Kanvasa Dön',
-    logout: 'Çıkış',
-    shortcuts: 'Kısayollar',
-    my_graphs: 'Graphlarım',
-    create_graph: 'Graph Oluştur',
-    tree_algorithms: 'Ağaç Algoritmaları',
-    array_algorithms: 'Dizi Algoritmaları',
-    unhcr_info: 'UNHCR Bilgi Sayfası',
-    download: 'İndir',
-    download_pdf_unhcr: 'UNHCR PDF\'ini İndir',
-    // Login/Register shared
-    password: 'Şifre',
-    confirm_password: 'Şifre Tekrar',
-    full_name: 'Ad Soyad',
-    required_fields_error: 'Lütfen tüm alanları doldurun.',
-    invalid_email_error: 'Geçerli bir e-posta adresi girin.',
-    server_unreachable: 'Sunucuya ulaşılamıyor. Lütfen daha sonra tekrar deneyin.',
-    change_language: 'Dili değiştir',
-
-    // Login
-    login_title: 'Giriş Yap',
-    login_failed: 'Giriş başarısız.',
-    login_success_redirect: 'Giriş başarılı! 2 saniye içinde yönlendirileceksiniz.',
-    redirecting: 'Yönlendiriliyor…',
-    login_button: 'Giriş Yap',
-    register_button: 'Kayıt Ol',
-    forgot_password: 'Şifremi Unuttum',
-
-    // Register
-    register_title: 'Kayıt Ol',
-    have_account_login: 'Zaten hesabın var mı? Giriş Yap',
-    min_password_length: 'Şifre en az 6 karakter olmalıdır.',
-    password_mismatch: 'Şifreler eşleşmiyor.',
-    enter_first_last_name: 'Lütfen en az isim ve soyisim girin.',
-    registration_error_generic: 'Kayıt sırasında bir hata oluştu.',
-    register_success: 'Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...',
-
-    // Forgot Password
-    forgot_password_title: 'Şifremi Unuttum',
-    forgot_password_desc: 'E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim.',
-    enter_email_error: 'Lütfen e-posta adresinizi girin.',
-    sending: 'Gönderiliyor…',
-    send_security_code: 'Güvenlik Kodu Gönder',
-    code_sent: 'Güvenlik kodu e-posta adresinize gönderildi.',
-    enter_code_and_continue: 'Kodu Gir ve Devam Et',
-    back_to_login: 'Giriş sayfasına dön',
-
-    // Reset Password
-    reset_password_title: 'Şifreyi Sıfırla',
-    security_code: 'Güvenlik Kodu',
-    new_password: 'Yeni Şifre',
-    new_password_confirm: 'Yeni Şifre (Tekrar)',
-    update_password: 'Şifreyi Güncelle',
-    reset_failed: 'Şifre sıfırlanamadı.',
-    password_updated_redirect: 'Şifreniz güncellendi! 2 saniye içinde giriş sayfasına yönlendirileceksiniz.',
-
-    // GraphList
-    all_graphs: 'Tüm Graphlar',
-    select_all: 'Tümünü Seç',
-    graph_selected_suffix: 'graph seçildi',
-    no_graphs_message: 'Henüz hiç graph bulunamadı. İlk graphı oluşturun!',
-    view_edit: 'Görüntüle/Düzenle',
-    delete: 'Sil',
-    close: 'Kapat',
-    delete_graphs_title: 'Graphları Sil',
-    graphs_delete_confirm_suffix: 'adet graphı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-    delete_graph_title: "Graph'ı Sil",
-    delete_graph_confirm: 'Bu graphı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-    operation_result: 'İşlem Sonucu',
-    graphs_deleted_success: 'Graphlar başarıyla silindi',
-    bulk_delete_failed: 'Toplu silme işlemi başarısız',
-    graph_delete_error: 'Graph silinirken hata oluştu',
-    node_count: 'Node sayısı:',
-    edge_count: 'Edge sayısı:',
-    created_at: 'Oluşturulma:',
-    updated_at: 'Güncellenme:',
-    unknown: 'Bilinmiyor',
-
-    prev: 'Geri',
-    next: 'İleri',
-
-    graph_simulator: 'Graph Simülatörü',
-
-    // TopBar
-    'topbar.options': 'Seçenekler',
-    'topbar.actions_aria': 'topbar-actions',
-    'topbar.select_placeholder': '--',
-
-    // GraphCreation / common form messages
-    vertex_name_required: 'İsim boş olamaz',
-    vertex_name_max: 'Düğüm adı en fazla 6 karakter olabilir',
-    vertex_name_duplicate: 'Aynı isimli düğüm zaten var',
-    weighted_mode_on: 'Ağırlıklı moda geçildi — kenarlar sıfırlandı, lütfen tekrar ekleyin.',
-    weighted_mode_off: 'Ağırlıklı mod kapandı — kenarlar sıfırlandı.',
-    file_empty: 'Dosya boş görünüyor',
-    file_format_error: 'Dosya formatı hatalı.',
-    file_read_error: 'Dosya okunamadı',
-    edge_exists_error: 'Bu kenar zaten var',
-    weight_required_error: 'Ağırlıklı graph için kenar ağırlığı gereklidir',
-    graph_name_empty: 'Graph adı boş olamaz',
-    min_vertices_required: 'En az bir düğüm eklemelisiniz',
-    graph_create_error: 'Graph oluşturulurken hata oluştu',
-    graph_loaded: 'Graph yüklendi',
-    graph_reset: 'Graph sıfırlandı',
-    unsupported_graph_type: 'Desteklenmeyen graph tipi',
-    quickgraph_full_created: 'Tam graph oluşturuldu ({n} düğüm, {m} kenar)',
-    quickgraph_tree_created: 'Ağaç oluşturuldu (n={n}, k={k})',
-    quickgraph_star_created: 'Star oluşturuldu (n={n}, merkez sayısı={c})',
-    quickgraph_ring_created: 'Ring oluşturuldu ({m})',
-    quickgraph_bipartite_created: 'Tam bipartite oluşturuldu (A={a}, B={b}, toplam={n}, kenar={m})',
-    quickgraph_grid_created: 'Grid oluşturuldu ({r}x{c}, toplam={n}, kenar={m}, w={w})',
-    quickgraph_error: 'Hızlı graph oluşturulurken hata oluştu',
-
-    // Melih:
-    quickgraph_Bn_helper: 'Graph içindeki path üzerindeki düğüm sayısı',
-    quickgraph_Kn_helper: 'Tam graph boyutu',
-    quickgraph_Pn_helper: 'Path üzerindeki düğüm sayısı',
-
-    // weight editor
-    edit_weight_title: 'Kenar Ağırlığını Düzenle',
-    weight_label: 'Ağırlık',
-    cancel: 'İptal',
-    save: 'Kaydet',
-
-    // Weighted example / File info
-    weighted_example_title: 'Ağırlıklı Graph Ekle - Bilgilendirme',
-    weighted_example_desc: 'Aşağıdaki örnek, kenar ağırlıklarını içeren dosya formatını gösterir:',
-    weighted_example_code: 'L1:(L2, 3),(L3, 1),(L4, 2),(L5, 4)\nL2:(L1, 3),(L3, 5),(L4, 1)',
-    weighted_example_note1: 'Bu format, yönlü graph’ı tanımlar.',
-    weighted_example_select_file: 'Dosya Seç',
-
-    file_info_title: 'Graph Ekle - Bilgilendirme',
-    file_info_desc: 'Dosyanız aşağıdaki formatta olmalıdır:',
-    file_info_code: 'L1:L2,L3,L4,L5\nL2:L1,L3,L4',
-    file_info_select_weighted: 'Ağırlıklı Örnek',
-
-    // Vertices / Edges panels
-    vertices_title: 'Düğümler (Vertex)',
-    new_vertex_label: 'Yeni Düğüm',
-    add_label: 'Ekle',
-
-    edges_title: 'Kenarlar (Edges)',
-    edges_toggle_open: 'Kenar Ekle',
-    edges_toggle_close: 'Kapat',
-    from_label: 'From',
-    to_label: 'To',
-    edge_weight_label: 'Kenar Ağırlığı',
-
-    // Edge list
-    edit_weight_tooltip: 'Ağırlığı düzenle',
-
-    // QuickGraph dialog
-    quickgraph_title: 'Hızlı Graph Oluştur',
-    quickgraph_graph_type: 'Graph Tipi',
-    quickgraph_type_full: 'Tam Graph (Complete)',
-    quickgraph_type_tree: 'Ağaç (n, k)',
-    quickgraph_type_star: 'Star (n, merkez)',
-    quickgraph_type_ring: 'Ring (n)',
-    quickgraph_type_bipartite: 'Tam İki Parça (a, b)',
-    quickgraph_type_grid: 'Grid (m, n, w)',
-    quickgraph_type_random: 'Random (öneri)',
-    quickgraph_layout: 'Layout',
-    quickgraph_Ahmet_Melih: 'Packing Coloring (Pn, Bn, Kn)',
-    quickgraph_layout_circular: 'Dairesel (Circular)',
-    quickgraph_layout_grid: 'Izgara (Grid)',
-    quickgraph_node_count: 'Düğüm Sayısı (n)',
-    quickgraph_node_helper: '1-200 arasında bir sayı girin',
-    quickgraph_tree_k: 'Çocuk Sayısı (k)',
-    quickgraph_star_centers: 'Merkez Sayısı',
-    quickgraph_grid_rows: 'Satır Sayısı (m)',
-    quickgraph_grid_cols: 'Sütun Sayısı (n)',
-    quickgraph_Pn: 'Yol Uzunluğu (Pn)',
-    quickgraph_Bn: 'Graph Yol Uzunuluğu (Bn)',
-    quickgraph_Kn: 'Tam Graph Boyutu (Kn)',
-    quickgraph_grid_weight: 'Kenar Ağırlığı (w)',
-    quickgraph_bipartite_a: 'A kümesi (a)',
-    quickgraph_bipartite_b: 'B kümesi (b)',
-    quickgraph_random_info_title: 'Random graph önerileri',
-    quickgraph_create: 'Oluştur',
-    quickgraph_cancel: 'İptal',
-
-    // Bottom actions
-    quick_graph_btn: 'Hızlı Graph',
-    reset_btn: 'Reset',
-    file_add_btn: 'Dosya Ekle',
-    create_btn: 'Oluştur',
-
-    // GraphNameOptions
-    graph_name_label: 'Graph Adı',
-    directed_label: 'Yönlü (Directed)',
-    weighted_label: 'Ağırlıklı (Weighted)',
-    enter_valid_number: 'Geçerli bir sayı girin',
-    previous_page: 'Önceki sayfa',
-    next_page: 'Sonraki sayfa',
-
-    // QuickGraph dialog additions
-    quickgraph_random_info_disabled: 'Random: öneriler gösterilir, oluşturma kapalı.',
-    ring_summary_one: '1 düğüm, 1 self-loop',
-    ring_summary_two: '2 düğüm, 2 paralel kenar',
-    ring_summary_general: '{n} düğüm, {n} kenar',
-    quickgraph_err_bipartite_min: 'A ve B en az 1 olmalı.',
-    quickgraph_err_nodecount: 'Geçerli bir düğüm sayısı girin.',
-    quickgraph_err_tree_k: 'Ağaç için k >= 1 olmalı.',
-    quickgraph_err_star_centers_range: 'Merkez sayısı 1..{max} aralığında olmalı.',
-    quickgraph_err_grid_dims_min: 'Grid için satır ve sütun sayısı en az 1 olmalı.',
-    quickgraph_err_grid_weight_min: 'Grid için kenar ağırlığı en az 1 olmalı.',
-    quickgraph_err_Melih_Bn: 'K Graphı içinden geçen path uzunluğu 0 olamaz',
-    quickgraph_err_Melih_Bn_Kn: 'K Graphı içinden geçen path uzunluğu graph boyutundan büyük olamaz',
-    quickgraph_err_Melih_Pn_Bn: 'Path uzunluğu K graphı içindeki path uzunluğuna tam bölünebilmelidir',
-    quickgraph_random_info_line1: 'Erdős–Rényi G(n, p): her kenar p olasılıkla eklenir (O(n^2) olası kenar; seyrek graph için örnekleme).',
-    quickgraph_random_info_line2: 'G(n, m): tam m adet kenar rastgele seçilir (kenar sayısı kontrolü için).',
-    quickgraph_random_info_line3: 'Barabási–Albert: tercihli bağlanma (ölçekten bağımsız).',
-    quickgraph_random_info_line4: 'Watts–Strogatz: küçük-dünya, yüksek kümeleşme.',
-    quickgraph_random_info_line5: 'Uygulama: tohumlu RNG, O(n + m) üretim, self-loop/çoklu-kenar opsiyonu ve yön/yük ayarları ekleyin.',
-    quickgraph_grid_rows_helper: 'Grid graph için satır sayısı (m)',
-    quickgraph_grid_cols_helper: 'Grid graph için sütun sayısı (n)',
-    quickgraph_tree_k_helper: 'Ağaç graph için çocuk sayısı (k)',
-    quickgraph_star_centers_helper: 'Star graph için merkez sayısı',
-    quickgraph_bipartite_a_helper: 'Bipartite graph için A kümesi düğüm sayısı',
-    quickgraph_bipartite_b_helper: 'Bipartite graph için B kümesi düğüm sayısı',
-    quickgraph_grid_weight_helper: 'Grid graph için kenar ağırlığı (w)',
-
-    // Graph Page specific
-    default_graph_name: 'Graph Adı',
-    saving: 'Kaydediliyor...',
-    loading: 'Yükleniyor...',
-    add_legend: 'Legend Ekle',
-    legend_entry_deleted: 'Legend girdisi silindi',
-    add_legend_title: 'Legend Ekle',
-    title: 'Başlık',
-    color_hex: 'Renk (#hex)',
-    properties: 'Özellikler',
-    key: 'Anahtar',
-    value: 'Değer',
-    add_property: 'Özellik Ekle',
-    enter_legend_title: 'Lütfen legend başlığı girin.',
-    legend_entry_added: 'Legend girdisi eklendi',
-    enter_graph_name_error: 'Lütfen graph için bir isim girin.',
-    enter_node_error: 'Lütfen en az bir düğüm ekleyin.',
-    graph_loaded_success: 'Graph başarıyla yüklendi!',
-    graph_not_found: 'Graph bulunamadı',
-    graph_access_denied: 'Bu graph\'a erişim yetkiniz yok',
-    graph_load_error: 'Graph yüklenirken hata oluştu',
-    graph_saved_success: 'Graph başarıyla kaydedildi!',
-    graph_updated_success: 'Graph başarıyla güncellendi!',
-    save_error: 'Kaydetme hatası: {msg}',
-    legend_title: 'Legend',
-
-    // Components
-    // GraphCanvas
-    zoom_in: 'Yakınlaştır',
-    zoom_out: 'Uzaklaştır',
-
-    // Sidebar
-    algorithm: 'Algoritma',
-    edit: 'Düzenle',
-    save_btn: 'Kaydet',
-    saving_btn: 'Kaydediliyor...',
-    cancel_btn: 'İptal',
-    dfs: 'Derinlik Öncelikli Arama (DFS)',
-    dijkstra: 'Dijkstra Algoritması',
-    ordered_coloring: 'Sıralı Boyama',
-    layout_planning: 'Yerleşim Planlama',
-    package_coloring: 'Paket Boyama',
-    run: 'Çalıştır',
-
-    // VertexSettings
-    vertex_settings_title: 'Düğüm Ayarları',
-    label_label: 'Etiket',
-    size_label: 'Boyut',
-    color_label: 'Renk',
-    delete_vertex: 'Sil',
-
-    // EdgeSettings
-    edge_settings_title: 'Kenar Ayarları',
-    show_weight_label: 'Ağırlığı göster',
-    directed_toggle_label: 'Yönlü',
-    source_label: 'Kaynak',
-    target_label: 'Hedef',
-    delete_edge: 'Sil',
-
-    // LegendPanel
-    capacity_label: 'Kapasite',
-    distance_label: 'Uzaklık',
-    radius_label: 'Yarıçap',
-    size_legend_label: 'Boyut',
-
-    // RunGraphAlgorithms
-    layout_planning_title: 'Yerleşim Planlama',
-    standard_selection: 'Standart seçimi',
-    unhcr_standards: 'UNHCR Standartları',
-    my_standards: 'Kendi Standartlarım',
-    unhcr_loaded_msg: 'UNHCR standartları yüklendi — bu girdileri düzenleyebilir veya silebilirsiniz.',
-    residential_fixed: 'Sabit, değiştirilemez',
-    blue_chip: 'Mavi',
-    name_label: 'İsim',
-    color_label_form: 'Renk',
-    capacity_form: 'Kapasite',
-    distance_form: 'Uzaklık',
-    radius_form: 'Yarıçap',
-    size_form: 'Boyut',
-    required_field: 'Zorunlu',
-    must_be_positive: "0'dan büyük olmalı",
-    save_entry: 'Kaydet',
-    cancel_entry: 'İptal',
-    edit_entry: 'Düzenle',
-    delete_entry: 'Sil',
-    max_5_entries: 'En fazla 5 giriş',
-    add_entry: 'Girdi Ekle',
-    cancel_dialog: 'Vazgeç',
-    run_algorithm: 'Çalıştır',
-    name_required_msg: 'İsim zorunlu; Kapasite, Uzaklık ve Yarıçap 0\'dan büyük olmalıdır.',
-    name_empty_error: 'İsim boş olamaz.',
-    positive_values_error: 'Kapasite, Uzaklık ve Yarıçap 0\'dan büyük olmalıdır.',
-    select_source_target: 'Lütfen kaynak ve hedef düğümleri seçin.',
-    source_target_different: 'Kaynak ve hedef düğümler farklı olmalıdır.',
-    algorithm_executed: 'Algoritma çalıştırıldı',
-    algorithm_failed: 'Algoritma çalışması başarısız.',
-    email_notification_msg: 'Algoritmanız çalıştığında cevap maili alacaksınız.',
-    layout_executed: 'Layout planning çalıştırıldı.',
-    layout_failed: 'Layout planning başarısız.',
-    from_vertex: 'From',
-    to_vertex: 'To',
-  },
   en: {
     add: 'Add',
     quickgraph_grid_weight_helper: 'Edge weight (w) for the grid graph',
@@ -357,17 +23,12 @@ const translations = {
     create_graph: 'Create Graph',
     tree_algorithms: 'Tree Algorithms',
     array_algorithms: 'Array Algorithms',
-
-    // Login/Register shared
     password: 'Password',
     confirm_password: 'Confirm Password',
     full_name: 'Full Name',
     required_fields_error: 'Please fill in all fields.',
     invalid_email_error: 'Please enter a valid email address.',
     server_unreachable: 'Cannot reach the server. Please try again later.',
-    change_language: 'Change language',
-
-    // Login
     login_title: 'Login',
     login_failed: 'Login failed.',
     login_success_redirect: 'Login successful! You will be redirected in 2 seconds.',
@@ -375,8 +36,6 @@ const translations = {
     login_button: 'Login',
     register_button: 'Register',
     forgot_password: 'Forgot Password',
-
-    // Register
     register_title: 'Register',
     have_account_login: 'Already have an account? Sign In',
     min_password_length: 'Password must be at least 6 characters.',
@@ -384,8 +43,6 @@ const translations = {
     enter_first_last_name: 'Please enter at least first and last name.',
     registration_error_generic: 'An error occurred during registration.',
     register_success: 'Registration successful! Redirecting to login...',
-
-    // Forgot Password
     forgot_password_title: 'Forgot Password',
     forgot_password_desc: 'Enter your email and we will send you a reset link.',
     enter_email_error: 'Please enter your email.',
@@ -394,8 +51,6 @@ const translations = {
     code_sent: 'A security code has been sent to your email.',
     enter_code_and_continue: 'Enter Code and Continue',
     back_to_login: 'Back to Login',
-
-    // Reset Password
     reset_password_title: 'Reset Password',
     security_code: 'Security Code',
     new_password: 'New Password',
@@ -404,7 +59,6 @@ const translations = {
     reset_failed: 'Password could not be reset.',
     password_updated_redirect: 'Your password has been updated! Redirecting to login in 2 seconds.',
     download_pdf_unhcr: 'Download UNHCR PDF',
-    // GraphList
     all_graphs: 'All Graphs',
     select_all: 'Select All',
     graph_selected_suffix: 'graph selected',
@@ -426,19 +80,13 @@ const translations = {
     created_at: 'Created:',
     updated_at: 'Updated:',
     unknown: 'Unknown',
-
     prev: 'Previous',
     next: 'Next',
     download: 'Download',
-
     graph_simulator: 'Graph Simulator',
-
-    // TopBar
     'topbar.options': 'Options',
     'topbar.actions_aria': 'topbar-actions',
     'topbar.select_placeholder': '--',
-
-    // GraphCreation / common form messages
     vertex_name_required: 'Name cannot be empty',
     vertex_name_max: 'Vertex name can be up to 6 characters',
     vertex_name_duplicate: 'A vertex with the same name already exists',
@@ -462,40 +110,28 @@ const translations = {
     quickgraph_bipartite_created: 'Complete bipartite created (A={a}, B={b}, total={n}, edges={m})',
     quickgraph_grid_created: 'Grid created ({r}x{c}, total={n}, edges={m}, w={w})',
     quickgraph_error: 'Error creating quick graph',
-
-    // weight editor
     edit_weight_title: 'Edit Edge Weight',
     weight_label: 'Weight',
     save: 'Save',
-
-    // Weighted example / File info
     weighted_example_title: 'Add Weighted Graph - Info',
     weighted_example_desc: 'The example below shows file format that includes edge weights:',
-    weighted_example_code: 'L1:(L2, 3),(L3, 1),(L4, 2),(L5, 4)\nL2:(L1, 3),(L3, 5),(L4, 1)',
+    weighted_example_code: 'L1:(L2, 3),(L3, 1),(L4, 2),(L5, 4)\\nL2:(L1, 3),(L3, 5),(L4, 1)',
     weighted_example_note1: 'This format represents a directed graph.',
     weighted_example_select_file: 'Select File',
-
     file_info_title: 'Add Graph - Info',
     file_info_desc: 'Your file should use the format below:',
-    file_info_code: 'L1:L2,L3,L4,L5\nL2:L1,L3,L4',
+    file_info_code: 'L1:L2,L3,L4,L5\\nL2:L1,L3,L4',
     file_info_select_weighted: 'Weighted Example',
-
-    // Vertices / Edges panels
     vertices_title: 'Vertices',
     new_vertex_label: 'New Vertex',
     add_label: 'Add',
-
     edges_title: 'Edges',
     edges_toggle_open: 'Add Edge',
     edges_toggle_close: 'Close',
     from_label: 'From',
     to_label: 'To',
     edge_weight_label: 'Edge Weight',
-
-    // Edge list
     edit_weight_tooltip: 'Edit weight',
-
-    // QuickGraph dialog
     quickgraph_title: 'Quick Graph Create',
     quickgraph_graph_type: 'Graph Type',
     quickgraph_type_full: 'Complete Graph',
@@ -524,29 +160,20 @@ const translations = {
     quickgraph_random_info_title: 'Random graph suggestions',
     quickgraph_create: 'Create',
     quickgraph_cancel: 'Cancel',
-
-
-    // Melih:
     quickgraph_Bn_helper: 'Number of vertices on the path within the graph',
     quickgraph_Kn_helper: 'Full graph size',
     quickgraph_Pn_helper: 'Number of vertices on the path',
-
-    // Bottom actions
     quick_graph_btn: 'Quick Graph',
     reset_btn: 'Reset',
     file_add_btn: 'Add File',
     create_btn: 'Create',
     unhcr_info: 'UNHCR Information Page',
-
-    // GraphNameOptions
     graph_name_label: 'Graph Name',
     directed_label: 'Directed',
     weighted_label: 'Weighted',
     enter_valid_number: 'Enter a valid number',
     previous_page: 'Previous page',
     next_page: 'Next page',
-
-    // QuickGraph dialog additions
     quickgraph_random_info_disabled: 'Random: suggestions are shown, creation is disabled.',
     ring_summary_one: '1 node, 1 self-loop',
     ring_summary_two: '2 nodes, 2 parallel edges',
@@ -567,8 +194,6 @@ const translations = {
     quickgraph_random_info_line5: 'Implementation: seeded RNG, O(n + m) generation, self-loop/multiedge options, direction/weight settings.',
     quickgraph_grid_rows_helper: 'Number of rows (m) for the grid graph',
     quickgraph_grid_cols_helper: 'Number of columns (n) for the grid graph',
-
-    // Graph Page specific
     default_graph_name: 'Graph Name',
     saving: 'Saving...',
     loading: 'Loading...',
@@ -593,47 +218,34 @@ const translations = {
     graph_updated_success: 'Graph updated successfully!',
     save_error: 'Save error: {msg}',
     legend_title: 'Legend',
-
-    // Components
-    // GraphCanvas
     zoom_in: 'Zoom in',
     zoom_out: 'Zoom out',
-
-    // Sidebar
     algorithm: 'Algorithm',
     edit: 'Edit',
     save_btn: 'Save',
     saving_btn: 'Saving...',
     cancel_btn: 'Cancel',
     dfs: 'Depth-First Search',
-    dijkstra: 'Dijkstra\'s Algorithm',
+    dijkstra: "Dijkstra's Algorithm",
     ordered_coloring: 'Ordered Coloring',
     layout_planning: 'Layout Planning',
     package_coloring: 'Packing Coloring',
     run: 'Run',
-
-    // VertexSettings
     vertex_settings_title: 'Vertex Settings',
     label_label: 'Label',
     size_label: 'Size',
     color_label: 'Color',
     delete_vertex: 'Delete',
-
-    // EdgeSettings
     edge_settings_title: 'Edge Settings',
     show_weight_label: 'Show weight',
     directed_toggle_label: 'Directed',
     source_label: 'Source',
     target_label: 'Target',
     delete_edge: 'Delete',
-
-    // LegendPanel
     capacity_label: 'Capacity',
     distance_label: 'Distance',
     radius_label: 'Radius',
     size_legend_label: 'Size',
-
-    // RunGraphAlgorithms
     layout_planning_title: 'Layout Planning',
     standard_selection: 'Standard Selection',
     unhcr_standards: 'UNHCR Standards',
@@ -669,21 +281,18 @@ const translations = {
     layout_failed: 'Layout planning failed.',
     from_vertex: 'From',
     to_vertex: 'To',
+    change_language: 'Change language',
   },
 };
 
 const I18nContext = createContext({
-  language: 'tr',
-  setLanguage: () => { },
+  language: 'en',
   t: (k) => k,
 });
 
 export const I18nProvider = ({ children }) => {
-  const [language, setLanguage] = useState(localStorage.getItem(LANG_KEY) || 'tr');
-
-  useEffect(() => {
-    localStorage.setItem(LANG_KEY, language);
-  }, [language]);
+  // Hardcoded to English only
+  const language = 'en';
 
   const fmt = (s, vars) => Object.entries(vars || {}).reduce((acc, [k, v]) => acc.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v)), s);
 
@@ -691,9 +300,9 @@ export const I18nProvider = ({ children }) => {
     const text = translations[language]?.[key] ?? key;
     if (vars) return fmt(text, vars);
     return text;
-  }, [language]);
+  }, []);
 
-  const value = useMemo(() => ({ language, setLanguage, t }), [language, t]);
+  const value = useMemo(() => ({ language, t }), [t]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 };
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack, Menu, MenuItem } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff, Language } from '@mui/icons-material';
+import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, IconButton, Link, Stack } from '@mui/material';
+import { Email, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
@@ -11,7 +11,7 @@ import { setTokens, ensureAccessToken } from '../../utils/auth';
 
 const Login = () => {
     const navigate = useNavigate();
-    const { t, language, setLanguage } = useI18n();
+    const { t } = useI18n();
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -20,7 +20,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [isRedirecting, setIsRedirecting] = useState(false);
-    const [langAnchor, setLangAnchor] = useState(null);
+
 
     // If user already has a valid (or refreshable) access token, go to /graph
     useEffect(() => {
@@ -107,31 +107,9 @@ const Login = () => {
                         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}
         >
-            {/* Theme + Language (side-by-side, not nested) */}
-            <Box sx={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 1200 }}>
+            {/* Theme toggle only */}
+            <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1200 }}>
                 <ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
-                <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<Language />}
-                    onClick={(e) => setLangAnchor(e.currentTarget)}
-                    aria-haspopup="true"
-                    aria-expanded={Boolean(langAnchor) ? 'true' : undefined}
-                    sx={{ px: 1.25, fontWeight: 600 }}
-                >
-                    {language.toUpperCase()}
-                </Button>
-                <Menu
-                    anchorEl={langAnchor}
-                    open={Boolean(langAnchor)}
-                    onClose={() => setLangAnchor(null)}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                    <MenuItem onClick={() => { setLanguage('tr'); setLangAnchor(null); }}>Türkçe</MenuItem>
-                    <MenuItem onClick={() => { setLanguage('en'); setLangAnchor(null); }}>English</MenuItem>
-                    {/* Add more languages here later */}
-                </Menu>
             </Box>
 
             <Box

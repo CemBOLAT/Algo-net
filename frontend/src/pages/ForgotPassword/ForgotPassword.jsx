@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, Link, Alert, Stack, Menu, MenuItem } from '@mui/material';
-import { Email, Language } from '@mui/icons-material';
+import { Box, Card, CardContent, TextField, Button, Typography, InputAdornment, Link, Alert, Stack } from '@mui/material';
+import { Email } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import FlashMessage from '../../components/FlashMessage';
@@ -9,12 +9,12 @@ const API_BASE = import.meta?.env?.VITE_API_BASE || '';
 
 const ForgotPassword = () => {
 	const navigate = useNavigate();
-	const { t, language, setLanguage } = useI18n();
+	const { t } = useI18n();
 	const [email, setEmail] = useState('');
 	const [error, setError] = useState('');
 	const [success, setSuccess] = useState('');
 	const [isSending, setIsSending] = useState(false);
-	const [langAnchor, setLangAnchor] = useState(null);
+
 
 	const handleChange = (e) => {
 		setEmail(e.target.value);
@@ -43,7 +43,7 @@ const ForgotPassword = () => {
 				body: JSON.stringify({ email })
 			});
 			if (!res.ok) {
-			 const data = await res.json().catch(() => ({}));
+				const data = await res.json().catch(() => ({}));
 				setError(data?.message || 'İşlem başarısız.');
 				setIsSending(false);
 				return;
@@ -71,31 +71,9 @@ const ForgotPassword = () => {
 						: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
 			}}
 		>
-			{/* Theme + Language (side-by-side, not nested) */}
-			<Box sx={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 1200 }}>
+			{/* Theme toggle only */}
+			<Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1200 }}>
 				<ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
-				<Button
-					variant="contained"
-					size="small"
-					startIcon={<Language />}
-					onClick={(e) => setLangAnchor(e.currentTarget)}
-					aria-haspopup="true"
-					aria-expanded={Boolean(langAnchor) ? 'true' : undefined}
-					sx={{ px: 1.25, fontWeight: 600 }}
-				>
-					{language.toUpperCase()}
-				</Button>
-				<Menu
-					anchorEl={langAnchor}
-					open={Boolean(langAnchor)}
-					onClose={() => setLangAnchor(null)}
-					anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-					transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-				>
-					<MenuItem onClick={() => { setLanguage('tr'); setLangAnchor(null); }}>Türkçe</MenuItem>
-					<MenuItem onClick={() => { setLanguage('en'); setLangAnchor(null); }}>English</MenuItem>
-					{/* Add more languages here later */}
-				</Menu>
 			</Box>
 
 			<Box

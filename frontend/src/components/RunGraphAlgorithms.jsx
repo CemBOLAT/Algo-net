@@ -6,6 +6,9 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Stack, Typography, Avatar, Chip, Divider, Paper
 } from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
+import TripOriginIcon from '@mui/icons-material/TripOrigin';
+import PlaceIcon from '@mui/icons-material/Place';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { TransitionGroup } from 'react-transition-group';
 import { http, getTokens } from "../utils/auth";
 import { useI18n } from '../context/I18nContext';
@@ -172,6 +175,9 @@ export default function RunGraphAlgorithms({
           };
         });
       });
+
+      // Hide edge labels after packing coloring result
+      setEdges((prev) => prev.map((e) => ({ ...e, showWeight: false })));
     } else {
       setNodes((prev) =>
         prev.map((n) => ({
@@ -499,45 +505,156 @@ export default function RunGraphAlgorithms({
   return (
     <>
       <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring"].includes(selectedAlgo)}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2, p: 1, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, }}>
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>{t('from_vertex')}</InputLabel>
-            <Select
-              value={edgeFrom}
-              label={t('from_vertex')}
-              onChange={(e) => setEdgeFrom(e.target.value)}
-            >
-              {nodes.map((v) => (
-                <MenuItem key={`from-${v.id}`} value={v.id}>{v.id}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: 2 }}>
+          {/* From Node Select */}
+          <Box sx={{ position: 'relative' }}>
+            <TripOriginIcon sx={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#94a3b8',
+              fontSize: '18px',
+              zIndex: 1,
+              pointerEvents: 'none'
+            }} />
+            <FormControl fullWidth size="small">
+              <Select
+                value={edgeFrom}
+                onChange={(e) => setEdgeFrom(e.target.value)}
+                displayEmpty
+                sx={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  pl: '32px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e2e8f0',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#cbd5e1',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#06b6d4',
+                    borderWidth: '1px',
+                  },
+                  '& .MuiSelect-select': {
+                    padding: '12px 16px',
+                    paddingLeft: '8px',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                      mt: 1,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="" disabled>
+                  <em style={{ color: '#94a3b8' }}>Starting Node (From)</em>
+                </MenuItem>
+                {nodes.map((v) => (
+                  <MenuItem key={`from-${v.id}`} value={v.id}>{v.label || v.id}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>{t('to_vertex')}</InputLabel>
-            <Select
-              value={edgeTo}
-              label={t('to_vertex')}
-              onChange={(e) => setEdgeTo(e.target.value)}
-            >
-              {nodes.map((v) => (
-                <MenuItem key={`to-${v.id}`} value={v.id}>{v.id}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {/* To Node Select */}
+          <Box sx={{ position: 'relative' }}>
+            <PlaceIcon sx={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#06b6d4',
+              fontSize: '18px',
+              zIndex: 1,
+              pointerEvents: 'none'
+            }} />
+            <FormControl fullWidth size="small">
+              <Select
+                value={edgeTo}
+                onChange={(e) => setEdgeTo(e.target.value)}
+                displayEmpty
+                sx={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  pl: '32px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#e2e8f0',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#cbd5e1',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#06b6d4',
+                    borderWidth: '1px',
+                  },
+                  '& .MuiSelect-select': {
+                    padding: '12px 16px',
+                    paddingLeft: '8px',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                      mt: 1,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="" disabled>
+                  <em style={{ color: '#94a3b8' }}>Destination Node (To)</em>
+                </MenuItem>
+                {nodes.map((v) => (
+                  <MenuItem key={`to-${v.id}`} value={v.id}>{v.label || v.id}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
-
       </Collapse>
 
       <Button
         id="run-btn"
-        variant="contained"
-        color="primary"
         fullWidth
         onClick={onRun}
         disabled={isLoading}
+        sx={{
+          padding: '16px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)',
+          color: '#ffffff',
+          fontWeight: 700,
+          fontSize: '12px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          border: 'none',
+          boxShadow: '0 10px 15px -3px rgba(6, 182, 212, 0.2)',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)',
+            transform: 'translateY(-2px)',
+            boxShadow: '0 20px 25px -5px rgba(6, 182, 212, 0.3)',
+          },
+          '&:disabled': {
+            background: '#cbd5e1',
+            boxShadow: 'none',
+            transform: 'none',
+          },
+        }}
       >
-        {t('run')}
+        <PlayArrowIcon sx={{ fontSize: '20px' }} />
+        Run Simulation
       </Button>
 
       {/* Layout Planning Dialog */}

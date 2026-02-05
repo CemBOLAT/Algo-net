@@ -277,11 +277,11 @@ const GraphCreation = () => {
                 label: e.name || '',
                 weight: e.weight !== undefined ? e.weight : undefined,
                 directed: typeof e.directed === 'boolean' ? e.directed : directed,
-                showWeight: e.weight !== undefined
+                showWeight: true
             }));
 
             navigate('/graph', { state: { nodes: preparedNodes, edges: preparedEdges, name: graphName.trim() } });
-        
+
         } catch (err) {
             setCreateError(t('graph_create_error'));
             setTimeout(() => setCreateError(''), 3000);
@@ -366,12 +366,12 @@ const GraphCreation = () => {
         setVertices(Array.from(verticesSet));
         setEdges(uniqueParsedEdges);
 
-    // close modals and preview on success
-    setFileModalOpen(false);
-    setWeightedExampleModalOpen(false);
-    setCreateError('');
-    setCreateSuccess(t('graph_loaded'));
-    setFilePreviewOpen(false);
+        // close modals and preview on success
+        setFileModalOpen(false);
+        setWeightedExampleModalOpen(false);
+        setCreateError('');
+        setCreateSuccess(t('graph_loaded'));
+        setFilePreviewOpen(false);
         try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch (err) { /* ignore */ }
         setTimeout(() => setCreateSuccess(''), 3000);
     };
@@ -484,10 +484,10 @@ const GraphCreation = () => {
                     break;
                 }
                 case 'Melih': {
-                    
+
                     const Pn = Number(spec.pathLength)
-                    const Bn = Number(spec.graphPathLength)    
-                    const Kn = Number(spec.graphSize) 
+                    const Bn = Number(spec.graphPathLength)
+                    const Kn = Number(spec.graphSize)
                     console.log("Bankaii")
                     const nOfKCompleteGraphs = Pn / Bn;
 
@@ -500,7 +500,7 @@ const GraphCreation = () => {
 
                     // --- Dynamic scaling ---
                     // Inner radius grows gently with the size of Kₙ
-                    const innerRadius = 40 + Kn * 10; 
+                    const innerRadius = 40 + Kn * 10;
                     // Outer radius scales with both number of graphs and inner radius
                     const outerRadius = innerRadius * (2.2 + nOfKCompleteGraphs / 2);
 
@@ -569,10 +569,10 @@ const GraphCreation = () => {
                         x: p.x + shiftX,
                         y: p.y + shiftY,
                     }));
-                    
-                    result =  { vertices, edges, positions: shiftedPositions };
+
+                    result = { vertices, edges, positions: shiftedPositions };
                 }
-                    
+
                     break;
                 default:
                     return;
@@ -604,7 +604,7 @@ const GraphCreation = () => {
                     to: e.to,
                     weight: hasWeight ? e.weight : undefined,
                     directed: !!e.directed,
-                    showWeight: hasWeight
+                    showWeight: true
                 };
             });
 
@@ -631,7 +631,7 @@ const GraphCreation = () => {
                     edges: edgesForCanvas,
                     name
                 }));
-            } catch {}
+            } catch { }
 
             // NEW: navigate with state (immediate, not depending on localStorage)
             navigate('/graph', { state: { nodes: nodesForCanvas, edges: edgesForCanvas, name } });
@@ -691,17 +691,17 @@ const GraphCreation = () => {
             />
 
 
-			<TopBar title={t('create_graph')}
-				actions={[
-					{ label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
-					{ label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
-					{ label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
-					{ label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
-					{ label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
+            <TopBar title={t('create_graph')}
+                actions={[
+                    { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
+                    { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
+                    { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
+                    { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
+                    { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
                     { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
                     { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
-				]}
-			/>
+                ]}
+            />
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <FlashMessage severity="error" message={createError} sx={{ mb: 2 }} />
                 <FlashMessage severity="success" message={createSuccess} sx={{ mb: 2 }} />
@@ -768,7 +768,7 @@ const GraphCreation = () => {
                     onSelectFile={() => {
                         weightedImportInProgressRef.current = true;
                         setWeightedExampleModalOpen(false);
-                        try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch {}
+                        try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch { }
                         fileInputRef.current?.click();
                     }}
                 />
@@ -778,7 +778,7 @@ const GraphCreation = () => {
                     content={filePreviewContent}
                     onClose={() => {
                         setFilePreviewOpen(false);
-                        try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch {}
+                        try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch { }
                     }}
                     onAdd={() => parseAndLoad(filePreviewContent)}
                 />
