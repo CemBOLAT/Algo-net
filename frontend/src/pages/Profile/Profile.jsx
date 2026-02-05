@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Paper, Typography, Stack, FormControlLabel, Switch, Divider, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
-import ThemeToggle from '../../components/ThemeToggle';
 import { http, getTokens, clearTokens } from '../../utils/auth';
 import { useI18n } from '../../context/I18nContext';
 
@@ -99,9 +98,6 @@ const Profile = () => {
 
             {/* Settings row */}
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md="auto">
-                <ThemeToggle position="inline" sx={{ position: 'static', boxShadow: 'none', width: 44, height: 44 }} />
-              </Grid>
               <Grid item xs={12} md>
                 <FormControlLabel
                   control={

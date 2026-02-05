@@ -26,6 +26,7 @@ const GraphCanvas = ({
   disabled = false,
   showNodeLabels = true,
   showEdgeWeights = true,
+  saveToHistory = () => { },
 }) => {
   // --- LAYOUT FIX: Parent Container Boyutlandırma ---
   const containerRef = useRef(null);
@@ -190,6 +191,7 @@ const GraphCanvas = ({
     }
 
     if (e.target === stage) {
+      saveToHistory(); // Save state before adding node for undo
       setNodes(prev => [
         ...prev,
         {
@@ -379,11 +381,13 @@ const GraphCanvas = ({
                 nodeDraggingRef.current = false;
                 setTimeout(() => { justDraggedRef.current = false; }, 0);
                 const nx = e.target.x(); const ny = e.target.y();
+                saveToHistory(); // Save state before modifying for undo
                 setNodes(prev => prev.map(n => n.id === node.id ? { ...n, x: nx, y: ny } : n));
               }}
               onClick={(e) => {
                 e.cancelBubble = true; if (disabled) return;
                 if (mode === 'add-edge' && tempEdge && node.id !== tempEdge.from.id) {
+                  saveToHistory(); // Save state before adding edge for undo
                   setEdges(prev => [...prev, { id: `${prev.length + 1}_${Date.now()}`, from: tempEdge.from.id, to: node.id, label: '', weight: 1, directed: false, showWeight: true }]);
                   setMode(null); setTempEdge(null); return;
                 }

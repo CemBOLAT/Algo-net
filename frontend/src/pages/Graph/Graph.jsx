@@ -361,8 +361,9 @@ const Graph = () => {
             disabled={isSaving}
             showNodeLabels={showNodeLabels}
             showEdgeWeights={showEdgeWeights}
+            saveToHistory={saveToHistory}
         />
-    ), [nodes, edges, selectedNode, selectedEdge, mode, tempEdge, isSaving, showNodeLabels, showEdgeWeights]);
+    ), [nodes, edges, selectedNode, selectedEdge, mode, tempEdge, isSaving, showNodeLabels, showEdgeWeights, saveToHistory]);
 
 
     return (
