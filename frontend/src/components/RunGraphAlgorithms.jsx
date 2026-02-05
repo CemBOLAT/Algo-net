@@ -287,7 +287,7 @@ export default function RunGraphAlgorithms({
     const unitOk = isPositive(draft.diameter);
     const sizeOk = isPositive(draft.size);
     if (!nameOk || !capOk || !distOk || !unitOk || !sizeOk) {
-      notify("error", "İsim zorunlu; Kapasite, Uzaklık ve Yarıçap 0'dan büyük olmalıdır.", 2500);
+      notify("error", t('name_required_msg'), 2500);
       return;
     }
 
@@ -337,11 +337,11 @@ export default function RunGraphAlgorithms({
     // From/To required only for pathfinding/searching
     if (["pathfinding", "searching"].includes(category)) {
       if (!edgeFrom || !edgeTo) {
-        notify("error", "Please select both source and target vertices.", 2000);
+        notify("error", t('select_source_target'), 2000);
         return;
       }
       if (edgeFrom === edgeTo) {
-        notify("error", "Source and target vertices must be different.", 2000);
+        notify("error", t('source_target_different'), 2000);
         return;
       }
       formData.append("edgeFrom", edgeFrom);
@@ -369,14 +369,14 @@ export default function RunGraphAlgorithms({
           updateSearching(data);
           break;
         default:
-          notify("success", `Algorithm executed: ${selectedAlgo}`, 1500);
+          notify("success", `${t('algorithm_executed')}: ${selectedAlgo}`, 1500);
       }
     } catch (err) {
       console.error("Request failed:", err);
       const msg =
         err?.data?.message ||
         err?.message ||
-        "Algorithm execution failed.";
+        t('algorithm_failed');
       notify("error", msg, 2000);
     } finally {
       setIsLoading(false);
@@ -404,20 +404,20 @@ export default function RunGraphAlgorithms({
         size,
         // provide attribute map so later save can read them
         attributes: {
-          Kapasite: String(capacity),
-          Uzaklık: String(distance),
-          Yarıçap: String(diameter),
-          Boyut: String(size),
+          [t('capacity_form')]: String(capacity),
+          [t('distance_form')]: String(distance),
+          [t('radius_form')]: String(diameter),
+          [t('size_form')]: String(size),
         },
       };
     });
 
     if (list.some(e => e.name.length === 0)) {
-      notify("error", "İsim boş olamaz.", 2000);
+      notify("error", t('name_empty_error'), 2000);
       return;
     }
     if (list.some(e => !(Number(e.capacity) > 0) || !(Number(e.distance) > 0) || !(Number(e.diameter) > 0) || !(Number(e.size) > 0))) {
-      notify("error", "Kapasite, Uzaklık ve Yarıçap 0'dan büyük olmalıdır.", 2500);
+      notify("error", t('positive_values_error'), 2500);
       return;
     }
 
@@ -442,7 +442,7 @@ export default function RunGraphAlgorithms({
         apiBase: API_BASE,
       }).catch((err) => console.error('layout planning async error:', err));
 
-      notify('success', 'Algoritmanız çalıştığında cevap maili alacaksınız.', 2500);
+      notify('success', t('email_notification_msg'), 2500);
       setLayoutDialogOpen(false);
       return; // do not block UI
     }
@@ -476,11 +476,11 @@ export default function RunGraphAlgorithms({
         }
       }
       onLegendChange(list);
-      notify("success", "Layout planning çalıştırıldı.", 1500);
+      notify("success", t('layout_executed'), 1500);
       setLayoutDialogOpen(false);
     } catch (err) {
       console.error("Layout request failed:", err);
-      const msg = err?.data?.message || err?.message || "Layout planning başarısız.";
+      const msg = err?.data?.message || err?.message || t('layout_failed');
       notify("error", msg, 2000);
     } finally {
       setIsLoading(false);
@@ -501,10 +501,10 @@ export default function RunGraphAlgorithms({
       <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2, p: 1, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, }}>
           <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>From</InputLabel>
+            <InputLabel>{t('from_vertex')}</InputLabel>
             <Select
               value={edgeFrom}
-              label="From"
+              label={t('from_vertex')}
               onChange={(e) => setEdgeFrom(e.target.value)}
             >
               {nodes.map((v) => (
@@ -514,10 +514,10 @@ export default function RunGraphAlgorithms({
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>To</InputLabel>
+            <InputLabel>{t('to_vertex')}</InputLabel>
             <Select
               value={edgeTo}
-              label="To"
+              label={t('to_vertex')}
               onChange={(e) => setEdgeTo(e.target.value)}
             >
               {nodes.map((v) => (
@@ -542,29 +542,29 @@ export default function RunGraphAlgorithms({
 
       {/* Layout Planning Dialog */}
       <Dialog open={layoutDialogOpen} onClose={() => setLayoutDialogOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Layout Planning</DialogTitle>
+        <DialogTitle>{t('layout_planning_title')}</DialogTitle>
         <DialogContent dividers>
           {/* Standard seçimi: UNHCR veya Kendi Standartlarım */}
           <Box sx={{ mb: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
             <FormControl component="fieldset" variant="standard" sx={{ width: '100%' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Standart seçimi</Typography>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('standard_selection')}</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   variant={standardOption === 'unhcr' ? 'contained' : 'outlined'}
                   onClick={() => handleStandardOption('unhcr')}
                 >
-                  UNHCR Standartları
+                  {t('unhcr_standards')}
                 </Button>
                 <Button
                   variant={standardOption === 'custom' ? 'contained' : 'outlined'}
                   onClick={() => handleStandardOption('custom')}
                 >
-                  Kendi Standartlarım
+                  {t('my_standards')}
                 </Button>
               </Box>
               {standardOption === 'unhcr' && (
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  UNHCR standartları yüklendi — bu girdileri düzenleyebilir veya silebilirsiniz.
+                  {t('unhcr_loaded_msg')}
                 </Typography>
               )}
             </FormControl>
@@ -579,9 +579,9 @@ export default function RunGraphAlgorithms({
               <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1 }}>
                 Residential
               </Typography>
-              <Typography variant="caption" color="text.secondary">Sabit, değiştirilemez</Typography>
+              <Typography variant="caption" color="text.secondary">{t('residential_fixed')}</Typography>
             </Box>
-            <Chip size="small" label="Mavi" sx={{ bgcolor: '#1976d2', color: '#fff' }} />
+            <Chip size="small" label={t('blue_chip')} sx={{ bgcolor: '#1976d2', color: '#fff' }} />
           </Paper>
 
           <Divider sx={{ mb: 2 }} />
@@ -614,16 +614,16 @@ export default function RunGraphAlgorithms({
                       }}
                     >
                       <TextField
-                        label="İsim"
+                        label={t('name_label')}
                         size="small"
                         value={view.name}
                         onChange={(e) => updateDraft(entry.id, 'name', e.target.value)}
                         error={nameErr}
-                        helperText={nameErr ? 'Zorunlu' : ''}
+                        helperText={nameErr ? t('required_field') : ''}
                         fullWidth
                       />
                       <TextField
-                        label="Renk"
+                        label={t('color_label_form')}
                         size="small"
                         type="color"
                         value={view.color}
@@ -631,48 +631,48 @@ export default function RunGraphAlgorithms({
                         inputProps={{ style: { padding: 0, height: 40 } }}
                       />
                       <TextField
-                        label="Kapasite"
+                        label={t('capacity_form')}
                         size="small"
                         type="number"
                         value={view.capacity}
                         onChange={(e) => updateDraft(entry.id, 'capacity', e.target.value)}
                         error={capErr}
-                        helperText={capErr ? "0'dan büyük olmalı" : ''}
+                        helperText={capErr ? t('must_be_positive') : ''}
                         inputProps={{ min: 1, step: 1 }}
                       />
                       <TextField
-                        label="Uzaklık"
+                        label={t('distance_form')}
                         size="small"
                         type="number"
                         value={view.distance}
                         onChange={(e) => updateDraft(entry.id, 'distance', e.target.value)}
                         error={distErr}
-                        helperText={distErr ? "0'dan büyük olmalı" : ''}
+                        helperText={distErr ? t('must_be_positive') : ''}
                         inputProps={{ min: 1, step: 1 }}
                       />
                       <TextField
-                        label="Yarıçap"
+                        label={t('radius_form')}
                         size="small"
                         type="number"
                         value={view.diameter}
                         onChange={(e) => updateDraft(entry.id, 'diameter', e.target.value)}
                         error={unitErr}
-                        helperText={unitErr ? "0'dan büyük olmalı" : ''}
+                        helperText={unitErr ? t('must_be_positive') : ''}
                         inputProps={{ min: 1, step: 1 }}
                       />
                       <TextField
-                        label="Boyut"
+                        label={t('size_form')}
                         size="small"
                         type="number"
                         value={view.size}
                         onChange={(e) => updateDraft(entry.id, 'size', e.target.value)}
                         error={sizeErr}
-                        helperText={sizeErr ? "0'dan büyük olmalı" : ''}
+                        helperText={sizeErr ? t('must_be_positive') : ''}
                         inputProps={{ min: 1, step: 1 }}
                       />
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button variant="contained" onClick={() => saveEdit(entry.id)}>Kaydet</Button>
-                        <Button variant="text" color="inherit" onClick={() => cancelEdit(entry.id)}>İptal</Button>
+                        <Button variant="contained" onClick={() => saveEdit(entry.id)}>{t('save_entry')}</Button>
+                        <Button variant="text" color="inherit" onClick={() => cancelEdit(entry.id)}>{t('cancel_entry')}</Button>
                       </Box>
                     </Box>
                   ) : (
@@ -685,15 +685,15 @@ export default function RunGraphAlgorithms({
                             {entry.name || '—'}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-                            <Chip size="small" label={`Kapasite: ${entry.capacity}`} />
-                            <Chip size="small" label={`Uzaklık: ${entry.distance}`} />
-                            <Chip size="small" label={`Yarıçap: ${entry.diameter}`} />
-                            <Chip size="small" label={`Büyüklük: ${entry.size}`} />
+                            <Chip size="small" label={`${t('capacity_form')}: ${entry.capacity}`} />
+                            <Chip size="small" label={`${t('distance_form')}: ${entry.distance}`} />
+                            <Chip size="small" label={`${t('radius_form')}: ${entry.diameter}`} />
+                            <Chip size="small" label={`${t('size_form')}: ${entry.size}`} />
                           </Box>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button size="small" variant="outlined" onClick={() => startEdit(entry.id)}>Düzenle</Button>
-                          <Button size="small" color="error" variant="outlined" onClick={() => deleteEntry(entry.id)}>Sil</Button>
+                          <Button size="small" variant="outlined" onClick={() => startEdit(entry.id)}>{t('edit_entry')}</Button>
+                          <Button size="small" color="error" variant="outlined" onClick={() => deleteEntry(entry.id)}>{t('delete_entry')}</Button>
                         </Box>
                       </Box>
                     </Paper>
@@ -706,19 +706,19 @@ export default function RunGraphAlgorithms({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
             {standardOption !== 'unhcr' ? (
               <Typography variant="caption" color="text.secondary">
-                En fazla 5 giriş
+                {t('max_5_entries')}
               </Typography>
             ) : (
               <Box /> /* placeholder to keep layout */
             )}
             <Button variant="contained" onClick={addEntry} disabled={standardOption !== 'unhcr' && entries.length >= 5}>
-              Girdi Ekle
+              {t('add_entry')}
             </Button>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLayoutDialogOpen(false)}>Vazgeç</Button>
-          <Button onClick={confirmLayout} variant="contained">Çalıştır</Button>
+          <Button onClick={() => setLayoutDialogOpen(false)}>{t('cancel_dialog')}</Button>
+          <Button onClick={confirmLayout} variant="contained">{t('run_algorithm')}</Button>
         </DialogActions>
       </Dialog>
     </>
