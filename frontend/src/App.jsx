@@ -24,7 +24,7 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
-      <Router>
+      <Router basename="/algonet">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/admin-login" element={<AdminLogin />} />
