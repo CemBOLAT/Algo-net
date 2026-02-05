@@ -42,4 +42,4 @@ COPY . /app
 EXPOSE 8000
 
 # Using your custom WSGI wrapper for CORS and Gunicorn
-CMD ["gunicorn", "pythonMS.wsgi_cors:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "pythonMS.wsgi_cors:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "3000"]

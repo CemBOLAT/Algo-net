@@ -356,7 +356,7 @@ def run_algorithm_layoutplanning(request):
     user_email = request.data.get("userEmail")
     if should_notify and not user_email:
         user_email = _get_email_from_auth(request.META.get("HTTP_AUTHORIZATION"))
-    script_path = os.path.join(settings.BASE_DIR, os.environ.get("LAYOUT_PLANNING_SCRIPT", "Cplex_Cover_sequencial.py"))
+    script_path = os.path.join(settings.BASE_DIR, os.environ.get("LAYOUT_PLANNING_SCRIPT", "Cplex_Cover_pulp_sequencial.py"))
 
     if should_notify and user_email:
         thread_args = (
