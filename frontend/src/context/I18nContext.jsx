@@ -253,6 +253,7 @@ const translations = {
     unhcr_loaded_msg: 'UNHCR standards loaded — you can edit or delete these entries.',
     residential_fixed: 'Fixed, cannot be changed',
     blue_chip: 'Blue',
+    white_chip: 'White',
     name_label: 'Name',
     color_label_form: 'Color',
     capacity_form: 'Capacity',

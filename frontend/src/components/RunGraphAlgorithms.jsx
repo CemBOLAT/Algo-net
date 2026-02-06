@@ -689,8 +689,8 @@ export default function RunGraphAlgorithms({
 
           {/* Fixed Residential card (non-editable) */}
           <Paper variant="outlined" sx={{ p: 1.5, mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ bgcolor: '#1976d2', width: 36, height: 36 }}>
-              <HomeIcon sx={{ color: '#fff' }} />
+            <Avatar sx={{ bgcolor: '#ffffff', width: 36, height: 36, border: '1px solid #e0e0e0' }}>
+              <HomeIcon sx={{ color: '#1976d2' }} />
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1 }}>
@@ -698,7 +698,7 @@ export default function RunGraphAlgorithms({
               </Typography>
               <Typography variant="caption" color="text.secondary">{t('residential_fixed')}</Typography>
             </Box>
-            <Chip size="small" label={t('blue_chip')} sx={{ bgcolor: '#1976d2', color: '#fff' }} />
+            <Chip size="small" label={t('white_chip')} sx={{ bgcolor: '#ffffff', color: '#333', border: '1px solid #e0e0e0' }} />
           </Paper>
 
           <Divider sx={{ mb: 2 }} />
