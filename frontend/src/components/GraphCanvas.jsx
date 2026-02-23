@@ -192,17 +192,14 @@ const GraphCanvas = ({
 
     if (e.target === stage) {
       saveToHistory(); // Save state before adding node for undo
-      setNodes(prev => [
-        ...prev,
-        {
-          id: `${prev.length + 1}_${Date.now()}`,
-          x: p.x,
-          y: p.y,
-          label: `V${prev.length + 1}`,
-          size: 15,
-          color: '#2563eb',
-        }
-      ]);
+      setNodes(prev => {
+        const usedNums = new Set(
+          prev.map(n => n.label).filter(l => /^V\d+$/.test(l)).map(l => parseInt(l.slice(1), 10))
+        );
+        let nextNum = 1;
+        while (usedNums.has(nextNum)) nextNum++;
+        return [...prev, { id: `${nextNum}_${Date.now()}`, x: p.x, y: p.y, label: `V${nextNum}`, size: 15, color: '#2563eb' }];
+      });
       setSelectedNode(null);
       setSelectedEdge(null);
     }
@@ -343,7 +340,10 @@ const GraphCanvas = ({
             if (otherTotal > 0) offsetIndex += 0.5 * dirSign;
             const baseOffset = offsetIndex * gap;
 
-            const cdx = to.x - from.x; const cdy = to.y - from.y;
+            const canonicalFrom = nodes.find(n => n.id === minId);
+            const canonicalTo = nodes.find(n => n.id === maxId);
+            const cdx = (canonicalTo?.x ?? to.x) - (canonicalFrom?.x ?? from.x);
+            const cdy = (canonicalTo?.y ?? to.y) - (canonicalFrom?.y ?? from.y);
             const clen = Math.hypot(cdx, cdy) || 1;
             const perpX = -cdy / clen; const perpY = cdx / clen;
             const sx = sx0 + perpX * baseOffset; const sy = sy0 + perpY * baseOffset;

@@ -3,6 +3,7 @@ import { Box, Typography, Button, TextField, Select, MenuItem, FormControl } fro
 import { Edit, Label, Balance, TripOrigin, Place, PlayArrow, Refresh, Save } from '@mui/icons-material';
 import CustomAlgoButton from "./CustomAlgo";
 import RunGraphAlgorithms from "./RunGraphAlgorithms";
+import ResultsPanel from "./ResultsPanel";
 import { useI18n } from '../context/I18nContext';
 
 const Sidebar = ({
@@ -14,7 +15,9 @@ const Sidebar = ({
   hasLegend = false, setHasLegend = () => { },
   legendEntries = [], setLegendEntries = () => { },
   showNodeLabels, setShowNodeLabels,
-  showEdgeWeights, setShowEdgeWeights
+  showEdgeWeights, setShowEdgeWeights,
+  algorithmResult = null,
+  setAlgorithmResult = () => { },
 }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
@@ -31,21 +34,23 @@ const Sidebar = ({
   // Elegant sidebar styles
   const sidebarStyles = {
     container: {
-      width: 320,
+      width: { xs: '100%', sm: 280, md: 320 },
+      minWidth: 0,
+      flexShrink: 0,
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
+      overflowY: 'auto',
+      overflowX: 'hidden',
       backgroundColor: '#ffffff',
       borderRight: '1px solid #e2e8f0',
       boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
     },
-    contentArea: {
-      flex: 1,
-      overflowY: 'auto',
-      padding: '24px',
+    contentPadding: {
+      padding: '16px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '32px',
+      gap: '16px',
     },
     sectionHeader: {
       fontSize: '11px',
@@ -117,12 +122,20 @@ const Sidebar = ({
       },
     },
     bottomActions: {
-      padding: '24px',
+      marginTop: 'auto',
+      padding: '12px 16px',
       borderTop: '1px solid #e2e8f0',
       backgroundColor: 'rgba(248, 250, 252, 0.5)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '16px',
+      gap: '8px',
+    },
+    resultsZone: {
+      flexShrink: 0,
+      maxHeight: '260px',
+      overflowY: 'auto',
+      padding: '0 16px',
+      borderTop: algorithmResult ? '1px solid #e2e8f0' : 'none',
     },
     runButton: {
       width: '100%',
@@ -189,11 +202,11 @@ const Sidebar = ({
 
   return (
     <Box sx={sidebarStyles.container}>
-      {/* Main Content Area */}
-      <Box sx={sidebarStyles.contentArea}>
+      {/* All content in one scrollable area */}
+      <Box sx={sidebarStyles.contentPadding}>
 
         {/* Active Project Section */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography sx={sidebarStyles.sectionHeader}>Active Project</Typography>
             {!editingName && (
@@ -276,9 +289,9 @@ const Sidebar = ({
           </Box>
         </Box>
 
-        {/* Algorithm Configuration Section */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Typography sx={sidebarStyles.sectionHeader}>Algorithm Configuration</Typography>
+        {/* Problems/Algorithms Section */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <Typography sx={sidebarStyles.sectionHeader}>Problems/Algorithms</Typography>
 
           <FormControl fullWidth>
             <Select
@@ -322,7 +335,7 @@ const Sidebar = ({
         </Box>
 
         {/* Toggle Buttons */}
-        <Box sx={{ display: 'flex', gap: '12px' }}>
+        <Box sx={{ display: 'flex', gap: '8px' }}>
           <Button
             onClick={() => setShowNodeLabels(!showNodeLabels)}
             sx={sidebarStyles.toggleButton(showNodeLabels)}
@@ -350,7 +363,15 @@ const Sidebar = ({
           setIsLoading={setIsLoading}
           notify={notify}
           onLegendChange={(entries) => { setLegendEntries(entries || []); setHasLegend(!!(entries && entries.length)); }}
+          onResult={(result) => setAlgorithmResult(result)}
           graphName={graphName}
+        />
+
+        {/* Algorithm Results Panel */}
+        <ResultsPanel
+          result={algorithmResult}
+          onClear={() => setAlgorithmResult(null)}
+          nodes={nodes}
         />
 
         {/* Custom Algorithm Button */}

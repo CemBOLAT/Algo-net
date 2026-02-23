@@ -54,3 +54,13 @@
 {"Solved Type": "Global", "timestamp": "2026-02-05 16:25:46", "solve_time_seconds": 3.1407859325408936, "objective_value": 44.0, "status": "Optimal", "stats": {"num_vertices": 49, "num_edges": 84}}
 {"Solved Type": "Communal Latrine", "timestamp": "2026-02-05 21:32:50", "solve_time_seconds": 0.18302607536315918, "objective_value": 1.0, "status": "Optimal", "stats": {"num_vertices": 2}}
 {"Solved Type": "Global", "timestamp": "2026-02-05 21:32:50", "solve_time_seconds": 0.17209959030151367, "objective_value": 1.0, "status": "Optimal", "stats": {"num_vertices": 2, "num_edges": 1}}
+{"Solved Type": "Communal Latrine", "timestamp": "2026-02-22 11:03:46", "solve_time_seconds": 0.029209613800048828, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4}}
+{"Solved Type": "Global", "timestamp": "2026-02-22 11:03:46", "solve_time_seconds": 0.00835275650024414, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4, "num_edges": 4}}
+{"Solved Type": "Communal Latrine", "timestamp": "2026-02-22 11:04:29", "solve_time_seconds": 0.008204936981201172, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4}}
+{"Solved Type": "Global", "timestamp": "2026-02-22 11:04:29", "solve_time_seconds": 0.007009029388427734, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4, "num_edges": 4}}
+{"Solved Type": "Communal Latrine", "timestamp": "2026-02-22 11:12:23", "solve_time_seconds": 0.013632774353027344, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4}}
+{"Solved Type": "Global", "timestamp": "2026-02-22 11:12:23", "solve_time_seconds": 0.007364988327026367, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4, "num_edges": 4}}
+{"Solved Type": "Communal Latrine", "timestamp": "2026-02-22 11:18:35", "solve_time_seconds": 0.010305404663085938, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4}}
+{"Solved Type": "Global", "timestamp": "2026-02-22 11:18:35", "solve_time_seconds": 0.007827281951904297, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4, "num_edges": 4}}
+{"Solved Type": "Communal Latrine", "timestamp": "2026-02-22 11:26:42", "solve_time_seconds": 0.009792804718017578, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4}}
+{"Solved Type": "Global", "timestamp": "2026-02-22 11:26:42", "solve_time_seconds": 0.007480144500732422, "objective_value": 3.0, "status": "Optimal", "stats": {"num_vertices": 4, "num_edges": 4}}

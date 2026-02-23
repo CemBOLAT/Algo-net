@@ -21,6 +21,15 @@ const Graph = () => {
     const [edges, setEdges] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null);
     const [selectedEdge, setSelectedEdge] = useState(null);
+
+    // Keep selectedNode in sync when algorithms update node properties (color, label, etc.)
+    useEffect(() => {
+        if (!selectedNode) return;
+        const updated = nodes.find(n => n.id === selectedNode.id);
+        if (updated && (updated.color !== selectedNode.color || updated.label !== selectedNode.label || updated.size !== selectedNode.size)) {
+            setSelectedNode(updated);
+        }
+    }, [nodes, selectedNode]);
     const [mode, setMode] = useState(null);
     const [tempEdge, setTempEdge] = useState(null);
 
@@ -33,6 +42,7 @@ const Graph = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [hasLegend, setHasLegend] = useState(false);
     const [legendEntries, setLegendEntries] = useState([]);
+    const [algorithmResult, setAlgorithmResult] = useState(null);
     const [legendDraft, setLegendDraft] = useState({
         name: '',
         color: '#1976d2',
@@ -230,6 +240,7 @@ const Graph = () => {
         setSelectedNode(null);
         setLegendEntries([]);
         setHasLegend(false);
+        setAlgorithmResult(null);
         setSelectedEdge(null);
         setMode(null);
         setTempEdge(null);
@@ -397,7 +408,7 @@ const Graph = () => {
 
 
     return (
-        <Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: '100vh' }}>
+        <Box sx={{ bgcolor: 'background.default', color: 'text.primary', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             {/* Messages & Overlays */}
             {successMessage && (
                 <Box sx={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 9999 }}>
@@ -428,8 +439,8 @@ const Graph = () => {
                 ]}
             />
 
-            <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
-                <Box sx={{ borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                <Box sx={{ flexShrink: 0, minWidth: 0, height: '100%', overflow: 'hidden', borderColor: 'divider' }}>
                     <Sidebar
                         onReset={handleResetGraph}
                         onSave={handleSaveGraph}
@@ -451,6 +462,8 @@ const Graph = () => {
                         setShowNodeLabels={setShowNodeLabels}
                         showEdgeWeights={showEdgeWeights}
                         setShowEdgeWeights={setShowEdgeWeights}
+                        algorithmResult={algorithmResult}
+                        setAlgorithmResult={setAlgorithmResult}
                     />
                 </Box>
 

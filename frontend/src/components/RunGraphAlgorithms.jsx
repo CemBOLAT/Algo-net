@@ -23,6 +23,7 @@ export default function RunGraphAlgorithms({
   setIsLoading = () => { },
   notify = () => { },
   onLegendChange = () => { },
+  onResult = () => { },
   graphName, // ADDED: receive graphName from Sidebar
 }) {
   const { t } = useI18n();
@@ -257,6 +258,76 @@ export default function RunGraphAlgorithms({
 
   };
 
+  // ---- Result emit helpers (for ResultsPanel) ----
+
+  const emitSearchingResult = (data) => {
+    const path = data?.path ?? [];
+    const visited = data?.visited ?? [];
+    onResult({
+      algorithm: selectedAlgo,
+      type: 'searching',
+      data: {
+        pathFound: path.length > 0,
+        path,
+        visitedCount: visited.length,
+      },
+    });
+  };
+
+  const emitPathfindingResult = (data) => {
+    const pathNodes = data?.path_nodes ?? [];
+    onResult({
+      algorithm: selectedAlgo,
+      type: 'pathfinding',
+      data: {
+        path: pathNodes,
+        distance: data?.distance ?? null,
+      },
+    });
+  };
+
+  const emitColoringResult = (data) => {
+    if (selectedAlgo === 'package_coloring') {
+      const assignments = data.assignments || data;
+      // Group nodes by their assignment value
+      const groups = {};
+      const distinctValues = [...new Set(Object.values(assignments).map(String))].sort((a, b) => Number(a) - Number(b));
+      distinctValues.forEach((val, idx) => {
+        const hue = Math.floor((idx * 360) / distinctValues.length);
+        const color = `hsl(${hue}, 70%, 50%)`;
+        const nodeIds = Object.entries(assignments)
+          .filter(([, v]) => String(v) === val)
+          .map(([k]) => k);
+        groups[color] = nodeIds;
+      });
+      onResult({
+        algorithm: selectedAlgo,
+        type: 'coloring',
+        data: {
+          colorCount: distinctValues.length,
+          pcn: data.pcn ?? null,
+          colorGroups: groups,
+        },
+      });
+    } else {
+      // Greedy / ordered coloring — data is { nodeId: '#color' }
+      const groups = {};
+      Object.entries(data || {}).forEach(([nodeId, color]) => {
+        if (!groups[color]) groups[color] = [];
+        groups[color].push(nodeId);
+      });
+      onResult({
+        algorithm: selectedAlgo,
+        type: 'coloring',
+        data: {
+          colorCount: Object.keys(groups).length,
+          pcn: null,
+          colorGroups: groups,
+        },
+      });
+    }
+  };
+
   // Helpers
   const isPositive = (v) => Number.isFinite(Number(v)) && Number(v) > 0;
 
@@ -367,12 +438,15 @@ export default function RunGraphAlgorithms({
       switch (category) {
         case "coloring":
           updateColoring(data);
+          emitColoringResult(data);
           break;
         case "pathfinding":
           updatePathfinding(data);
+          emitPathfindingResult(data);
           break;
         case "searching":
           updateSearching(data);
+          emitSearchingResult(data);
           break;
         default:
           notify("success", `${t('algorithm_executed')}: ${selectedAlgo}`, 1500);
@@ -474,14 +548,19 @@ export default function RunGraphAlgorithms({
         const colorMap = data.colors && typeof data.colors === 'object' ? data.colors : data;
         if (colorMap && typeof colorMap === 'object') {
           setNodes((prev) =>
-            prev.map((n) => ({
-              ...n,
-              color: colorMap?.[n.id] ?? n.color,
-            }))
+            prev.map((n) => {
+              const c = colorMap?.[n.id];
+              // Only apply if it's a valid non-empty color string
+              return {
+                ...n,
+                color: (typeof c === 'string' && c.trim().length > 0) ? c : n.color,
+              };
+            })
           );
         }
       }
       onLegendChange(list);
+      onResult({ algorithm: selectedAlgo, type: 'layout', data: { entries: list } });
       notify("success", t('layout_executed'), 1500);
       setLayoutDialogOpen(false);
     } catch (err) {

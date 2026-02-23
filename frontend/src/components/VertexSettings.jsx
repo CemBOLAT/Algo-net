@@ -2,17 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { Paper, Typography, TextField, Slider, Button, Box } from '@mui/material';
 import { useI18n } from '../context/I18nContext';
 
+// Convert any CSS color (hsl, rgb, named, short hex) to 6-digit hex
+// Input type="color" only accepts #rrggbb format
+const toHex = (color) => {
+  if (!color) return '#2563eb';
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color; // already valid
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  } catch {
+    return '#2563eb';
+  }
+};
+
 const VertexSettings = ({ selectedNode, setSelectedNode, setNodes, setEdges, setTempEdge }) => {
   const { t } = useI18n();
   const [label, setLabel] = useState(selectedNode?.label || '');
   const [size, setSize] = useState(selectedNode?.size || 15);
-  const [color, setColor] = useState(selectedNode?.color || '#2563eb');
+  const [color, setColor] = useState(toHex(selectedNode?.color));
 
   useEffect(() => {
     if (selectedNode) {
       setLabel(selectedNode.label);
       setSize(selectedNode.size);
-      setColor(selectedNode.color);
+      setColor(toHex(selectedNode.color));
     }
   }, [selectedNode]);
 
