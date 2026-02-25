@@ -20,6 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: build  # Use the JDK stage, not the JRE stage
       network: host
     # backend is reachable only internally; proxy will expose a single external port
     env_file:
@@ -32,6 +33,9 @@ services:
       - APP_JWT_SECRET=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       # allow CORS from the proxy (set to '*' to permit proxy-origin and simplify dev)
       - APP_CORS_ALLOWED_ORIGIN=*
+    volumes:
+      - ./backend:/app
+    command: ["./gradlew", "bootRun"]
     depends_on:
       - db
       - pythonms
@@ -41,6 +45,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: builder  # Stop at the Node.js stage, skip Nginx
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Prevent host node_modules from overwriting container's
+    environment:
+      - VITE_PYTHON_BASE=/pythonms
+      - VITE_API_BASE=
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "80"]
     # frontend served internally; proxy will forward external traffic to it
     restart: always
 
@@ -56,6 +68,7 @@ services:
       - ./pythonMS:/app
     environment:
       - PYTHONPATH=/app
+    command: ["gunicorn", "pythonMS.wsgi_cors:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "3000", "--reload"]
     # pythonms is internal; proxy will forward requests for python endpoints
     restart: always
 

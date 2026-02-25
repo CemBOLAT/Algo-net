@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { clearTokens } from '../../utils/auth';
+import { clearTokens, http } from '../../utils/auth';
 import { Button, Box, Container } from '@mui/material';
 import FlashMessage from '../../components/FlashMessage';
 import TopBar from '../../components/TopBar';
@@ -39,8 +39,9 @@ const GraphCreation = () => {
     const [edges, setEdges] = useState([]);
     const [edgeFormOpen, setEdgeFormOpen] = useState(false);
     const [edgeFrom, setEdgeFrom] = useState('');
-    const [edgeTo, setEdgeTo] = useState('');
+    const [edgeTo, setEdgeTo] = useState([]);
     const [edgeWeight, setEdgeWeight] = useState('');
+    const [edgeColor, setEdgeColor] = useState('#1985d2'); // default blue ish
     const [edgePage, setEdgePage] = useState(1);
     const edgesPerPage = 5;
 
@@ -62,6 +63,7 @@ const GraphCreation = () => {
         setEdgeFrom('');
         setEdgeTo('');
         setEdgeWeight('');
+        setEdgeColor('#1985d2');
         setCreateSuccess(weighted ? t('weighted_mode_on') : t('weighted_mode_off'));
         setTimeout(() => setCreateSuccess(''), 2000);
     }, [weighted]);
@@ -130,6 +132,36 @@ const GraphCreation = () => {
         });
     };
 
+    const addBulkVertices = (count) => {
+        const numCount = Number(count);
+        if (isNaN(numCount) || numCount <= 0 || numCount > 100) {
+            setVertexError(t('invalid_bulk_count'));
+            return;
+        }
+
+        const newVertices = [];
+        let labelIndex = 1;
+        // Generate valid, sequential names
+        for (let i = 0; i < numCount; i++) {
+            let candidateName = `${labelIndex}`;
+            while (
+                vertices.some((existing) => existing.toLowerCase() === candidateName.toLowerCase()) ||
+                newVertices.some((existing) => existing.toLowerCase() === candidateName.toLowerCase())
+            ) {
+                labelIndex++;
+                candidateName = `${labelIndex}`;
+            }
+            newVertices.push(candidateName);
+            labelIndex++;
+        }
+
+        setVertices((v) => [...v, ...newVertices]);
+        setVertexError('');
+        requestAnimationFrame(() => {
+            if (vertexListRef.current) vertexListRef.current.scrollLeft = vertexListRef.current.scrollWidth;
+        });
+    };
+
     const removeVertex = (index) => {
         const removedName = vertices[index];
         setVertices((v) => v.filter((_, i) => i !== index));
@@ -137,29 +169,51 @@ const GraphCreation = () => {
     };
 
     const addEdge = () => {
-        if (!edgeFrom || !edgeTo) return;
-        // Check for duplicate edges in undirected graphs
-        if (edgeExists(edges, edgeFrom, edgeTo, directed)) {
-            setCreateError(t('edge_exists_error'));
-            setTimeout(() => setCreateError(''), 2500);
-            return;
-        }
-        if (weighted) {
-            if (edgeWeight === '' || edgeWeight === null || Number.isNaN(Number(edgeWeight))) {
-                setCreateError(t('weight_required_error'));
+        if (!edgeFrom || !edgeTo || edgeTo.length === 0) return;
+
+        const newEdges = [];
+        let hasError = false;
+
+        for (const target of edgeTo) {
+            // Check for duplicate edges in undirected graphs
+            if (edgeExists(edges, edgeFrom, target, directed)) {
+                setCreateError(t('edge_exists_error') + `: ${edgeFrom}-${target}`);
                 setTimeout(() => setCreateError(''), 2500);
-                return;
+                hasError = true;
+                continue;
             }
+            if (weighted) {
+                if (edgeWeight === '' || edgeWeight === null || Number.isNaN(Number(edgeWeight))) {
+                    setCreateError(t('weight_required_error'));
+                    setTimeout(() => setCreateError(''), 2500);
+                    hasError = true;
+                    continue;
+                }
+            }
+            const name = `${edgeFrom}-${target}`;
+            newEdges.push({
+                id: Date.now() + Math.random(),
+                name,
+                from: edgeFrom,
+                to: target,
+                showDelete: false,
+                directed: directed,
+                weight: weighted ? Number(edgeWeight) : undefined,
+                color: edgeColor
+            });
         }
-        const name = `${edgeFrom}-${edgeTo}`;
-        setEdges((e) => [...e, { id: Date.now(), name, from: edgeFrom, to: edgeTo, showDelete: false, directed: directed, weight: weighted ? Number(edgeWeight) : undefined }]);
-        setEdgeWeight('');
-        setEdgeFrom('');
-        setEdgeTo('');
-        setEdgeFormOpen(false);
-        requestAnimationFrame(() => {
-            if (edgeListRef.current) edgeListRef.current.scrollLeft = edgeListRef.current.scrollWidth;
-        });
+
+        if (newEdges.length > 0) {
+            setEdges((e) => [...e, ...newEdges]);
+            setEdgeWeight('');
+            setEdgeFrom('');
+            setEdgeTo([]);
+            setEdgeColor('#1985d2');
+            setEdgeFormOpen(false);
+            requestAnimationFrame(() => {
+                if (edgeListRef.current) edgeListRef.current.scrollLeft = edgeListRef.current.scrollWidth;
+            });
+        }
     };
 
     const toggleEdgeDelete = (id) => {
@@ -383,12 +437,13 @@ const GraphCreation = () => {
         setEdgeFrom('');
         setEdgeTo('');
         setEdgeWeight('');
+        setEdgeColor('#1985d2');
         setEdgePage(1);
         setCreateSuccess(t('graph_reset'));
         setTimeout(() => setCreateSuccess(''), 2000);
     };
 
-    const handleQuickGraphCreate = (spec) => {
+    const handleQuickGraphCreate = async (spec) => {
         // spec payload from QuickGraphDialog
         if (spec.error) {
             setCreateError(spec.error);
@@ -574,6 +629,39 @@ const GraphCreation = () => {
                 }
 
                     break;
+                case 'random':
+                    // Make request to PythonMS
+                    try {
+                        const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || '/pythonms';
+                        // Pass graph specs down to backend
+                        const response = await http.post('/api/generate/', {
+                            graphType: 'erdos_renyi', // hardcoded to erdos_renyi for simple random
+                            numNodes: Number(spec.quickGraphNodeCount || 5),
+                            prob: 0.3
+                        }, { apiBase: API_BASE, auth: true });
+                        result = { vertices: [], edges: [], positions: [] };
+                        if (response && response.nodes) {
+                            result.vertices = response.nodes.map(n => n.id);
+                            result.positions = response.nodes.map(n => ({ x: n.x, y: n.y }));
+                        }
+                        if (response && response.edges) {
+                            result.edges = response.edges.map(e => ({
+                                id: e.id,
+                                name: `e_${e.from}_${e.to}`,
+                                from: e.from,
+                                to: e.to,
+                                showDelete: false,
+                                directed: false,
+                                weight: e.weight,
+                                color: e.color
+                            }));
+                        }
+                    } catch (err) {
+                        setCreateError(t('quickgraph_err_random_failed'));
+                        setTimeout(() => setCreateError(''), 3000);
+                        return;
+                    }
+                    break;
                 default:
                     return;
             }
@@ -603,6 +691,7 @@ const GraphCreation = () => {
                     from: e.from,
                     to: e.to,
                     weight: hasWeight ? e.weight : undefined,
+                    color: e.color || '#1985d2',
                     directed: !!e.directed,
                     showWeight: true
                 };
@@ -651,6 +740,10 @@ const GraphCreation = () => {
                 msg = tf('quickgraph_bipartite_created', { a: spec.bipartiteA, b: spec.bipartiteB, n: nodeCount, m: edgeCount });
             } else if (type === 'grid') {
                 msg = tf('quickgraph_grid_created', { r: Number(spec.gridRows), c: Number(spec.gridCols), n: nodeCount, m: edgeCount, w: spec.gridWeight });
+            } else if (type === 'random') {
+                msg = t('quickgraph_random_created');
+            } else if (type === 'Melih') {
+                msg = t('Melih Graph has been created.')
             }
             setCreateSuccess(msg);
             setTimeout(() => setCreateSuccess(''), 3000);
@@ -721,6 +814,7 @@ const GraphCreation = () => {
                         setVertexName={(v) => { setVertexName(v); if (vertexError) setVertexError(''); }}
                         vertexError={vertexError}
                         addVertex={addVertex}
+                        addBulkVertices={addBulkVertices}
                         vertices={vertices}
                         removeVertex={removeVertex}
                         vertexListRef={vertexListRef}
@@ -741,6 +835,8 @@ const GraphCreation = () => {
                         setEdgeTo={setEdgeTo}
                         edgeWeight={edgeWeight}
                         setEdgeWeight={setEdgeWeight}
+                        edgeColor={edgeColor}
+                        setEdgeColor={setEdgeColor}
                         addEdge={addEdge}
                         openWeightEditor={openWeightEditor}
                         toggleEdgeDelete={toggleEdgeDelete}

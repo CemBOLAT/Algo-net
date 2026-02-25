@@ -1,4 +1,4 @@
-const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || 'http://localhost:8000';
+const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || '/pythonms';
 
 import { useRef, useState } from "react";
 import {
@@ -25,6 +25,7 @@ export default function RunGraphAlgorithms({
   onLegendChange = () => { },
   onResult = () => { },
   graphName, // ADDED: receive graphName from Sidebar
+  setShowEdgeWeights = () => { },
 }) {
   const { t } = useI18n();
 
@@ -167,7 +168,7 @@ export default function RunGraphAlgorithms({
           }
 
           // Debug for specific problematic nodes if needed
-          // if (strId.startsWith('5_')) console.log(`Node ${strId}: num=${num}, backendColor=${backendColor}, final=${finalColor}`);
+          // if (strId.startsWith('5_')) console.log(`Node ${ strId }: num = ${ num }, backendColor = ${ backendColor }, final = ${ finalColor } `);
 
           return {
             ...n,
@@ -191,71 +192,121 @@ export default function RunGraphAlgorithms({
 
   // Pathfinding algorithms → highlight selected edges
   const updatePathfinding = (data) => {
-    const pathEdges = new Set(
-      (data?.pathEdgese ?? []).map(([a, b]) => `${a}-${b}`)
-    );
+    // FIX: Typos in pathEdges -> path_edges
+    // Make sure we check both strings "from-to" and "to-from" if undirected, but backend returns defined directed pairs.
+    // However edge format has .source and .target. Backend returns array of [from, to] ids
+    const pathEdgesPairs = data?.path_edges ?? [];
 
     setEdges((prev) =>
-      prev.map((e) => ({
-        ...e,
-        color: pathEdges.has(`${e.source}-${e.target}`)
-          ? "#00C853" // green highlight
-          : "#9E9E9E", // dim default
-        width: pathEdges.has(`${e.source}-${e.target}`) ? 3 : 1.5,
-      }))
+      prev.map((e) => {
+        // check if this edge is in pathEdgesPairs
+        let isPath = false;
+        for (let pair of pathEdgesPairs) {
+          if ((String(e.from) === String(pair[0]) && String(e.to) === String(pair[1])) ||
+            (String(e.from) === String(pair[1]) && String(e.to) === String(pair[0]))) {
+            isPath = true;
+            break;
+          }
+        }
+
+        return {
+          ...e,
+          color: isPath ? "#00C853" // green highlight
+            : (e.color || "#9E9E9E"), // dim default, or use existing color from graph
+          width: isPath ? 3 : 1.5,
+        };
+      })
     );
 
 
     setNodes((prevNodes) =>
-      prevNodes.map((node) =>
-        data["path_nodes"].includes(node.id)
-          ? { ...node, color: 'red' }   // highlight path
-          : { ...node, color: "#1976d2" } // reset others
-      )
+      prevNodes.map((node) => {
+        const isPathNode = data["path_nodes"] && data["path_nodes"].includes(String(node.id));
+
+        return {
+          ...node,
+          color: isPathNode ? 'red' : "#1976d2",
+        };
+      })
     );
   };
 
   // Searching algorithms → highlight visited nodes and optionally show traversal path
   const updateSearching = (data) => {
     console.log("Searching data:", data);
-    const visited = new Set(data?.visited ?? []);
-    const pathEdges = new Set(
-      (data?.edges ?? []).map(([a, b]) => `${a}-${b}`)
-    );
-
-
+    const visitedOrder = data?.visited_order ?? [];
     const pathNodes = new Set(data?.path ?? []);
-    console.log("Path Nodes:", pathNodes);
 
+    // Reset everything initially
+    setNodes((prev) => prev.map((n) => ({ ...n, color: "#1976d2" })));
+    setEdges((prev) => prev.map((e) => ({ ...e, color: "#BDBDBD" })));
 
+    let step = 0;
+    const intervalId = setInterval(() => {
+      if (step >= visitedOrder.length) {
+        clearInterval(intervalId);
+        // Ensure final path nodes stick out strongly at the end, default others back
+        if (pathNodes.size > 0) {
+          setNodes((prev) => prev.map((n) => ({
+            ...n,
+            color: pathNodes.has(n.id) ? "#D32F2F" : "#1976d2"
+          })));
 
-    setNodes((prev) =>
-      prev.map((n) => ({
-        ...n,
-        color: pathNodes.has(n.id)
-          ? "#D32F2F" // red for path nodes
-          : visited.has(n.id)
-            ? "#FFA000" // orange for visited nodes
-            : "#1976d2", // default color
-      }))
-    );
+          // Recolor path edges firmly, default others back to grey
+          const pathEdgesSeq = new Set();
+          const p = data.path;
+          for (let i = 0; i < p.length - 1; i++) {
+            pathEdgesSeq.add(`${p[i]}-${p[i + 1]}`);
+          }
+          setEdges((prev) => prev.map((e) => {
+            const isPathEdge = pathEdgesSeq.has(`${e.from}-${e.to}`) || (!e.directed && pathEdgesSeq.has(`${e.to}-${e.from}`));
+            return {
+              ...e,
+              color: isPathEdge ? "#FB8C00" : "#BDBDBD",
+              width: isPathEdge ? 3 : 1.5,
+            };
+          }));
+        } else {
+          // If no path is found, reset everything back to default visually
+          setNodes((prev) => prev.map((n) => ({ ...n, color: "#1976d2" })));
+          setEdges((prev) => prev.map((e) => ({ ...e, color: "#BDBDBD", width: 1.5 })));
+        }
+        return;
+      }
 
-    console.log("Path Edges:", pathEdges);
+      const activeNodeId = visitedOrder[step];
+      const previousNodeId = step > 0 ? visitedOrder[step - 1] : null;
 
-    console.log("all edges before update:", edges);
+      // Color the active node
+      let activeColor = '#FFA000'; // Default DFS/Search color
+      if (selectedAlgo === 'bfs' && data?.colors && data.colors[activeNodeId]) {
+        activeColor = data.colors[activeNodeId]; // Use backend layer color
+      } else if (selectedAlgo === 'bfs') {
+        // Fallback smooth gradient if backend colors missing
+        const hue = Math.floor(200 - (step / visitedOrder.length) * 150);
+        activeColor = `hsl(${hue}, 80%, 55%)`;
+      }
 
-    setEdges((prev) =>
-      prev.map((e) => {
-        // Edge'i yazdır
-        console.log("Edge:", e);
+      setNodes((prev) => prev.map((n) => {
+        if (String(n.id) === String(activeNodeId)) {
+          return { ...n, color: activeColor };
+        }
+        return n;
+      }));
 
-        return {
-          ...e,
-          color: pathEdges.has(`${e.from}-${e.to}`) ? "#FB8C00" : "#BDBDBD",
-        };
-      })
-    );
+      // Highlight the edge that was just traversed (if applicable and visible back to previous)
+      if (previousNodeId) {
+        setEdges((prev) => prev.map((e) => {
+          if ((e.from === previousNodeId && e.to === activeNodeId) ||
+            (!e.directed && e.from === activeNodeId && e.to === previousNodeId)) {
+            return { ...e, color: activeColor };
+          }
+          return e;
+        }));
+      }
 
+      step++;
+    }, 400); // 400ms per node for animation
   };
 
   // ---- Result emit helpers (for ResultsPanel) ----
@@ -304,7 +355,7 @@ export default function RunGraphAlgorithms({
         algorithm: selectedAlgo,
         type: 'coloring',
         data: {
-          colorCount: distinctValues.length,
+          colorCount: null, // Removed per user request
           pcn: data.pcn ?? null,
           colorGroups: groups,
         },
@@ -437,14 +488,20 @@ export default function RunGraphAlgorithms({
 
       switch (category) {
         case "coloring":
+          onLegendChange([]);
+          setShowEdgeWeights(false);
           updateColoring(data);
           emitColoringResult(data);
           break;
         case "pathfinding":
+          onLegendChange([]);
+          setShowEdgeWeights(true);
           updatePathfinding(data);
           emitPathfindingResult(data);
           break;
         case "searching":
+          onLegendChange([]);
+          setShowEdgeWeights(false);
           updateSearching(data);
           emitSearchingResult(data);
           break;
@@ -627,6 +684,7 @@ export default function RunGraphAlgorithms({
                       borderRadius: '12px',
                       boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                       mt: 1,
+                      maxHeight: 200, // Added to prevent overflow
                     },
                   },
                 }}
@@ -683,6 +741,7 @@ export default function RunGraphAlgorithms({
                       borderRadius: '12px',
                       boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                       mt: 1,
+                      maxHeight: 200, // Added to prevent overflow
                     },
                   },
                 }}

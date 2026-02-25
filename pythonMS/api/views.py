@@ -1,13 +1,13 @@
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .serializers import RunPythonSerializer, ColorSerializer, SearchSerializer, LayoutPlanningSerializer
 from .services import run_python_script, ScriptExecutionError
 from .services import run_fixed_python_script
 from django.conf import settings
 import os
 import threading
-from .algorithms import coloring_algorithms, searching_algorithms, path_algorithms
+from .algorithms import coloring_algorithms, searching_algorithms, path_algorithms, generation
 
 import smtplib, ssl, json, datetime, requests
 from email.mime.text import MIMEText
@@ -56,6 +56,7 @@ def _to_backend_payload(vertices, edges, name: str, legend_entries=None, user_id
             "weight": e.get("weight", 1),
             "isDirected": e.get("directed", False),
             "showWeight": e.get("showWeight", True),
+            "color": e.get("color", "#BDBDBD"),
         })
     payload = {
         "name": name,
@@ -427,6 +428,9 @@ def run_algorithm_search(request):
     if data["selectedAlgo"] == "dfs":
         result = searching_algorithms.dfs(data["vertices"], data["edges"], data["edgeFrom"], data["edgeTo"])
         return Response({"result": result})
+    elif data["selectedAlgo"] == "bfs":
+        result = searching_algorithms.bfs(data["vertices"], data["edges"], data["edgeFrom"], data["edgeTo"])
+        return Response({"result": result})
     return Response({"result": {}})
 
 @api_view(["POST"])
@@ -439,6 +443,28 @@ def run_algorithm_path(request):
         result = path_algorithms.dijkstra_pathfinding(data["vertices"], data["edges"], data["edgeFrom"], data["edgeTo"])
         return Response({"result": result})
     return Response({"result": {}})
+
+@api_view(["POST"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def generate_graph(request):
+    try:
+        # Use simple json data or form data
+        graph_type = request.data.get("graphType", "erdos_renyi")
+        num_nodes = int(request.data.get("numNodes", 10))
+        prob = float(request.data.get("prob", 0.2))
+        k = int(request.data.get("k", max(1, min(4, num_nodes - 1))))
+        m = int(request.data.get("m", max(1, min(2, num_nodes - 1))))
+
+        result = generation.generate_random_graph(
+            graph_type, 
+            num_nodes, 
+            prob=prob, 
+            k=k, 
+            m=m
+        )
+        return Response(result)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 @api_view(["GET", "HEAD"])
 def health(request):

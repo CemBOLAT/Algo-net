@@ -12,13 +12,15 @@ def dijkstra_pathfinding(vertices, edges, source, target):
     # Build adjacency list with weights
     adj = {str(v["id"]): [] for v in vertices}
     for e in edges:
-        u = e["from"]
-        v = e["to"]
+        u = str(e["from"])
+        v = str(e["to"])
         w = float(e.get("weight", 1))
+        is_directed = e.get("directed", False)
+        
         if u in adj:
             adj[u].append((v, w))
-        # comment this line if your graph is directed
-        if v in adj:
+        
+        if not is_directed and v in adj:
             adj[v].append((u, w))
 
     # Priority queue (distance, node)
@@ -56,9 +58,16 @@ def dijkstra_pathfinding(vertices, edges, source, target):
     path_edges = [(path_nodes[i], path_nodes[i + 1]) for i in range(len(path_nodes) - 1)]
 
     total_distance = dist[str(target)] if dist[str(target)] != float("inf") else None
+    
+    # Format distances dict for frontend rendering
+    distances = {
+        node_id: ("Unreachable" if node_dist == float("inf") else node_dist)
+        for node_id, node_dist in dist.items()
+    }
 
     return {
         "path_nodes": path_nodes,
         "path_edges": path_edges,
         "distance": total_distance,
+        "distances": distances
     }

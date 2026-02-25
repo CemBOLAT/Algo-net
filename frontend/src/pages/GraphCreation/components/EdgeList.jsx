@@ -44,6 +44,18 @@ const EdgeList = ({
                                             </IconButton>
                                         </Tooltip>
                                     )}
+                                    {edge.color && (
+                                        <Box
+                                            sx={{
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: '50%',
+                                                backgroundColor: edge.color,
+                                                border: '1px solid rgba(0,0,0,0.2)',
+                                            }}
+                                            title="Edge Color"
+                                        />
+                                    )}
                                     <Box sx={{ perspective: 600 }}>
                                         <Box
                                             sx={{

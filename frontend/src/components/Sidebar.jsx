@@ -326,6 +326,7 @@ const Sidebar = ({
               }}
             >
               <MenuItem value="dfs">{t('dfs')}</MenuItem>
+              <MenuItem value="bfs">{t('bfs')}</MenuItem>
               <MenuItem value="dijkstra">{t('dijkstra')}</MenuItem>
               <MenuItem value="ordered_coloring">{t('ordered_coloring')}</MenuItem>
               <MenuItem value="layout_planning">{t('layout_planning')}</MenuItem>
@@ -344,7 +345,11 @@ const Sidebar = ({
             Labels
           </Button>
           <Button
-            onClick={() => setShowEdgeWeights(!showEdgeWeights)}
+            onClick={() => {
+              const newState = !showEdgeWeights;
+              setShowEdgeWeights(newState);
+              setEdges((prev) => prev.map((e) => ({ ...e, showWeight: newState })));
+            }}
             sx={sidebarStyles.toggleButton(showEdgeWeights)}
           >
             <Balance sx={{ fontSize: '20px' }} />
@@ -365,6 +370,7 @@ const Sidebar = ({
           onLegendChange={(entries) => { setLegendEntries(entries || []); setHasLegend(!!(entries && entries.length)); }}
           onResult={(result) => setAlgorithmResult(result)}
           graphName={graphName}
+          setShowEdgeWeights={setShowEdgeWeights}
         />
 
         {/* Algorithm Results Panel */}

@@ -90,7 +90,7 @@ const ResultsPanel = ({ result, onClear, nodes = [] }) => {
   // Build a lookup: id -> label
   const nodeLabel = (id) => {
     const n = nodes.find(n => String(n.id) === String(id));
-    return n?.label && n.label !== String(id) ? `${n.label} (${id})` : String(id);
+    return n?.label ? String(n.label) : String(id);
   };
 
   useEffect(() => {

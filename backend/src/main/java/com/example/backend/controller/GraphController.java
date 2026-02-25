@@ -54,19 +54,54 @@ public class GraphController {
         private Long userId;
 
         // Getters and setters
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        public List<NodeDTO> getNodes() { return nodes; }
-        public void setNodes(List<NodeDTO> nodes) { this.nodes = nodes; }
-        public List<EdgeDTO> getEdges() { return edges; }
-        public void setEdges(List<EdgeDTO> edges) { this.edges = edges; }
-        public Boolean getHasLegend() { return hasLegend; }
-        public void setHasLegend(Boolean hasLegend) { this.hasLegend = hasLegend; }
-        public List<LegendEntryDTO> getLegendEntries() { return legendEntries; }
-        public void setLegendEntries(List<LegendEntryDTO> legendEntries) { this.legendEntries = legendEntries; }
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public List<NodeDTO> getNodes() {
+            return nodes;
+        }
+
+        public void setNodes(List<NodeDTO> nodes) {
+            this.nodes = nodes;
+        }
+
+        public List<EdgeDTO> getEdges() {
+            return edges;
+        }
+
+        public void setEdges(List<EdgeDTO> edges) {
+            this.edges = edges;
+        }
+
+        public Boolean getHasLegend() {
+            return hasLegend;
+        }
+
+        public void setHasLegend(Boolean hasLegend) {
+            this.hasLegend = hasLegend;
+        }
+
+        public List<LegendEntryDTO> getLegendEntries() {
+            return legendEntries;
+        }
+
+        public void setLegendEntries(List<LegendEntryDTO> legendEntries) {
+            this.legendEntries = legendEntries;
+        }
+
         // NEW: userId getter/setter
-        public Long getUserId() { return userId; }
-        public void setUserId(Long userId) { this.userId = userId; }
+        public Long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(Long userId) {
+            this.userId = userId;
+        }
     }
 
     public static class NodeDTO {
@@ -78,18 +113,53 @@ public class GraphController {
         private Double positionY;
 
         // Getters and setters
-        public String getNodeId() { return nodeId; }
-        public void setNodeId(String nodeId) { this.nodeId = nodeId; }
-        public String getLabel() { return label; }
-        public void setLabel(String label) { this.label = label; }
-        public Integer getSize() { return size; }
-        public void setSize(Integer size) { this.size = size; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
-        public Double getPositionX() { return positionX; }
-        public void setPositionX(Double positionX) { this.positionX = positionX; }
-        public Double getPositionY() { return positionY; }
-        public void setPositionY(Double positionY) { this.positionY = positionY; }
+        public String getNodeId() {
+            return nodeId;
+        }
+
+        public void setNodeId(String nodeId) {
+            this.nodeId = nodeId;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(String label) {
+            this.label = label;
+        }
+
+        public Integer getSize() {
+            return size;
+        }
+
+        public void setSize(Integer size) {
+            this.size = size;
+        }
+
+        public String getColor() {
+            return color;
+        }
+
+        public void setColor(String color) {
+            this.color = color;
+        }
+
+        public Double getPositionX() {
+            return positionX;
+        }
+
+        public void setPositionX(Double positionX) {
+            this.positionX = positionX;
+        }
+
+        public Double getPositionY() {
+            return positionY;
+        }
+
+        public void setPositionY(Double positionY) {
+            this.positionY = positionY;
+        }
     }
 
     public static class EdgeDTO {
@@ -99,20 +169,64 @@ public class GraphController {
         private Double weight;
         private Boolean isDirected;
         private Boolean showWeight;
+        private String color;
 
         // Getters and setters
-        public String getEdgeId() { return edgeId; }
-        public void setEdgeId(String edgeId) { this.edgeId = edgeId; }
-        public String getFromNode() { return fromNode; }
-        public void setFromNode(String fromNode) { this.fromNode = fromNode; }
-        public String getToNode() { return toNode; }
-        public void setToNode(String toNode) { this.toNode = toNode; }
-        public Double getWeight() { return weight; }
-        public void setWeight(Double weight) { this.weight = weight; }
-        public Boolean getIsDirected() { return isDirected; }
-        public void setIsDirected(Boolean isDirected) { this.isDirected = isDirected; }
-        public Boolean getShowWeight() { return showWeight; }
-        public void setShowWeight(Boolean showWeight) { this.showWeight = showWeight; }
+        public String getEdgeId() {
+            return edgeId;
+        }
+
+        public void setEdgeId(String edgeId) {
+            this.edgeId = edgeId;
+        }
+
+        public String getFromNode() {
+            return fromNode;
+        }
+
+        public void setFromNode(String fromNode) {
+            this.fromNode = fromNode;
+        }
+
+        public String getToNode() {
+            return toNode;
+        }
+
+        public void setToNode(String toNode) {
+            this.toNode = toNode;
+        }
+
+        public Double getWeight() {
+            return weight;
+        }
+
+        public void setWeight(Double weight) {
+            this.weight = weight;
+        }
+
+        public Boolean getIsDirected() {
+            return isDirected;
+        }
+
+        public void setIsDirected(Boolean isDirected) {
+            this.isDirected = isDirected;
+        }
+
+        public Boolean getShowWeight() {
+            return showWeight;
+        }
+
+        public void setShowWeight(Boolean showWeight) {
+            this.showWeight = showWeight;
+        }
+
+        public String getColor() {
+            return color;
+        }
+
+        public void setColor(String color) {
+            this.color = color;
+        }
     }
 
     public static class LegendEntryDTO {
@@ -121,7 +235,7 @@ public class GraphController {
         private Double capacity;
         private Double distance;
 
-        @JsonAlias({"unitDist", "unitDistance"})
+        @JsonAlias({ "unitDist", "unitDistance" })
         private Double diameter;
 
         private Double size;
@@ -129,24 +243,62 @@ public class GraphController {
         // New: arbitrary attributes
         private Map<String, String> attributes;
 
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
-        public Double getCapacity() { return capacity; }
-        public void setCapacity(Double capacity) { this.capacity = capacity; }
-        public Double getDistance() { return distance; }
-        public void setDistance(Double distance) { this.distance = distance; }
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getColor() {
+            return color;
+        }
+
+        public void setColor(String color) {
+            this.color = color;
+        }
+
+        public Double getCapacity() {
+            return capacity;
+        }
+
+        public void setCapacity(Double capacity) {
+            this.capacity = capacity;
+        }
+
+        public Double getDistance() {
+            return distance;
+        }
+
+        public void setDistance(Double distance) {
+            this.distance = distance;
+        }
 
         // Unified accessors
-        public Double getDiameter() { return diameter; }
-        public void setDiameter(Double diameter) { this.diameter = diameter; }
+        public Double getDiameter() {
+            return diameter;
+        }
 
-        public Double getSize() { return size; }
-        public void setSize(Double size) { this.size = size; }
+        public void setDiameter(Double diameter) {
+            this.diameter = diameter;
+        }
 
-        public Map<String, String> getAttributes() { return attributes; }
-        public void setAttributes(Map<String, String> attributes) { this.attributes = attributes; }
+        public Double getSize() {
+            return size;
+        }
+
+        public void setSize(Double size) {
+            this.size = size;
+        }
+
+        public Map<String, String> getAttributes() {
+            return attributes;
+        }
+
+        public void setAttributes(Map<String, String> attributes) {
+            this.attributes = attributes;
+        }
     }
 
     @Value("${app.internal.api-key:}")
@@ -167,7 +319,8 @@ public class GraphController {
                 : System.getenv("INTERNAL_API_KEY");
 
         // Priority 1: Internal key flow
-        if (internalKeyHeader != null && effectiveInternalKey != null && internalKeyHeader.equals(effectiveInternalKey)) {
+        if (internalKeyHeader != null && effectiveInternalKey != null
+                && internalKeyHeader.equals(effectiveInternalKey)) {
 
             Long userId = request.getUserId();
             if (userId == null && internalUserId != null) {
@@ -183,15 +336,15 @@ public class GraphController {
             }
             user = userOpt.get();
 
-        // Priority 2: Bearer token flow
+            // Priority 2: Bearer token flow
         } else if (authorization != null && authorization.startsWith("Bearer ")) {
             try {
                 String token = authorization.substring(7).trim();
                 Map<String, Object> claims = jwtService.parseClaims(token);
                 Object subObj = claims.get("sub");
                 Long userId = (subObj instanceof String) ? Long.parseLong((String) subObj)
-                             : (subObj instanceof Number) ? ((Number) subObj).longValue()
-                             : null;
+                        : (subObj instanceof Number) ? ((Number) subObj).longValue()
+                                : null;
                 if (userId == null) {
                     return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz (sub yok)");
                 }
@@ -206,18 +359,20 @@ public class GraphController {
             }
 
         } else {
-            return error(HttpStatus.UNAUTHORIZED, "NO_AUTH", "Kimlik doğrulama bilgisi bulunamadı (Token veya API Key eksik)");
+            return error(HttpStatus.UNAUTHORIZED, "NO_AUTH",
+                    "Kimlik doğrulama bilgisi bulunamadı (Token veya API Key eksik)");
         }
 
         // --- END AUTH LOGIC ---
 
         // If we get here, 'user' is valid and authenticated.
         // Now, we run the graph-saving logic in its OWN try-catch block.
-        // This is better than your original code, which would call a save error "INVALID_TOKEN".
+        // This is better than your original code, which would call a save error
+        // "INVALID_TOKEN".
         try {
             // Create and save graph
             Graph graph = new Graph(request.getName(), user);
-            
+
             // Save nodes
             if (request.getNodes() != null) {
                 for (NodeDTO nodeDTO : request.getNodes()) {
@@ -237,15 +392,18 @@ public class GraphController {
                     edge.setWeight(edgeDTO.getWeight() != null ? edgeDTO.getWeight() : 1.0);
                     edge.setIsDirected(edgeDTO.getIsDirected() != null ? edgeDTO.getIsDirected() : false);
                     edge.setShowWeight(edgeDTO.getShowWeight() != null ? edgeDTO.getShowWeight() : true);
+                    edge.setColor(edgeDTO.getColor());
                     graph.getEdges().add(edge);
                 }
             }
 
             // legend
-            graph.setHasLegend(Boolean.TRUE.equals(request.getHasLegend()) && request.getLegendEntries() != null && !request.getLegendEntries().isEmpty());
+            graph.setHasLegend(Boolean.TRUE.equals(request.getHasLegend()) && request.getLegendEntries() != null
+                    && !request.getLegendEntries().isEmpty());
             if (graph.isHasLegend()) {
                 for (LegendEntryDTO dto : request.getLegendEntries()) {
-                    if (dto == null) continue;
+                    if (dto == null)
+                        continue;
                     LegendEntry le = new LegendEntry();
                     le.setGraph(graph);
                     le.setName(dto.getName());
@@ -274,8 +432,10 @@ public class GraphController {
         } catch (Exception e) {
             // This is now a *real* server error, not an auth error
             // You should log this error!
-            // log.error("Error saving graph for user {}: {}", user.getId(), e.getMessage(), e);
-            return error(HttpStatus.INTERNAL_SERVER_ERROR, "GRAPH_SAVE_FAILED", "Grafik kaydedilirken bir sunucu hatası oluştu: " + e.getMessage());
+            // log.error("Error saving graph for user {}: {}", user.getId(), e.getMessage(),
+            // e);
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "GRAPH_SAVE_FAILED",
+                    "Grafik kaydedilirken bir sunucu hatası oluştu: " + e.getMessage());
         }
     }
 
@@ -334,13 +494,13 @@ public class GraphController {
 
             // total count
             Long total = entityManager.createQuery(
-                            "SELECT COUNT(g) FROM Graph g WHERE g.user.id = :uid", Long.class)
+                    "SELECT COUNT(g) FROM Graph g WHERE g.user.id = :uid", Long.class)
                     .setParameter("uid", userId)
                     .getSingleResult();
 
             // paged items
             List<Graph> items = entityManager.createQuery(
-                            "SELECT g FROM Graph g WHERE g.user.id = :uid ORDER BY g.updatedAt DESC", Graph.class)
+                    "SELECT g FROM Graph g WHERE g.user.id = :uid ORDER BY g.updatedAt DESC", Graph.class)
                     .setParameter("uid", userId)
                     .setFirstResult(offset)
                     .setMaxResults(limit)
@@ -358,7 +518,8 @@ public class GraphController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş: " + e.getMessage());
+            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN",
+                    "Token geçersiz veya süresi dolmuş: " + e.getMessage());
         }
     }
 
@@ -375,14 +536,14 @@ public class GraphController {
         try {
             Map<String, Object> claims = jwtService.parseClaims(token);
             Long userId = Long.parseLong((String) claims.get("sub"));
-            
+
             Optional<Graph> graphOpt = graphRepository.findById(id);
             if (graphOpt.isEmpty()) {
                 return error(HttpStatus.NOT_FOUND, "GRAPH_NOT_FOUND", "Graph bulunamadı");
             }
 
             Graph graph = graphOpt.get();
-            
+
             // Check if user owns this graph
             if (!graph.getUser().getId().equals(userId)) {
                 return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Bu graph'a erişim yetkiniz yok");
@@ -408,14 +569,14 @@ public class GraphController {
         try {
             Map<String, Object> claims = jwtService.parseClaims(token);
             Long userId = Long.parseLong((String) claims.get("sub"));
-            
+
             Optional<Graph> graphOpt = graphRepository.findById(id);
             if (graphOpt.isEmpty()) {
                 return error(HttpStatus.NOT_FOUND, "GRAPH_NOT_FOUND", "Graph bulunamadı");
             }
 
             Graph graph = graphOpt.get();
-            
+
             // Check if user owns this graph
             if (!graph.getUser().getId().equals(userId)) {
                 return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Bu graph'ı silme yetkiniz yok");
@@ -446,9 +607,9 @@ public class GraphController {
         try {
             Map<String, Object> claims = jwtService.parseClaims(token);
             // Token geçerliliğini kontrol et, ancak user ID'ye göre filtreleme yapma
-            
+
             List<Graph> graphs = graphRepository.findAllOrderByUpdatedAtDesc();
-            
+
             return ResponseEntity.ok(graphs);
 
         } catch (Exception e) {
@@ -469,21 +630,21 @@ public class GraphController {
         try {
             Map<String, Object> claims = jwtService.parseClaims(token);
             Long userId = Long.parseLong((String) claims.get("sub"));
-            
+
             if (graphIds == null || graphIds.isEmpty()) {
                 return error(HttpStatus.BAD_REQUEST, "EMPTY_LIST", "Silinecek graph listesi boş");
             }
-            
+
             List<Graph> graphsToDelete = graphRepository.findAllById(graphIds);
-            
+
             // Check if user owns all graphs
             for (Graph graph : graphsToDelete) {
                 if (!graph.getUser().getId().equals(userId)) {
-                    return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", 
-                               "Graph ID " + graph.getId() + " için silme yetkiniz yok");
+                    return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED",
+                            "Graph ID " + graph.getId() + " için silme yetkiniz yok");
                 }
             }
-            
+
             graphRepository.deleteAll(graphsToDelete);
 
             Map<String, Object> response = new HashMap<>();
@@ -495,7 +656,8 @@ public class GraphController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş: " + e.getMessage());
+            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN",
+                    "Token geçersiz veya süresi dolmuş: " + e.getMessage());
         }
     }
 
@@ -514,14 +676,14 @@ public class GraphController {
         try {
             Map<String, Object> claims = jwtService.parseClaims(token);
             Long userId = Long.parseLong((String) claims.get("sub"));
-            
+
             Optional<Graph> graphOpt = graphRepository.findById(id);
             if (graphOpt.isEmpty()) {
                 return error(HttpStatus.NOT_FOUND, "GRAPH_NOT_FOUND", "Graph bulunamadı");
             }
 
             Graph graph = graphOpt.get();
-            
+
             // Check if user owns this graph
             if (!graph.getUser().getId().equals(userId)) {
                 return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Bu graph'ı güncelleme yetkiniz yok");
@@ -553,9 +715,10 @@ public class GraphController {
             Map<String, NodeDTO> uniqueNodes = new LinkedHashMap<>();
             if (request.getNodes() != null) {
                 for (NodeDTO nodeDTO : request.getNodes()) {
-                    String key = nodeDTO.getNodeId() != null ? nodeDTO.getNodeId() :
-                                 (nodeDTO.getLabel() != null ? nodeDTO.getLabel() : "");
-                    if (!key.isEmpty()) uniqueNodes.put(key, nodeDTO); // keep last occurrence
+                    String key = nodeDTO.getNodeId() != null ? nodeDTO.getNodeId()
+                            : (nodeDTO.getLabel() != null ? nodeDTO.getLabel() : "");
+                    if (!key.isEmpty())
+                        uniqueNodes.put(key, nodeDTO); // keep last occurrence
                 }
             }
 
@@ -576,9 +739,10 @@ public class GraphController {
                     boolean directed = edgeDTO.getIsDirected() != null ? edgeDTO.getIsDirected() : false;
                     String from = edgeDTO.getFromNode();
                     String to = edgeDTO.getToNode();
-                    if (from == null || to == null) continue;
+                    if (from == null || to == null)
+                        continue;
                     String key = directed ? (from + "->" + to)
-                                          : (from.compareTo(to) <= 0 ? from + "::" + to : to + "::" + from);
+                            : (from.compareTo(to) <= 0 ? from + "::" + to : to + "::" + from);
                     uniqueEdges.put(key, edgeDTO); // keep last occurrence
                 }
             }
@@ -589,6 +753,7 @@ public class GraphController {
                 edge.setWeight(edgeDTO.getWeight() != null ? edgeDTO.getWeight() : 1.0);
                 edge.setIsDirected(edgeDTO.getIsDirected() != null ? edgeDTO.getIsDirected() : false);
                 edge.setShowWeight(edgeDTO.getShowWeight() != null ? edgeDTO.getShowWeight() : true);
+                edge.setColor(edgeDTO.getColor());
                 graph.getEdges().add(edge);
             }
 
@@ -603,11 +768,13 @@ public class GraphController {
             }
             entityManager.flush();
 
-            boolean hasLegend = Boolean.TRUE.equals(request.getHasLegend()) && request.getLegendEntries() != null && !request.getLegendEntries().isEmpty();
+            boolean hasLegend = Boolean.TRUE.equals(request.getHasLegend()) && request.getLegendEntries() != null
+                    && !request.getLegendEntries().isEmpty();
             graph.setHasLegend(hasLegend);
             if (hasLegend) {
                 for (LegendEntryDTO dto : request.getLegendEntries()) {
-                    if (dto == null) continue;
+                    if (dto == null)
+                        continue;
                     LegendEntry le = new LegendEntry();
                     le.setGraph(graph);
                     le.setName(dto.getName());
@@ -635,7 +802,8 @@ public class GraphController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token geçersiz veya süresi dolmuş: " + e.getMessage());
+            return error(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN",
+                    "Token geçersiz veya süresi dolmuş: " + e.getMessage());
         }
     }
 

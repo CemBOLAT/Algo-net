@@ -1,4 +1,4 @@
-const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || 'http://localhost:8000';
+const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || '/pythonms';
 
 
 // CustomAlgo.js
@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { Button, Container } from "@mui/material";
 import { http, getTokens } from "../utils/auth"; // Adjust the import path as necessary
 
-export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = false, setIsLoading = () => {}, notify = () => {}, graphName = 'Graph' }) {
+export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = false, setIsLoading = () => { }, notify = () => { }, graphName = 'Graph' }) {
     const fileInputRef = useRef(null);
 
     const getUserEmail = () => {
@@ -35,7 +35,7 @@ export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = f
             if (email) formData.append("userEmail", email);
 
             http.post('/api/run/', formData, { json: false, auth: true, apiBase: API_BASE })
-              .catch((err) => console.error('custom algo async error:', err));
+                .catch((err) => console.error('custom algo async error:', err));
             notify('success', 'Algoritmanız çalıştığında cevap maili alacaksınız.', 2500);
             event.target.value = null;
             return;
@@ -74,7 +74,7 @@ export default function CustomAlgoButton({ setNodes, nodes, edges, isLoading = f
 
     return (
         <Container>
-            
+
         </Container>
         // <Container style={{ padding: "0", marginTop: "10px" }}>
         //     <Button

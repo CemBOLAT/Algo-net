@@ -30,7 +30,7 @@ import unhcrTranslations from './unhcr.json';
 // 1) DATA MODEL + DEFAULT TEXT (PDF içeriği buraya aktarıldı)
 // ------------------------------------------------------
 
-const pdfUrl = '/UNHCR.pdf';
+const pdfUrl = '/algonet/UNHCR.pdf';
 
 // Tek nokta: tüm text keyleri buradan geçecek
 const defaults = unhcrTranslations.tr; // Fallback to Turkish

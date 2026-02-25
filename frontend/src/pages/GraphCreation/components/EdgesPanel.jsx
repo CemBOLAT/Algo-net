@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Typography, Box, Tooltip, IconButton, Collapse, FormControl, InputLabel, Select, MenuItem, TextField, Button } from '@mui/material';
+import { Paper, Typography, Box, Tooltip, IconButton, Collapse, FormControl, TextField, Button, Autocomplete, Checkbox } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EdgeList from './EdgeList';
 import { useI18n } from '../../../context/I18nContext';
@@ -9,6 +9,7 @@ const EdgesPanel = ({
 	edges, edgePage, setEdgePage, edgesPerPage,
 	weighted, edgeFormOpen, setEdgeFormOpen,
 	edgeFrom, setEdgeFrom, edgeTo, setEdgeTo, edgeWeight, setEdgeWeight,
+	edgeColor, setEdgeColor,
 	addEdge, openWeightEditor, toggleEdgeDelete, deleteEdge
 }) => {
 	const { t } = useI18n();
@@ -30,27 +31,50 @@ const EdgesPanel = ({
 
 			<Collapse in={edgeFormOpen}>
 				<Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
-					<FormControl size="small" sx={{ minWidth: 140 }}>
-						<InputLabel>{t('from_label')}</InputLabel>
-						<Select value={edgeFrom} label="From" onChange={(e) => setEdgeFrom(e.target.value)}>
-							{vertices.map((v) => (
-								<MenuItem key={`from-${v}`} value={v}>{v}</MenuItem>
-							))}
-						</Select>
-					</FormControl>
+					<Autocomplete
+						size="small"
+						options={vertices}
+						value={edgeFrom}
+						onChange={(e, val) => setEdgeFrom(val || '')}
+						sx={{ minWidth: 140 }}
+						renderInput={(params) => <TextField {...params} label={t('from_label')} />}
+					/>
 
-					<FormControl size="small" sx={{ minWidth: 140 }}>
-						<InputLabel>{t('to_label')}</InputLabel>
-						<Select value={edgeTo} label="To" onChange={(e) => setEdgeTo(e.target.value)}>
-							{vertices.map((v) => (
-								<MenuItem key={`to-${v}`} value={v}>{v}</MenuItem>
-							))}
-						</Select>
-					</FormControl>
+					<Autocomplete
+						multiple
+						size="small"
+						options={vertices}
+						disableCloseOnSelect
+						value={Array.isArray(edgeTo) ? edgeTo : []}
+						onChange={(e, val) => setEdgeTo(val)}
+						getOptionLabel={(option) => option}
+						sx={{ minWidth: 200, maxWidth: 350 }}
+						renderOption={(props, option, { selected }) => {
+							const { key, ...otherProps } = props;
+							return (
+								<li key={key} {...otherProps}>
+									<Checkbox style={{ marginRight: 8 }} checked={selected} />
+									{option}
+								</li>
+							);
+						}}
+						renderInput={(params) => (
+							<TextField {...params} label={t('to_label')} placeholder="Add target..." />
+						)}
+					/>
 
 					{weighted ? (
 						<TextField size="small" label={t('edge_weight_label')} type="number" value={edgeWeight} onChange={(e) => setEdgeWeight(e.target.value)} />
 					) : null}
+					<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+						<input
+							type="color"
+							value={edgeColor || '#1985d2'}
+							onChange={(e) => setEdgeColor(e.target.value)}
+							style={{ width: '32px', height: '32px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }}
+							title="Edge Color"
+						/>
+					</Box>
 					<Button className="tm-modern-btn tm-modern-primary" onClick={addEdge} startIcon={<AddIcon />}>{t('add_label')}</Button>
 				</Box>
 			</Collapse>

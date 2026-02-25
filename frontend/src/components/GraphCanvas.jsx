@@ -290,17 +290,17 @@ const GraphCanvas = ({
               const c1x = n.x - loopR; const c1y = n.y - loopR;
               const c2x = n.x + loopR; const c2y = n.y - loopR;
               const isSelected = selectedEdge && selectedEdge.id === edge.id;
-              const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `(${edge.weight})` : `${n.label}`;
+              const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : `${n.label}`;
 
               return (
                 <Group key={edge.id}>
                   <Line
                     points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5}
-                    stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE}
+                    stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE}
                     hitStrokeWidth={10} listening={!disabled}
                     onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }}
                   />
-                  {edge.directed && <Arrow points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} listening={false} />}
+                  {edge.directed && <Arrow points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : (edge.color || '#999')} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} listening={false} />}
                   {showWeights && <Text x={n.x} y={n.y - loopR - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
                 </Group>
               );
@@ -315,12 +315,12 @@ const GraphCanvas = ({
 
             if (groupAll.length === 1) {
               const isSelected = selectedEdge && selectedEdge.id === edge.id;
-              const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `${edge.weight}` : '';
+              const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : '';
               const mx = (sx0 + ex0) / 2; const my = (sy0 + ey0) / 2;
               return (
                 <Group key={edge.id}>
-                  <Line points={[sx0, sy0, ex0, ey0]} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
-                  {edge.directed && <Arrow points={[sx0, sy0, ex0, ey0]} pointerLength={10} pointerWidth={8} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} listening={false} />}
+                  <Line points={[sx0, sy0, ex0, ey0]} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
+                  {edge.directed && <Arrow points={[sx0, sy0, ex0, ey0]} pointerLength={10} pointerWidth={8} fill={isSelected ? '#f59e0b' : (edge.color || '#999')} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} listening={false} />}
                   {showWeights && labelText && <Text x={mx} y={my - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
                 </Group>
               )
@@ -353,14 +353,14 @@ const GraphCanvas = ({
             const isSelected = selectedEdge && selectedEdge.id === edge.id;
             const labelX = 0.25 * sx + 0.5 * cx + 0.25 * ex;
             const labelY = 0.25 * sy + 0.5 * cy + 0.25 * ey;
-            const labelText = (edge.showWeight ?? true) && edge.weight !== undefined ? `${edge.weight}` : '';
+            const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : '';
 
             return (
               <Group key={edge.id}>
                 {edge.directed ? (
-                  <Arrow points={[sx, sy, cx, cy, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : '#999'} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
+                  <Arrow points={[sx, sy, cx, cy, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : (edge.color || '#999')} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
                 ) : (
-                  <Line points={[sx, sy, cx, cy, ex, ey]} tension={0.5} stroke={isSelected ? '#f59e0b' : '#999'} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
+                  <Line points={[sx, sy, cx, cy, ex, ey]} tension={0.5} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
                 )}
                 {showWeights && labelText && <Text x={labelX} y={labelY - 8} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
               </Group>
@@ -401,6 +401,7 @@ const GraphCanvas = ({
             >
               <Circle radius={node.size} fill={node.color} stroke={selectedNode && selectedNode.id === node.id ? "#000" : null} strokeWidth={selectedNode && selectedNode.id === node.id ? 2 : 0} />
               {showLabels && <Text text={node.label} fontSize={12} fill="#fff" width={node.size * 2} height={node.size * 2} align="center" verticalAlign="middle" offsetX={node.size} offsetY={node.size} listening={false} />}
+              {showLabels && node.labelPrefix && <Text text={node.labelPrefix} fontSize={12} fill="black" fontStyle="bold" y={-(node.size * 2)} align="center" offsetX={(node.labelPrefix.length * 3.5)} listening={false} />}
             </Group>
           ))}
         </Layer>

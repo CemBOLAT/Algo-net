@@ -6,6 +6,7 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
   const { t } = useI18n();
   const [weight, setWeight] = useState(selectedEdge?.weight || 1);
   const [directed, setDirected] = useState(selectedEdge?.directed || false);
+  const [color, setColor] = useState(selectedEdge?.color || '#1985d2');
   const [fromId, setFromId] = useState(selectedEdge?.from || '');
   const [toId, setToId] = useState(selectedEdge?.to || '');
 
@@ -13,6 +14,7 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
     if (selectedEdge) {
       setWeight(selectedEdge.weight || 1);
       setDirected(selectedEdge.directed || false);
+      setColor(selectedEdge.color || '#1985d2');
       setFromId(selectedEdge.from || '');
       setToId(selectedEdge.to || '');
     }
@@ -22,6 +24,7 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
     // Update local states where applicable
     if (key === 'weight') setWeight(value);
     if (key === 'directed') setDirected(value);
+    if (key === 'color') setColor(value);
     if (key === 'from') setFromId(value);
     if (key === 'to') setToId(value);
 
@@ -77,6 +80,20 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
         control={<Switch checked={directed} onChange={(e) => handleEdgeUpdate('directed', e.target.checked)} />}
         label={t('directed_toggle_label')}
       />
+
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, mt: 1, justifyContent: 'space-between' }}>
+        <Typography variant="body2">{t('edge_color')}</Typography>
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => {
+            setColor(e.target.value);
+            handleEdgeUpdate('color', e.target.value);
+          }}
+          style={{ width: '32px', height: '32px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }}
+          title="Edge Color"
+        />
+      </Box>
 
       {/* Show source/target selectors only for directed edges */}
       {directed && (

@@ -29,12 +29,16 @@ public class Edge {
     @Column(name = "show_weight", nullable = false)
     private Boolean showWeight = true;
 
+    @Column(name = "color")
+    private String color;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "graph_id", nullable = false)
     @JsonBackReference
     private Graph graph;
 
-    public Edge() {}
+    public Edge() {
+    }
 
     public Edge(String edgeId, String fromNode, String toNode, Graph graph) {
         this.edgeId = edgeId;
@@ -44,27 +48,75 @@ public class Edge {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getEdgeId() { return edgeId; }
-    public void setEdgeId(String edgeId) { this.edgeId = edgeId; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Double getWeight() { return weight; }
-    public void setWeight(Double weight) { this.weight = weight; }
+    public String getEdgeId() {
+        return edgeId;
+    }
 
-    public Boolean getIsDirected() { return isDirected; }
-    public void setIsDirected(Boolean isDirected) { this.isDirected = isDirected; }
+    public void setEdgeId(String edgeId) {
+        this.edgeId = edgeId;
+    }
 
-    public String getFromNode() { return fromNode; }
-    public void setFromNode(String fromNode) { this.fromNode = fromNode; }
+    public Double getWeight() {
+        return weight;
+    }
 
-    public String getToNode() { return toNode; }
-    public void setToNode(String toNode) { this.toNode = toNode; }
+    public void setWeight(Double weight) {
+        this.weight = weight;
+    }
 
-    public Boolean getShowWeight() { return showWeight; }
-    public void setShowWeight(Boolean showWeight) { this.showWeight = showWeight; }
+    public Boolean getIsDirected() {
+        return isDirected;
+    }
 
-    public Graph getGraph() { return graph; }
-    public void setGraph(Graph graph) { this.graph = graph; }
+    public void setIsDirected(Boolean isDirected) {
+        this.isDirected = isDirected;
+    }
+
+    public String getFromNode() {
+        return fromNode;
+    }
+
+    public void setFromNode(String fromNode) {
+        this.fromNode = fromNode;
+    }
+
+    public String getToNode() {
+        return toNode;
+    }
+
+    public void setToNode(String toNode) {
+        this.toNode = toNode;
+    }
+
+    public Boolean getShowWeight() {
+        return showWeight;
+    }
+
+    public void setShowWeight(Boolean showWeight) {
+        this.showWeight = showWeight;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public Graph getGraph() {
+        return graph;
+    }
+
+    public void setGraph(Graph graph) {
+        this.graph = graph;
+    }
 }

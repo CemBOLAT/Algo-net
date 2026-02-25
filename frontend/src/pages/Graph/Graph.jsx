@@ -8,7 +8,7 @@ import EdgeSettings from '../../components/EdgeSettings';
 import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
 import LegendPanel from '../../components/LegendPanel';
-import { Box, Paper, Button, TextField, Stack, Typography } from '@mui/material';
+import { Box, Paper, Button, TextField, Stack, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
 import { useI18n } from '../../context/I18nContext';
 
 const Graph = () => {
@@ -49,6 +49,15 @@ const Graph = () => {
         attributes: [{ key: '', value: '' }],
     });
     const [showLegendEditor, setShowLegendEditor] = useState(false);
+
+    // Bulk Tools State
+    const [showBulkTools, setShowBulkTools] = useState(false);
+    const [bulkTab, setBulkTab] = useState(0);
+    const [bulkNodeCount, setBulkNodeCount] = useState('');
+    const [bulkEdgeFrom, setBulkEdgeFrom] = useState(null);
+    const [bulkEdgeTo, setBulkEdgeTo] = useState([]);
+    const [bulkEdgeWeight, setBulkEdgeWeight] = useState('');
+    const [bulkEdgeColor, setBulkEdgeColor] = useState('#1985d2');
 
     // Visibility States
     const [showNodeLabels, setShowNodeLabels] = useState(true);
@@ -102,6 +111,70 @@ const Graph = () => {
         }
     }, [nodes, edges]);
 
+    // --- Bulk Action Handlers ---
+    const handleBulkAddNodes = () => {
+        const count = parseInt(bulkNodeCount, 10);
+        if (isNaN(count) || count <= 0) {
+            showError(t('enter_valid_number') || 'Invalid number');
+            return;
+        }
+
+        saveToHistory();
+        const newNodes = [];
+        let labelIndex = 1;
+
+        for (let i = 0; i < count; i++) {
+            let candidateName = `${labelIndex}`;
+            while (
+                nodes.some((n) => n.label === candidateName) ||
+                newNodes.some((n) => n.label === candidateName)
+            ) {
+                labelIndex++;
+                candidateName = `${labelIndex}`;
+            }
+            newNodes.push({
+                id: Date.now() + Math.random(),
+                label: candidateName,
+                x: Math.random() * (window.innerWidth * 0.5) + 50,
+                y: Math.random() * (window.innerHeight * 0.5) + 50,
+                size: 20,
+                color: '#1976d2'
+            });
+            labelIndex++;
+        }
+
+        setNodes((prev) => [...prev, ...newNodes]);
+        showSuccess(`Added ${count} nodes`);
+        setBulkNodeCount('');
+        setShowBulkTools(false);
+    };
+
+    const handleBulkAddEdges = () => {
+        if (!bulkEdgeFrom || !bulkEdgeTo || bulkEdgeTo.length === 0) return;
+        saveToHistory();
+
+        const newEdges = [];
+        for (const target of bulkEdgeTo) {
+            newEdges.push({
+                id: Date.now() + Math.random(),
+                name: `${bulkEdgeFrom.id}-${target.id}`,
+                from: bulkEdgeFrom.id,
+                to: target.id,
+                weight: bulkEdgeWeight !== '' ? Number(bulkEdgeWeight) : undefined,
+                showWeight: true,
+                directed: false,
+                color: bulkEdgeColor
+            });
+        }
+
+        setEdges((prev) => [...prev, ...newEdges]);
+        showSuccess(`Added ${newEdges.length} edges`);
+        setBulkEdgeFrom(null);
+        setBulkEdgeTo([]);
+        setBulkEdgeWeight('');
+        setShowBulkTools(false);
+    };
+
     // --- Helper Functions (useCallback ile sarmalandı) ---
 
     const showError = useCallback((message) => {
@@ -154,9 +227,13 @@ const Graph = () => {
         if (!location?.state) return;
         const { nodes: incomingNodes, edges: incomingEdges, name } = location.state || {};
         if (Array.isArray(incomingNodes) && incomingNodes.length) setNodes(incomingNodes);
-        if (Array.isArray(incomingEdges) && incomingEdges.length) setEdges(incomingEdges);
+        if (Array.isArray(incomingEdges) && incomingEdges.length) {
+            setEdges(incomingEdges);
+            const isWeighted = incomingEdges.some(e => e.weight !== undefined && e.weight !== null);
+            setShowEdgeWeights(isWeighted);
+        }
         if (name) setGraphName(name);
-    }, []); // Dependency array boş bırakıldı, sadece mount'ta çalışsın
+    }, [location.state]);
 
     // Load from API
     const loadGraph = useCallback(async (id) => {
@@ -183,12 +260,17 @@ const Graph = () => {
                     to: edge.toNode,
                     weight: hasWeight ? edge.weight : undefined,
                     directed: edge.isDirected ?? false,
-                    showWeight: edge.showWeight !== undefined ? edge.showWeight : true
+                    showWeight: edge.showWeight !== undefined ? edge.showWeight : true,
+                    color: edge.color || '#BDBDBD'
                 };
             }) || [];
 
             setNodes(loadedNodes);
             setEdges(loadedEdges);
+
+            // Auto-detect if graph is weighted
+            const isWeighted = loadedEdges.some(e => e.weight !== undefined && e.weight !== null);
+            setShowEdgeWeights(isWeighted);
 
             if (graph.hasLegend && Array.isArray(graph.legendEntries)) {
                 setHasLegend(true);
@@ -305,7 +387,8 @@ const Graph = () => {
                 toNode: edge.to,
                 weight: edge.weight !== undefined ? edge.weight : null,
                 isDirected: edge.directed ?? false,
-                showWeight: edge.showWeight !== undefined ? edge.showWeight : true
+                showWeight: edge.showWeight !== undefined ? edge.showWeight : true,
+                color: edge.color || '#BDBDBD'
             }));
 
             const requestBody = {
@@ -434,6 +517,7 @@ const Graph = () => {
                     { label: t('array_algorithms'), onClick: () => navigate('/array-algorithms'), variant: 'contained', color: 'primary' },
                     { label: t('tree_algorithms'), onClick: () => navigate('/tree-algorithms'), variant: 'contained', color: 'primary' },
                     { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary' },
+                    { label: t('bulk_tools_title'), onClick: () => setShowBulkTools(true), variant: 'contained', color: 'secondary', isButton: true },
                     { label: t('add_legend'), onClick: () => setShowLegendEditor(v => !v), variant: 'contained', color: 'primary', isButton: true },
                     { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error' }
                 ]}
@@ -534,6 +618,84 @@ const Graph = () => {
                             </Paper>
                         </Box>
                     )}
+
+                    {/* Bulk Tools Dialog */}
+                    <Dialog open={showBulkTools} onClose={() => setShowBulkTools(false)} maxWidth="sm" fullWidth>
+                        <DialogTitle>{t('bulk_tools_title')}</DialogTitle>
+                        <DialogContent dividers>
+                            <Tabs value={bulkTab} onChange={(e, v) => setBulkTab(v)} sx={{ mb: 2 }}>
+                                <Tab label={t('add_vertices_tab')} />
+                                <Tab label={t('add_edges_tab')} />
+                            </Tabs>
+
+                            {bulkTab === 0 && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('bulk_nodes_desc')}
+                                    </Typography>
+                                    <TextField
+                                        label={t('num_nodes_label')}
+                                        type="number"
+                                        size="small"
+                                        value={bulkNodeCount}
+                                        onChange={(e) => setBulkNodeCount(e.target.value)}
+                                        inputProps={{ min: 1, max: 100 }}
+                                    />
+                                    <Button variant="contained" onClick={handleBulkAddNodes}>{t('add_nodes_btn')}</Button>
+                                </Box>
+                            )}
+
+                            {bulkTab === 1 && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('bulk_edges_desc')}
+                                    </Typography>
+                                    <Autocomplete
+                                        size="small"
+                                        options={nodes}
+                                        getOptionLabel={(n) => n.label || String(n.id)}
+                                        value={bulkEdgeFrom}
+                                        onChange={(e, val) => setBulkEdgeFrom(val)}
+                                        renderInput={(params) => <TextField {...params} label={t('from_source_label')} />}
+                                    />
+                                    <Autocomplete
+                                        multiple
+                                        size="small"
+                                        options={nodes}
+                                        disableCloseOnSelect
+                                        getOptionLabel={(n) => n.label || String(n.id)}
+                                        value={bulkEdgeTo}
+                                        onChange={(e, val) => setBulkEdgeTo(val)}
+                                        renderOption={(props, option, { selected }) => {
+                                            const { key, ...otherProps } = props;
+                                            return (
+                                                <li key={key} {...otherProps}>
+                                                    <Checkbox style={{ marginRight: 8 }} checked={selected} />
+                                                    {option.label || String(option.id)}
+                                                </li>
+                                            );
+                                        }}
+                                        renderInput={(params) => <TextField {...params} label={t('to_targets_label')} />}
+                                    />
+                                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                        <TextField
+                                            size="small" label={t('weight_optional_label')} type="number"
+                                            value={bulkEdgeWeight} onChange={(e) => setBulkEdgeWeight(e.target.value)}
+                                            sx={{ flex: 1 }}
+                                        />
+                                        <input
+                                            type="color"
+                                            value={bulkEdgeColor}
+                                            onChange={(e) => setBulkEdgeColor(e.target.value)}
+                                            style={{ width: '40px', height: '40px', border: 'none', cursor: 'pointer', background: 'transparent' }}
+                                            title={t('edge_color') || 'Edge Color'}
+                                        />
+                                    </Box>
+                                    <Button variant="contained" onClick={handleBulkAddEdges}>{t('add_edges_btn')}</Button>
+                                </Box>
+                            )}
+                        </DialogContent>
+                    </Dialog>
 
                     {selectedNode && (
                         <VertexSettings

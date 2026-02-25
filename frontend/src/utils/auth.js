@@ -151,7 +151,7 @@ export const http = {
         }
         init.headers = h;
 
-        const res = auth ? await fetchWithAuth(url, init, apiBase) : await fetch(url, init);
+        const res = auth ? await fetchWithAuth(input, init, apiBase) : await fetch(url, init);
         if (!res.ok) {
             const errBody = await parseResponse(res);
             const err = new Error((errBody && errBody.message) || `request_failed_${res.status}`);
