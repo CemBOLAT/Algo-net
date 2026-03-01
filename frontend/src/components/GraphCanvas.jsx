@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+﻿import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
@@ -57,6 +57,15 @@ const GraphCanvas = ({
   const isPanningRef = useRef(false);
   const justDraggedRef = useRef(false);
   const nodeDraggingRef = useRef(false);
+
+  // Momentum: velocity history and active animation frame ids per node
+  const dragVelHistory = useRef({});
+  const momentumAnimRef = useRef({});
+  // draggingPositions: map of nodeId -> {x,y} for every node currently dragging or in momentum.
+  // Using a map (not a single slot) so multiple nodes can animate concurrently without conflict.
+  const [draggingPositions, setDraggingPositions] = useState({}); // { [nodeId]: {x,y} }
+  const draggingPositionsRef = useRef({}); // mirrors state for rAF callbacks (avoids stale closures)
+  const dragRafPendingRef = useRef({});  // per-node boolean — is a rAF flush already queued?
 
   // Zooming
   const [scale, setScale] = useState(1);
@@ -138,6 +147,17 @@ const GraphCanvas = ({
     const ey = to.y - (to.size * dy / len);
     return [sx, sy, ex, ey];
   }, []);
+
+  // Returns the effective position of a node.
+  // During drag or momentum the position comes from draggingPositions map; otherwise from nodes.
+  const getNodeEffPos = useCallback((nodeId) => {
+    const dp = draggingPositions[nodeId];
+    if (dp) {
+      const base = nodes.find(n => n.id === nodeId);
+      return base ? { ...base, ...dp } : dp;
+    }
+    return nodes.find(n => n.id === nodeId);
+  }, [nodes, draggingPositions]);
 
   const handleStageMouseMove = () => {
     if (!tempEdge) return;
@@ -272,9 +292,14 @@ const GraphCanvas = ({
         <Layer perfectDrawEnabled={false}>
           {/* EDGES */}
           {edges.map(edge => {
-            const from = nodes.find(n => n.id === edge.from);
-            const to = nodes.find(n => n.id === edge.to);
-            if (!from || !to) return null;
+            // Use effective positions: dragging node reads from draggingPos, others from nodes
+            const fromBase = nodes.find(n => n.id === edge.from);
+            const toBase = nodes.find(n => n.id === edge.to);
+            if (!fromBase || !toBase) return null;
+            const fromPos = getNodeEffPos(edge.from);
+            const toPos = getNodeEffPos(edge.to);
+            const from = fromPos ? { ...fromBase, x: fromPos.x, y: fromPos.y } : fromBase;
+            const to = toPos ? { ...toBase, x: toPos.x, y: toPos.y } : toBase;
 
             if (from.id === to.id) {
               // Self Loop Logic
@@ -340,10 +365,10 @@ const GraphCanvas = ({
             if (otherTotal > 0) offsetIndex += 0.5 * dirSign;
             const baseOffset = offsetIndex * gap;
 
-            const canonicalFrom = nodes.find(n => n.id === minId);
-            const canonicalTo = nodes.find(n => n.id === maxId);
-            const cdx = (canonicalTo?.x ?? to.x) - (canonicalFrom?.x ?? from.x);
-            const cdy = (canonicalTo?.y ?? to.y) - (canonicalFrom?.y ?? from.y);
+            const canonicalFromPos = getNodeEffPos(minId);
+            const canonicalToPos = getNodeEffPos(maxId);
+            const cdx = (canonicalToPos?.x ?? to.x) - (canonicalFromPos?.x ?? from.x);
+            const cdy = (canonicalToPos?.y ?? to.y) - (canonicalFromPos?.y ?? from.y);
             const clen = Math.hypot(cdx, cdy) || 1;
             const perpX = -cdy / clen; const perpY = cdx / clen;
             const sx = sx0 + perpX * baseOffset; const sy = sy0 + perpY * baseOffset;
@@ -374,15 +399,105 @@ const GraphCanvas = ({
           {nodes.map(node => (
             <Group
               key={node.id}
-              x={node.x} y={node.y}
+              x={draggingPositions[node.id]?.x ?? node.x}
+              y={draggingPositions[node.id]?.y ?? node.y}
               draggable={!disabled}
-              onDragStart={() => { nodeDraggingRef.current = true; }}
+              onDragStart={() => {
+                nodeDraggingRef.current = true;
+                saveToHistory();
+                // Cancel any in-progress momentum for this specific node only
+                if (momentumAnimRef.current[node.id]) {
+                  cancelAnimationFrame(momentumAnimRef.current[node.id]);
+                  delete momentumAnimRef.current[node.id];
+                }
+                dragVelHistory.current[node.id] = [];
+                dragRafPendingRef.current[node.id] = false;
+                // Add this node to the dragging map (other nodes keep their entries)
+                const init = { x: node.x, y: node.y };
+                draggingPositionsRef.current = { ...draggingPositionsRef.current, [node.id]: init };
+                setDraggingPositions(prev => ({ ...prev, [node.id]: init }));
+              }}
+              onDragMove={(e) => {
+                const nx = e.target.x(); const ny = e.target.y();
+                // Record position + timestamp for velocity estimation (keep last 5 samples)
+                const hist = dragVelHistory.current[node.id] || [];
+                hist.push({ x: nx, y: ny, t: performance.now() });
+                if (hist.length > 5) hist.shift();
+                dragVelHistory.current[node.id] = hist;
+                // Write to ref immediately; flush to React state at most once per rAF frame.
+                draggingPositionsRef.current[node.id] = { x: nx, y: ny };
+                if (!dragRafPendingRef.current[node.id]) {
+                  dragRafPendingRef.current[node.id] = true;
+                  requestAnimationFrame(() => {
+                    const pos = draggingPositionsRef.current[node.id];
+                    if (pos) setDraggingPositions(prev => ({ ...prev, [node.id]: { ...pos } }));
+                    dragRafPendingRef.current[node.id] = false;
+                  });
+                }
+              }}
               onDragEnd={(e) => {
                 nodeDraggingRef.current = false;
                 setTimeout(() => { justDraggedRef.current = false; }, 0);
+                dragRafPendingRef.current[node.id] = false;
                 const nx = e.target.x(); const ny = e.target.y();
-                saveToHistory(); // Save state before modifying for undo
-                setNodes(prev => prev.map(n => n.id === node.id ? { ...n, x: nx, y: ny } : n));
+
+                // Compute velocity from recent history
+                const hist = dragVelHistory.current[node.id] || [];
+                let vx = 0; let vy = 0;
+                if (hist.length >= 2) {
+                  const first = hist[0]; const last = hist[hist.length - 1];
+                  const dt = (last.t - first.t) || 1;
+                  vx = ((last.x - first.x) / dt) * 16;
+                  vy = ((last.y - first.y) / dt) * 16;
+                }
+                delete dragVelHistory.current[node.id];
+
+                const speed = Math.hypot(vx, vy);
+
+                // Helper: remove this node from the dragging map (other nodes unaffected)
+                const clearDragging = () => {
+                  delete draggingPositionsRef.current[node.id];
+                  setDraggingPositions(prev => {
+                    const next = { ...prev };
+                    delete next[node.id];
+                    return next;
+                  });
+                };
+
+                if (speed < 1.5) {
+                  // No momentum: commit position, remove from map
+                  setNodes(prev => prev.map(n => n.id === node.id ? { ...n, x: nx, y: ny } : n));
+                  clearDragging();
+                  return;
+                }
+
+                // Momentum: keep this node's entry in draggingPositions alive during glide.
+                // Other nodes retain their own entries independently.
+                // setNodes called ONCE when glide finishes — no O(n) map per frame.
+                const FRICTION = 0.92;
+                const MIN_SPEED = 0.4;
+                let posX = nx; let posY = ny;
+
+                const animate = () => {
+                  vx *= FRICTION;
+                  vy *= FRICTION;
+                  posX += vx;
+                  posY += vy;
+                  if (Math.hypot(vx, vy) < MIN_SPEED) {
+                    // Glide done: commit final position, remove from map
+                    const fx = posX; const fy = posY;
+                    setNodes(prev => prev.map(n => n.id === node.id ? { ...n, x: fx, y: fy } : n));
+                    clearDragging();
+                    delete momentumAnimRef.current[node.id];
+                    return;
+                  }
+                  // Still gliding: update only this node's entry in the map
+                  const pos = { x: posX, y: posY };
+                  draggingPositionsRef.current[node.id] = pos;
+                  setDraggingPositions(prev => ({ ...prev, [node.id]: pos }));
+                  momentumAnimRef.current[node.id] = requestAnimationFrame(animate);
+                };
+                momentumAnimRef.current[node.id] = requestAnimationFrame(animate);
               }}
               onClick={(e) => {
                 e.cancelBubble = true; if (disabled) return;
