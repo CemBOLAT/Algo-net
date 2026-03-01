@@ -445,10 +445,28 @@ const GraphCanvas = ({
                 const hist = dragVelHistory.current[node.id] || [];
                 let vx = 0; let vy = 0;
                 if (hist.length >= 2) {
-                  const first = hist[0]; const last = hist[hist.length - 1];
-                  const dt = (last.t - first.t) || 1;
-                  vx = ((last.x - first.x) / dt) * 16;
-                  vy = ((last.y - first.y) / dt) * 16;
+                  const now = performance.now();
+                  const last = hist[hist.length - 1];
+                  // Kullanıcı bırakmadan önce 80ms'den fazla bekledi mi?
+                  // Eğer öyleyse momentum sıfırlanır (sabit tutup bıraktı).
+                  const stillThreshold = 80; // ms
+                  if (now - last.t < stillThreshold) {
+                    // Yalnızca son 80ms'lik penceredeki örnekleri kullan
+                    const windowSamples = hist.filter(s => now - s.t <= stillThreshold);
+                    if (windowSamples.length >= 2) {
+                      const first = windowSamples[0];
+                      const dt = (last.t - first.t) || 1;
+                      vx = ((last.x - first.x) / dt) * 16;
+                      vy = ((last.y - first.y) / dt) * 16;
+                    } else {
+                      // Tek örnek var, doğrudan son interval'ı kullan
+                      const prev = hist[hist.length - 2];
+                      const dt = (last.t - prev.t) || 1;
+                      vx = ((last.x - prev.x) / dt) * 16;
+                      vy = ((last.y - prev.y) / dt) * 16;
+                    }
+                  }
+                  // else: son hareket çok eski → vx/vy = 0, momentum yok
                 }
                 delete dragVelHistory.current[node.id];
 
