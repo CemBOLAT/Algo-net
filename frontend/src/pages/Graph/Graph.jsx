@@ -207,19 +207,40 @@ const Graph = () => {
         }
     }, [navigate]);
 
-    // Bootstrap local storage
+    // Bootstrap local storage — priority: algoNetQuickGraph (hand-off) > algoNetCanvasState (session restore)
     useEffect(() => {
+        // 1. Quick-graph hand-off key (always consumed immediately)
         try {
             const raw = localStorage.getItem('algoNetQuickGraph');
+            if (raw) {
+                const saved = JSON.parse(raw);
+                if (Array.isArray(saved?.nodes) && saved.nodes.length) {
+                    setNodes(saved.nodes);
+                    if (Array.isArray(saved?.edges)) setEdges(saved.edges);
+                    if (saved?.name) setGraphName(saved.name);
+                }
+                localStorage.removeItem('algoNetQuickGraph');
+                return; // Hand-off wins; skip session restore
+            }
+        } catch { }
+
+        // 2. Session restore — only when there is no incoming router state and no ?id= param
+        const hasRouterState = !!(location?.state?.nodes?.length);
+        const hasUrlId = !!new URLSearchParams(location.search).get('id');
+        if (hasRouterState || hasUrlId) return;
+
+        try {
+            const raw = localStorage.getItem('algoNetCanvasState');
             if (!raw) return;
             const saved = JSON.parse(raw);
             if (Array.isArray(saved?.nodes) && saved.nodes.length) {
                 setNodes(saved.nodes);
                 if (Array.isArray(saved?.edges)) setEdges(saved.edges);
                 if (saved?.name) setGraphName(saved.name);
+                if (saved?.graphId) setGraphId(saved.graphId);
             }
-            localStorage.removeItem('algoNetQuickGraph');
         } catch { }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Load from router state
@@ -314,6 +335,22 @@ const Graph = () => {
         if (id) loadGraph(id);
     }, [location.search, loadGraph]);
 
+    // Persist canvas state to localStorage on every meaningful change (debounced 400 ms)
+    useEffect(() => {
+        if (nodes.length === 0 && edges.length === 0) return; // Don't persist empty canvas
+        const timer = setTimeout(() => {
+            try {
+                localStorage.setItem('algoNetCanvasState', JSON.stringify({
+                    nodes,
+                    edges,
+                    name: graphName,
+                    graphId,
+                }));
+            } catch { }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [nodes, edges, graphName, graphId]);
+
     // --- Event Handlers (Memoized) ---
 
     const handleResetGraph = useCallback(() => {
@@ -326,6 +363,8 @@ const Graph = () => {
         setSelectedEdge(null);
         setMode(null);
         setTempEdge(null);
+        // Clear persisted canvas so the blank state is not restored on next visit
+        try { localStorage.removeItem('algoNetCanvasState'); } catch { }
     }, []);
 
     const updateDraftAttr = (idx, field, val) => {

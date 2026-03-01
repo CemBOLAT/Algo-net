@@ -10,6 +10,8 @@ import './GraphCreation.css';
 import WeightEditDialog from './components/WeightEditDialog';
 import FileInfoDialog from './components/FileInfoDialog';
 import WeightedExampleDialog from './components/WeightedExampleDialog';
+import ColoredExampleDialog from './components/ColoredExampleDialog';
+import JsonExampleDialog from './components/JsonExampleDialog';
 import FilePreviewDialog from './components/FilePreviewDialog';
 import QuickGraphDialog from './components/QuickGraphDialog';
 import { useI18n } from '../../context/I18nContext';
@@ -75,6 +77,14 @@ const GraphCreation = () => {
     const fileInputRef = useRef(null);
     const [fileModalOpen, setFileModalOpen] = useState(false);
     const [weightedExampleModalOpen, setWeightedExampleModalOpen] = useState(false);
+    const [coloredExampleModalOpen, setColoredExampleModalOpen] = useState(false);
+    const [jsonExampleModalOpen, setJsonExampleModalOpen] = useState(false);
+
+    // Separate ref for json file input
+    const jsonFileInputRef = useRef(null);
+
+    // Map of vertex label -> color string (from colored file format)
+    const [vertexColors, setVertexColors] = useState({});
 
     const vertexListRef = useRef(null);
     const edgeListRef = useRef(null);
@@ -316,7 +326,7 @@ const GraphCreation = () => {
                     y,
                     label,
                     size: 15,
-                    color: '#2563eb'
+                    color: vertexColors[label] ?? '#2563eb'
                 };
             });
 
@@ -342,25 +352,53 @@ const GraphCreation = () => {
         }
     };
 
-    // parse content (simple or weighted) and load into vertices/edges
+    // parse content (simple, weighted, or colored) and load into vertices/edges
     const parseAndLoad = (content) => {
         const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
         if (lines.length === 0) {
             // close any modals and show error
             setFileModalOpen(false);
             setWeightedExampleModalOpen(false);
+            setColoredExampleModalOpen(false);
             setCreateError(t('file_empty'));
             setTimeout(() => setCreateError(''), 3000);
             return;
         }
+
+        // --- Colored format: strip trailing : "color" or just "color" ---
+        // Matches: optional (: neighbors) then : "colorValue"  OR just : "colorValue"
+        // colorValue = #hex or word chars
+        const colorSuffixRegex = /\s*:\s*["']([#a-zA-Z0-9]+)["']\s*$/;
+        const vertexOnlyColorRegex = /^([A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6})\s*:\s*["']([#a-zA-Z0-9]+)["']\s*$/;
+
+        const extractedColors = {};
+        const strippedLines = lines.map(ln => {
+            // Vertex-only color line: e.g.  L3: "pink"
+            const vertexOnlyMatch = ln.match(vertexOnlyColorRegex);
+            if (vertexOnlyMatch) {
+                const [, vLabel, col] = vertexOnlyMatch;
+                extractedColors[vLabel] = col;
+                // Return just the vertex label so it gets added to verticesSet
+                return vLabel;
+            }
+            // Edge line with color suffix: e.g.  L1: L2, L4 : "purple"
+            const colorMatch = ln.match(colorSuffixRegex);
+            if (colorMatch) {
+                // Determine which vertex owns this line
+                const vertexMatch = ln.match(/^([A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6})\s*:/);
+                if (vertexMatch) extractedColors[vertexMatch[1]] = colorMatch[1];
+                return ln.replace(colorSuffixRegex, '').trim();
+            }
+            return ln;
+        });
 
         const vertexRegex = /^[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}$/;
         const edgeRegex = /^\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*:\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}(\s*,\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6})*\s*$/;
         const weightedEdgeRegex = /^\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*:\s*\(\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*,\s*\d+\s*\)(\s*,\s*\(\s*[A-Za-z0-9ĞÜŞİÖÇğüşiöç]{1,6}\s*,\s*\d+\s*\))*\s*$/;
 
         let badLine = null;
-        for (let i = 0; i < lines.length; i++) {
-            const ln = lines[i];
+        for (let i = 0; i < strippedLines.length; i++) {
+            const ln = strippedLines[i];
             if (vertexRegex.test(ln)) continue;
             if (edgeRegex.test(ln)) continue;
             if (weightedEdgeRegex.test(ln)) continue;
@@ -372,6 +410,7 @@ const GraphCreation = () => {
             // close modals and show error
             setFileModalOpen(false);
             setWeightedExampleModalOpen(false);
+            setColoredExampleModalOpen(false);
             setCreateError(t('file_format_error'));
             setTimeout(() => setCreateError(''), 3000);
             return;
@@ -380,7 +419,7 @@ const GraphCreation = () => {
         const verticesSet = new Set();
         const parsedEdges = [];
         let idCounter = Date.now();
-        for (const ln of lines) {
+        for (const ln of strippedLines) {
             if (weightedEdgeRegex.test(ln)) {
                 const [srcPart, targetsPart] = ln.split(':');
                 const src = srcPart.trim();
@@ -419,10 +458,14 @@ const GraphCreation = () => {
 
         setVertices(Array.from(verticesSet));
         setEdges(uniqueParsedEdges);
+        if (Object.keys(extractedColors).length > 0) {
+            setVertexColors(extractedColors);
+        }
 
         // close modals and preview on success
         setFileModalOpen(false);
         setWeightedExampleModalOpen(false);
+        setColoredExampleModalOpen(false);
         setCreateError('');
         setCreateSuccess(t('graph_loaded'));
         setFilePreviewOpen(false);
@@ -433,6 +476,7 @@ const GraphCreation = () => {
     const handleReset = () => {
         setVertices([]);
         setEdges([]);
+        setVertexColors({});
         setVertexName('');
         setEdgeFrom('');
         setEdgeTo('');
@@ -772,15 +816,87 @@ const GraphCreation = () => {
         reader.readAsText(file);
     };
 
+    const handleJsonFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const json = JSON.parse(ev.target.result || '{}');
+
+                if (!Array.isArray(json.nodes) || json.nodes.length === 0) {
+                    setCreateError(t('min_vertices_required'));
+                    setTimeout(() => setCreateError(''), 3000);
+                    return;
+                }
+
+                // Map nodes -> canvas nodes
+                const nodesForCanvas = json.nodes.map((n) => ({
+                    id: String(n.nodeId ?? n.id),
+                    label: String(n.label ?? n.nodeId ?? n.id),
+                    x: n.positionX ?? n.x ?? 100,
+                    y: n.positionY ?? n.y ?? 100,
+                    size: n.size ?? 20,
+                    color: n.color ?? '#1976d2',
+                }));
+
+                // Map edges -> canvas edges
+                const edgesForCanvas = (json.edges || []).map((e, i) => ({
+                    id: String(e.edgeId ?? e.id ?? `edge-${i + 1}`),
+                    from: String(e.fromNode ?? e.from),
+                    to: String(e.toNode ?? e.to),
+                    weight: e.weight !== undefined ? e.weight : undefined,
+                    directed: e.isDirected ?? e.directed ?? false,
+                    color: e.color ?? '#1985d2',
+                    showWeight: e.showWeight ?? true,
+                }));
+
+                const name = json.name || file.name.replace(/\.json$/i, '');
+
+                // Persist fallback
+                try {
+                    localStorage.setItem('algoNetQuickGraph', JSON.stringify({
+                        nodes: nodesForCanvas,
+                        edges: edgesForCanvas,
+                        name,
+                    }));
+                } catch { }
+
+                navigate('/graph', { state: { nodes: nodesForCanvas, edges: edgesForCanvas, name } });
+
+                setCreateSuccess(t('graph_loaded'));
+                setTimeout(() => setCreateSuccess(''), 3000);
+            } catch {
+                setCreateError(t('file_format_error'));
+                setTimeout(() => setCreateError(''), 3000);
+            } finally {
+                try { if (jsonFileInputRef.current) jsonFileInputRef.current.value = ''; } catch { }
+            }
+        };
+        reader.onerror = () => {
+            setCreateError(t('file_read_error'));
+            setTimeout(() => setCreateError(''), 3000);
+        };
+        reader.readAsText(file);
+    };
+
     return (
         <Box className="tm-root" sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-            {/* hidden file input */}
+            {/* hidden .txt file input */}
             <input
                 type="file"
                 accept=".txt"
                 ref={fileInputRef}
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
+            />
+            {/* hidden .json file input */}
+            <input
+                type="file"
+                accept=".json"
+                ref={jsonFileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleJsonFileChange}
             />
 
 
@@ -857,6 +973,8 @@ const GraphCreation = () => {
                     onClose={() => setFileModalOpen(false)}
                     fileInputRef={fileInputRef}
                     openWeightedExample={() => setWeightedExampleModalOpen(true)}
+                    openColoredExample={() => setColoredExampleModalOpen(true)}
+                    openJsonExample={() => setJsonExampleModalOpen(true)}
                 />
                 <WeightedExampleDialog
                     open={weightedExampleModalOpen}
@@ -866,6 +984,24 @@ const GraphCreation = () => {
                         setWeightedExampleModalOpen(false);
                         try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch { }
                         fileInputRef.current?.click();
+                    }}
+                />
+                <ColoredExampleDialog
+                    open={coloredExampleModalOpen}
+                    onClose={() => setColoredExampleModalOpen(false)}
+                    onSelectFile={() => {
+                        setColoredExampleModalOpen(false);
+                        try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch { }
+                        fileInputRef.current?.click();
+                    }}
+                />
+                <JsonExampleDialog
+                    open={jsonExampleModalOpen}
+                    onClose={() => setJsonExampleModalOpen(false)}
+                    onSelectFile={() => {
+                        setJsonExampleModalOpen(false);
+                        try { if (jsonFileInputRef.current) jsonFileInputRef.current.value = ''; } catch { }
+                        jsonFileInputRef.current?.click();
                     }}
                 />
                 <FilePreviewDialog
