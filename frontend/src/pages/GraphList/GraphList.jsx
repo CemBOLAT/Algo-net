@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Container, Typography, Grid, Card, CardContent, CardActions, Button, Box,
   CircularProgress, Checkbox, FormControlLabel, Fab, IconButton, Dialog,
-  DialogActions, DialogContent, DialogContentText, DialogTitle, Alert
+  DialogActions, DialogContent, DialogContentText, DialogTitle, Alert,
+  Paper, Divider, Tooltip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import FolderIcon from '@mui/icons-material/Folder';
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import PersonIcon from '@mui/icons-material/Person';
+import InfoIcon from '@mui/icons-material/Info';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import { clearTokens, http } from '../../utils/auth';
@@ -154,8 +165,8 @@ const GraphList = () => {
   const locale = language === 'tr' ? 'tr-TR' : 'en-US';
 
   const handleSelectGraph = (graphId) => {
-    setSelectedGraphs(prev => 
-      prev.includes(graphId) 
+    setSelectedGraphs(prev =>
+      prev.includes(graphId)
         ? prev.filter(id => id !== graphId)
         : [...prev, graphId]
     );
@@ -171,7 +182,7 @@ const GraphList = () => {
 
   const handleBulkDelete = async () => {
     if (selectedGraphs.length === 0) return;
-    
+
     setDeleteDialogOpen(true);
   };
 
@@ -248,13 +259,32 @@ const GraphList = () => {
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
       <TopBar title={t('all_graphs')}
         actions={[
-          { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
-          { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
-          { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
-          { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
-          { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-          { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
-          { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+          { tooltip: t('go_to_canvas'), icon: <ArrowBackIcon />, onClick: handleCanvas, color: 'inherit', ariaLabel: t('go_to_canvas') },
+          {
+            label: 'Graphs',
+            icon: <FolderIcon />,
+            menuItems: [
+              { label: t('my_graphs'), onClick: () => navigate('/graph-list'), ariaLabel: t('profile') },
+              { label: t('create_graph'), onClick: () => navigate('/graph-creation'), ariaLabel: t('create_graph') }
+            ]
+          },
+          {
+            label: 'Algorithms',
+            icon: <DataArrayIcon />,
+            menuItems: [
+              { label: t('array_algorithms'), onClick: handleArray, ariaLabel: t('array_algorithms') },
+              { label: t('tree_algorithms'), onClick: handleTree, ariaLabel: t('tree_algorithms') }
+            ]
+          },
+          { label: t('unhcr_info'), icon: <InfoIcon />, onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+          {
+            label: 'User',
+            icon: <PersonIcon />,
+            menuItems: [
+              { label: t('profile'), onClick: () => navigate('/profile'), ariaLabel: t('profile') },
+              { label: t('logout'), onClick: handleLogout, color: 'error', ariaLabel: t('logout') }
+            ]
+          }
         ]}
       />
       {error && (
@@ -262,7 +292,7 @@ const GraphList = () => {
           {error}
         </FlashMessage>
       )}
-      <Container>
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
         {graphs.length === 0 ? (
           <Box textAlign="center" mt={4}>
             <Typography variant="h6" color="textSecondary">
@@ -271,131 +301,193 @@ const GraphList = () => {
           </Box>
         ) : (
           <>
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectedGraphs.length === graphs.length}
-                    indeterminate={selectedGraphs.length > 0 && selectedGraphs.length < graphs.length}
-                    onChange={handleSelectAll}
-                  />
-                }
-                label={t('select_all')}
-              />
-              {selectedGraphs.length > 0 && (
-                <>
-                  <Typography variant="body2" color="primary">
-                    {selectedGraphs.length} {t('graph_selected_suffix')}
-                  </Typography>
-                  <IconButton
+            {/* Page Header */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', mb: 4, gap: 2 }}>
+              <Box>
+                <Typography variant="h4" fontWeight="900" sx={{ letterSpacing: '-0.02em' }}>
+                  {t('all_graphs')}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Bulk Actions & Pagination Top */}
+            <Paper elevation={0} sx={{ mb: 3, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedGraphs.length === graphs.length}
+                      indeterminate={selectedGraphs.length > 0 && selectedGraphs.length < graphs.length}
+                      onChange={handleSelectAll}
+                      size="small"
+                      sx={{ color: 'primary.main', '&.Mui-checked': { color: 'primary.main' } }}
+                    />
+                  }
+                  label={<Typography variant="body2" fontWeight="500">Select All</Typography>}
+                  sx={{ m: 0 }}
+                />
+
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 20, alignSelf: 'center' }} />
+
+                <Typography variant="body2" color="text.secondary">
+                  {selectedGraphs.length} {t('graph_selected_suffix') || 'graphs selected'}
+                </Typography>
+
+                {selectedGraphs.length > 0 && (
+                  <Button
                     color="error"
                     onClick={handleBulkDelete}
                     disabled={isDeleting}
                     size="small"
-                    sx={{ ml: 1 }}
+                    startIcon={<DeleteIcon />}
+                    sx={{ ml: 1, textTransform: 'none', fontWeight: 600 }}
                   >
-                    <DeleteIcon />
-                  </IconButton>
-                </>
-              )}
-            </Box>
+                    {t('delete')}
+                  </Button>
+                )}
+              </Box>
 
-            {/* pagination controls */}
-            <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body2" color="textSecondary">
-                {total === 0 ? '0' : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} / {total}
-              </Typography>
-              <Box>
-                <Button
-                  variant="outlined"
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton
                   size="small"
-                  aria-label={t('previous_page')}
                   onClick={() => setPageAndSearch(page - 1)}
                   disabled={page === 1 || loading}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
                 >
-                  {t('prev')}
-                </Button>
-                <Button
-                  variant="outlined"
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: 'center' }}>{page}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mx: 0.5 }}>/</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24, textAlign: 'center' }}>{Math.ceil(total / pageSize) || 1}</Typography>
+                </Box>
+                <IconButton
                   size="small"
-                  sx={{ ml: 1 }}
-                  aria-label={t('next_page')}
                   onClick={() => setPageAndSearch(page + 1)}
                   disabled={page * pageSize >= total || loading}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
                 >
-                  {t('next')}
-                </Button>
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
               </Box>
-            </Box>
+            </Paper>
 
-            <Grid container spacing={3} sx={{ mt: 1 }}>
+            {/* Graphs Grid */}
+            <Grid container spacing={3}>
               {graphs.map((graph) => (
-                <Grid item xs={12} sm={6} md={4} key={graph.id}>
-                  <Card sx={{ position: 'relative' }}>
-                    <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 1 }}>
+                <Grid item xs={12} sm={6} lg={4} key={graph.id}>
+                  <Card elevation={0} sx={{
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 3,
+                    transition: 'all 0.2s ease-in-out',
+                    '&:hover': {
+                      boxShadow: 4,
+                      borderColor: 'primary.main'
+                    }
+                  }}>
+                    <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}>
                       <Checkbox
                         checked={selectedGraphs.includes(graph.id)}
                         onChange={() => handleSelectGraph(graph.id)}
                         size="small"
                       />
                     </Box>
-                    <CardContent sx={{ pt: 5 }}>
-                      <Typography variant="h6" component="h2">
-                        {graph.name}
-                      </Typography>
-                      <Typography variant="body2">
-                        {t('node_count')} {graph.nodes?.length || 0}
-                      </Typography>
-                      <Typography variant="body2">
-                        {t('edge_count')} {graph.edges?.length || 0}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        {t('created_at')} {graph.createdAt ? new Date(graph.createdAt).toLocaleDateString(locale) : t('unknown')}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        {t('updated_at')} {graph.updatedAt ? new Date(graph.updatedAt).toLocaleDateString(locale) : t('unknown')}
-                      </Typography>
+                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 3, pr: 4 }}>
+                        <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                          {graph.name}
+                        </Typography>
+                        {/* Optional Tag pill could go here if graph types were supported */}
+                        {/* <Box component="span" sx={{ ml: 1, px: 1, py: 0.25, bgcolor: 'action.hover', color: 'text.secondary', borderRadius: 1, fontSize: '0.625rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Network</Box> */}
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Nodes</Typography>
+                          <Typography variant="body2" fontWeight="500">{graph.nodes?.length || 0}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Edges</Typography>
+                          <Typography variant="body2" fontWeight="500">{graph.edges?.length || 0}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Created</Typography>
+                          <Typography variant="body2" fontWeight="500">{graph.createdAt ? new Date(graph.createdAt).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }) : t('unknown')}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Updated</Typography>
+                          <Typography variant="body2" fontWeight="500">{graph.updatedAt ? new Date(graph.updatedAt).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }) : t('unknown')}</Typography>
+                        </Grid>
+                      </Grid>
                     </CardContent>
-                    <CardActions>
-                      <Button size="small" onClick={() => handleEdit(graph.id)}>
-                        {t('view_edit')}
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => handleDownload(graph)}
-                        startIcon={<DownloadIcon fontSize="small" />}
-                      >
-                        {t('download')}
-                      </Button>
-                      <Button size="small" color="error" onClick={() => handleDelete(graph.id)}>
-                        {t('delete')}
-                      </Button>
-                    </CardActions>
+
+                    <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'transparent' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          disableElevation
+                          onClick={() => handleEdit(graph.id)}
+                          startIcon={<VisibilityIcon fontSize="small" />}
+                          sx={{ bgcolor: 'primary.50', color: 'primary.main', '&:hover': { bgcolor: 'primary.100' }, minWidth: 'auto', px: 2, py: 0.5, textTransform: 'none', fontWeight: 'bold' }}
+                        >
+                          View
+                        </Button>
+                        <Tooltip title={t('download')}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDownload(graph)}
+                            sx={{ border: '1px solid', borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}
+                          >
+                            <DownloadIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                      <Tooltip title={t('delete')}>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(graph.id)}
+                          sx={{ '&:hover': { bgcolor: 'error.lighter' } }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </Card>
                 </Grid>
               ))}
             </Grid>
 
-            {/* bottom pagination controls */}
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            {/* Pagination Bottom */}
+            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
               <Button
                 variant="outlined"
-                size="small"
-                aria-label={t('previous_page')}
+                color="inherit"
+                startIcon={<ArrowBackIcon />}
                 onClick={() => setPageAndSearch(page - 1)}
                 disabled={page === 1 || loading}
+                sx={{ textTransform: 'none', fontWeight: 600, borderColor: 'divider' }}
               >
-                {t('prev')}
+                Previous
               </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Button variant="contained" disableElevation sx={{ minWidth: 40, width: 40, height: 40, p: 0, fontWeight: 'bold' }}>{page}</Button>
+              </Box>
               <Button
                 variant="outlined"
-                size="small"
-                sx={{ ml: 1 }}
-                aria-label={t('next_page')}
+                color="inherit"
+                endIcon={<ArrowBackIcon sx={{ transform: 'rotate(180deg)' }} />}
                 onClick={() => setPageAndSearch(page + 1)}
                 disabled={page * pageSize >= total || loading}
+                sx={{ textTransform: 'none', fontWeight: 600, borderColor: 'divider' }}
               >
-                {t('next')}
+                Next
               </Button>
             </Box>
           </>

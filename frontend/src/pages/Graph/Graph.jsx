@@ -9,6 +9,10 @@ import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
 import LegendPanel from '../../components/LegendPanel';
 import { Box, Paper, Button, TextField, Stack, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab, Autocomplete, Checkbox } from '@mui/material';
+import FolderIcon from '@mui/icons-material/Folder';
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import PersonIcon from '@mui/icons-material/Person';
+import InfoIcon from '@mui/icons-material/Info';
 import { useI18n } from '../../context/I18nContext';
 
 const Graph = () => {
@@ -550,15 +554,31 @@ const Graph = () => {
 
             <TopBar title=""
                 actions={[
-                    { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary' },
-                    { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary' },
-                    { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary' },
-                    { label: t('array_algorithms'), onClick: () => navigate('/array-algorithms'), variant: 'contained', color: 'primary' },
-                    { label: t('tree_algorithms'), onClick: () => navigate('/tree-algorithms'), variant: 'contained', color: 'primary' },
-                    { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary' },
-                    { label: t('bulk_tools_title'), onClick: () => setShowBulkTools(true), variant: 'contained', color: 'secondary', isButton: true },
-                    { label: t('add_legend'), onClick: () => setShowLegendEditor(v => !v), variant: 'contained', color: 'primary', isButton: true },
-                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error' }
+                    {
+                        label: 'Graphs',
+                        icon: <FolderIcon />,
+                        menuItems: [
+                            { label: t('my_graphs'), onClick: () => navigate('/graph-list'), ariaLabel: t('graph-list') },
+                            { label: t('create_graph'), onClick: () => navigate('/graph-creation'), ariaLabel: t('create_graph') }
+                        ]
+                    },
+                    {
+                        label: 'Algorithms',
+                        icon: <DataArrayIcon />,
+                        menuItems: [
+                            { label: t('array_algorithms'), onClick: () => navigate('/array-algorithms'), ariaLabel: t('array_algorithms') },
+                            { label: t('tree_algorithms'), onClick: () => navigate('/tree-algorithms'), ariaLabel: t('tree_algorithms') }
+                        ]
+                    },
+                    { label: t('unhcr_info'), icon: <InfoIcon />, onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+                    {
+                        label: 'User',
+                        icon: <PersonIcon />,
+                        menuItems: [
+                            { label: t('profile'), onClick: () => navigate('/profile'), ariaLabel: t('profile') },
+                            { label: t('logout'), onClick: handleLogout, color: 'error', ariaLabel: t('logout') }
+                        ]
+                    }
                 ]}
             />
 
@@ -587,6 +607,8 @@ const Graph = () => {
                         setShowEdgeWeights={setShowEdgeWeights}
                         algorithmResult={algorithmResult}
                         setAlgorithmResult={setAlgorithmResult}
+                        onOpenBulkTools={() => setShowBulkTools(true)}
+                        onOpenLegendEditor={() => setShowLegendEditor(v => !v)}
                     />
                 </Box>
 

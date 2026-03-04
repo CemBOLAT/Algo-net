@@ -21,6 +21,11 @@ import {
     Divider
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import FolderIcon from '@mui/icons-material/Folder';
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import PersonIcon from '@mui/icons-material/Person';
+import InfoIcon from '@mui/icons-material/Info';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TopBar from '../../components/TopBar';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../context/I18nContext';
@@ -194,17 +199,17 @@ const referenceLinks = [
 // 2) COMPONENT
 // ------------------------------------------------------
 
-const handleArray = () => {
-    navigate('/array-algorithms');
-};
-
-const handleTree = () => {
-    navigate('/tree-algorithms');
-};
-
 const Unhcr = () => {
     const { t, language } = useI18n();
     const navigate = useNavigate();
+
+    const handleArray = () => {
+        navigate('/array-algorithms');
+    };
+
+    const handleTree = () => {
+        navigate('/tree-algorithms');
+    };
 
     // Get translations for current language, fallback to Turkish
     const translations = unhcrTranslations[language] || unhcrTranslations.tr;
@@ -217,22 +222,39 @@ const Unhcr = () => {
             <TopBar
                 title={tt('unhcr_info')}
                 actions={[
-                    { label: t('go_to_canvas') || 'Canvas', onClick: () => navigate('/graph'), variant: 'contained', color: 'primary' },
-                    { label: t('profile') || 'Profil', onClick: () => navigate('/profile'), variant: 'contained', color: 'primary' },
-                    { label: t('create_graph') || 'Graf Oluştur', onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary' },
-                    { label: t('my_graphs') || 'Graflerim', onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary' },
-                    { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
-                    { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-
+                    { tooltip: t('go_to_canvas') || 'Canvas', icon: <ArrowBackIcon />, onClick: () => navigate('/graph'), color: 'inherit', ariaLabel: t('go_to_canvas') },
+                    {
+                        label: 'Graphs',
+                        icon: <FolderIcon />,
+                        menuItems: [
+                            { label: t('my_graphs') || 'Graflerim', onClick: () => navigate('/graph-list'), ariaLabel: t('graph-list') },
+                            { label: t('create_graph') || 'Graf Oluştur', onClick: () => navigate('/graph-creation'), ariaLabel: t('create_graph') }
+                        ]
+                    },
+                    {
+                        label: 'Algorithms',
+                        icon: <DataArrayIcon />,
+                        menuItems: [
+                            { label: t('array_algorithms'), onClick: handleArray, ariaLabel: t('array_algorithms') },
+                            { label: t('tree_algorithms'), onClick: handleTree, ariaLabel: t('tree_algorithms') }
+                        ]
+                    },
                     {
                         label: tt('download_pdf_unhcr') || 'PDF Görüntüle',
+                        icon: <DownloadIcon />,
                         onClick: () => window.open(pdfUrl, '_blank'),
                         variant: 'contained',
                         color: 'primary',
                         isButton: true
                     },
-
-                    { label: t('logout') || 'Çıkış', onClick: () => navigate('/login'), variant: 'contained', color: 'error' }
+                    {
+                        label: 'User',
+                        icon: <PersonIcon />,
+                        menuItems: [
+                            { label: t('profile') || 'Profil', onClick: () => navigate('/profile'), ariaLabel: t('profile') },
+                            { label: t('logout') || 'Çıkış', onClick: () => navigate('/login'), color: 'error', ariaLabel: t('logout') }
+                        ]
+                    }
                 ]}
             />
 

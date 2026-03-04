@@ -1,6 +1,6 @@
-import React from 'react';
-import { Paper, Typography, Box, Tooltip, IconButton, Collapse, FormControl, TextField, Button, Autocomplete, Checkbox } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import React, { useMemo } from 'react';
+import { Paper, Typography, Box, TextField, Button, Autocomplete, Checkbox } from '@mui/material';
+import MovingIcon from '@mui/icons-material/Moving';
 import EdgeList from './EdgeList';
 import { useI18n } from '../../../context/I18nContext';
 
@@ -13,81 +13,135 @@ const EdgesPanel = ({
 	addEdge, openWeightEditor, toggleEdgeDelete, deleteEdge
 }) => {
 	const { t } = useI18n();
+
+	// Pre-build options for Autocomplete to ensure stability
+	const vertexOptions = useMemo(() => vertices || [], [vertices]);
+
 	return (
-		<Paper className="tm-glass" sx={{ flex: 1, p: 2 }} elevation={2}>
-			<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-				<Typography variant="h6">{t('edges_title')}</Typography>
-				<Box>
-					<Tooltip title={edgeFormOpen ? 'Kapat' : 'Kenar Ekle'}>
-						<IconButton
-							onClick={() => setEdgeFormOpen((s) => !s)}
-							sx={{ transform: edgeFormOpen ? 'rotate(45deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}
-						>
-							<AddIcon />
-						</IconButton>
-					</Tooltip>
-				</Box>
+		<Paper elevation={0} sx={{
+			display: 'flex',
+			flexDirection: 'column',
+			borderRadius: 3,
+			border: '1px solid',
+			borderColor: 'divider',
+			bgcolor: 'background.paper',
+			overflow: 'hidden'
+		}}>
+			<Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+				<MovingIcon color="primary" fontSize="small" />
+				<Typography variant="subtitle1" fontWeight="700">Edges</Typography>
 			</Box>
 
-			<Collapse in={edgeFormOpen}>
-				<Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center' }}>
-					<Autocomplete
-						size="small"
-						options={vertices}
-						value={edgeFrom}
-						onChange={(e, val) => setEdgeFrom(val || '')}
-						sx={{ minWidth: 140 }}
-						renderInput={(params) => <TextField {...params} label={t('from_label')} />}
-					/>
+			<Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+				<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+					<Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 2 }}>
+						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+							<Typography variant="caption" fontWeight="600" color="text.secondary">Source Node</Typography>
+							<Autocomplete
+								size="small"
+								options={vertexOptions}
+								value={edgeFrom}
+								onChange={(e, val) => setEdgeFrom(val || '')}
+								clearIcon={null}
+								renderInput={(params) => (
+									<TextField
+										{...params}
+										placeholder="Select node"
+										sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+									/>
+								)}
+							/>
+						</Box>
+						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+							<Typography variant="caption" fontWeight="600" color="text.secondary">Target Node</Typography>
+							<Autocomplete
+								multiple
+								size="small"
+								options={vertexOptions}
+								disableCloseOnSelect
+								value={Array.isArray(edgeTo) ? edgeTo : []}
+								onChange={(e, val) => setEdgeTo(val)}
+								getOptionLabel={(option) => String(option)}
+								isOptionEqualToValue={(option, value) => option === value}
+								renderOption={(props, option, { selected }) => (
+									<li {...props} key={option}>
+										<Checkbox style={{ marginRight: 8 }} checked={selected} />
+										{option}
+									</li>
+								)}
+								renderInput={(params) => (
+									<TextField
+										{...params}
+										placeholder="Select nodes"
+										sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+									/>
+								)}
+							/>
+						</Box>
+					</Box>
 
-					<Autocomplete
-						multiple
-						size="small"
-						options={vertices}
-						disableCloseOnSelect
-						value={Array.isArray(edgeTo) ? edgeTo : []}
-						onChange={(e, val) => setEdgeTo(val)}
-						getOptionLabel={(option) => option}
-						sx={{ minWidth: 200, maxWidth: 350 }}
-						renderOption={(props, option, { selected }) => {
-							const { key, ...otherProps } = props;
-							return (
-								<li key={key} {...otherProps}>
-									<Checkbox style={{ marginRight: 8 }} checked={selected} />
-									{option}
-								</li>
-							);
-						}}
-						renderInput={(params) => (
-							<TextField {...params} label={t('to_label')} placeholder="Add target..." />
+					<Box sx={{ display: 'grid', gridTemplateColumns: weighted ? '1fr auto' : 'auto', gap: 2, alignItems: 'end' }}>
+						{weighted && (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+								<Typography variant="caption" fontWeight="600" color="text.secondary">Weight (Required)</Typography>
+								<TextField
+									size="small"
+									type="number"
+									placeholder="1.0"
+									value={edgeWeight}
+									onChange={(e) => setEdgeWeight(e.target.value)}
+									sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+								/>
+							</Box>
 						)}
-					/>
+						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+							<Typography variant="caption" fontWeight="600" color="text.secondary">Color</Typography>
+							<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default', overflow: 'hidden' }}>
+								<input
+									type="color"
+									value={edgeColor || '#1985d2'}
+									onChange={(e) => setEdgeColor(e.target.value)}
+									style={{ width: '200%', height: '200%', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent', alignSelf: 'center', justifySelf: 'center' }}
+									title="Edge Color"
+								/>
+							</Box>
+						</Box>
+					</Box>
 
-					{weighted ? (
-						<TextField size="small" label={t('edge_weight_label')} type="number" value={edgeWeight} onChange={(e) => setEdgeWeight(e.target.value)} />
-					) : null}
-					<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-						<input
-							type="color"
-							value={edgeColor || '#1985d2'}
-							onChange={(e) => setEdgeColor(e.target.value)}
-							style={{ width: '32px', height: '32px', border: 'none', padding: 0, cursor: 'pointer', background: 'transparent' }}
-							title="Edge Color"
+					<Button
+						fullWidth
+						sx={{
+							bgcolor: 'primary.50',
+							color: 'primary.main',
+							'&:hover': { bgcolor: 'primary.100' },
+							borderRadius: 2,
+							fontWeight: 'bold',
+							textTransform: 'none',
+							border: '1px solid',
+							borderColor: 'primary.200',
+							py: 1.25
+						}}
+						onClick={addEdge}
+					>
+						Connect Nodes
+					</Button>
+				</Box>
+
+				<Box sx={{ mt: 1 }}>
+					<Typography variant="body2" fontWeight="700" sx={{ mb: 2 }}>Connection Preview</Typography>
+					<Box sx={{ border: '2px dashed', borderColor: 'divider', borderRadius: 3, p: 1, minHeight: 120 }}>
+						<EdgeList
+							edges={edges}
+							edgePage={edgePage}
+							setEdgePage={setEdgePage}
+							edgesPerPage={edgesPerPage}
+							openWeightEditor={openWeightEditor}
+							toggleEdgeDelete={toggleEdgeDelete}
+							deleteEdge={deleteEdge}
 						/>
 					</Box>
-					<Button className="tm-modern-btn tm-modern-primary" onClick={addEdge} startIcon={<AddIcon />}>{t('add_label')}</Button>
 				</Box>
-			</Collapse>
-
-			<EdgeList
-				edges={edges}
-				edgePage={edgePage}
-				setEdgePage={setEdgePage}
-				edgesPerPage={edgesPerPage}
-				openWeightEditor={openWeightEditor}
-				toggleEdgeDelete={toggleEdgeDelete}
-				deleteEdge={deleteEdge}
-			/>
+			</Box>
 		</Paper>
 	);
 };

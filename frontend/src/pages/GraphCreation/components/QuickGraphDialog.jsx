@@ -2,18 +2,17 @@ import React, { useMemo, useState } from 'react';
 import { useI18n } from '../../../context/I18nContext';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TextField,
-  Typography
+  Typography,
+  IconButton,
+  MenuItem
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import HubIcon from '@mui/icons-material/Hub';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const QuickGraphDialog = ({
   open,
@@ -140,16 +139,65 @@ const QuickGraphDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth >
-      <DialogTitle>{t('quickgraph_title')}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <FormControl fullWidth>
-            <InputLabel>{t('quickgraph_graph_type')}</InputLabel>
-            <Select
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }
+      }}
+    >
+      {/* Header */}
+      <Box sx={{
+        px: 3,
+        py: 2,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            bgcolor: 'primary.50',
+            p: 1,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <HubIcon color="primary" fontSize="small" />
+          </Box>
+          <Typography variant="h6" fontWeight="700" color="text.primary" sx={{ letterSpacing: '-0.02em' }}>
+            {t('quickgraph_title')}
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
+      {/* Content */}
+      <DialogContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography variant="caption" fontWeight="600" color="text.secondary">
+              {t('quickgraph_graph_type')}
+            </Typography>
+            <TextField
+              select
+              size="small"
               value={quickGraphType}
-              label={t('quickgraph_graph_type')}
               onChange={handleTypeChange}
+              fullWidth
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
             >
               <MenuItem value="full">{t('quickgraph_type_full')}</MenuItem>
               <MenuItem value="tree">{t('quickgraph_type_tree')}</MenuItem>
@@ -159,185 +207,261 @@ const QuickGraphDialog = ({
               <MenuItem value="grid">{t('quickgraph_type_grid')}</MenuItem>
               <MenuItem value="random">{t('quickgraph_type_random')}</MenuItem>
               <MenuItem value="Melih"> {t('quickgraph_Ahmet_Melih')}</MenuItem>
-            </Select>
-          </FormControl>
+            </TextField>
+          </Box>
 
           {/* Layout: only for full; others auto in Graph.jsx */}
           {quickGraphType === 'full' && (
-            <FormControl fullWidth>
-              <InputLabel>{t('quickgraph_layout')}</InputLabel>
-              <Select
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="caption" fontWeight="600" color="text.secondary">
+                {t('quickgraph_layout')}
+              </Typography>
+              <TextField
+                select
+                size="small"
                 value={quickGraphLayout || 'circular'}
-                label={t('quickgraph_layout')}
                 onChange={(e) => setQuickGraphLayout(e.target.value)}
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
               >
                 <MenuItem value="circular">{t('quickgraph_layout_circular')}</MenuItem>
                 <MenuItem value="grid">{t('quickgraph_layout_grid')}</MenuItem>
-              </Select>
-            </FormControl>
+              </TextField>
+            </Box>
           )}
 
           {/* n input for non-bipartite */}
           {quickGraphType !== 'bipartite' && quickGraphType !== 'grid' && quickGraphType !== 'Melih' && (
-            <TextField
-              label={t('quickgraph_node_count')}
-              type="number"
-              fullWidth
-              value={quickGraphNodeCount}
-              onChange={handleNodeCountChange}
-              inputProps={{ min: 1, max: 200 }}
-              helperText={t('quickgraph_node_helper')} // Bu güncellenecek
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="caption" fontWeight="600" color="text.secondary">
+                {t('quickgraph_node_count')}
+              </Typography>
+              <TextField
+                type="number"
+                size="small"
+                fullWidth
+                value={quickGraphNodeCount}
+                onChange={handleNodeCountChange}
+                inputProps={{ min: 1, max: 200 }}
+                helperText={t('quickgraph_node_helper')}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+              />
+            </Box>
           )}
 
           {quickGraphType === 'tree' && (
-            <TextField
-              label={t('quickgraph_tree_k')}
-              type="number"
-              fullWidth
-              value={treeChildCount}
-              onChange={(e) => { setTreeChildCount(Number(e.target.value)); }}
-              inputProps={{ min: 1, max: 10 }}
-              helperText={t('quickgraph_tree_k_helper')} // Bu güncellenecek
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="caption" fontWeight="600" color="text.secondary">
+                {t('quickgraph_tree_k')}
+              </Typography>
+              <TextField
+                type="number"
+                size="small"
+                fullWidth
+                value={treeChildCount}
+                onChange={(e) => { setTreeChildCount(Number(e.target.value)); }}
+                inputProps={{ min: 1, max: 10 }}
+                helperText={t('quickgraph_tree_k_helper')}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+              />
+            </Box>
           )}
 
           {quickGraphType === 'star' && (
-            <TextField
-              label={`${t('quickgraph_star_centers')} (1..${Math.max(1, Number(quickGraphNodeCount || 1) - 1)})`}
-              type="number"
-              fullWidth
-              value={starCenterCount}
-              onChange={(e) => { setStarCenterCount(Number(e.target.value)); }}
-              inputProps={{ min: 1, max: Math.max(1, Number(quickGraphNodeCount || 1) - 1) }}
-              helperText={t('quickgraph_star_centers_helper')} // Bu güncellenecek
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="caption" fontWeight="600" color="text.secondary">
+                {`${t('quickgraph_star_centers')} (1..${Math.max(1, Number(quickGraphNodeCount || 1) - 1)})`}
+              </Typography>
+              <TextField
+                type="number"
+                size="small"
+                fullWidth
+                value={starCenterCount}
+                onChange={(e) => { setStarCenterCount(Number(e.target.value)); }}
+                inputProps={{ min: 1, max: Math.max(1, Number(quickGraphNodeCount || 1) - 1) }}
+                helperText={t('quickgraph_star_centers_helper')}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+              />
+            </Box>
           )}
 
           {quickGraphType === 'grid' && (
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label={t('quickgraph_grid_rows')}
-                type="number"
-                fullWidth
-                value={gridRows}
-                onChange={(e) => { setGridRows(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 20 }}
-                helperText={t('quickgraph_grid_rows_helper')} // Bu güncellenecek
-              />
-              <TextField
-                label={t('quickgraph_grid_cols')}
-                type="number"
-                fullWidth
-                value={gridCols}
-                onChange={(e) => { setGridCols(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 20 }}
-                helperText={t('quickgraph_grid_cols_helper')} // Bu güncellenecek
-              />
-              <TextField
-                label={t('quickgraph_grid_weight')}
-                type="number"
-                fullWidth
-                value={gridWeight}
-                onChange={(e) => { setGridWeight(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 100 }}
-                helperText={t('quickgraph_grid_weight_helper')} // Bu güncellenecek
-              />
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_grid_rows')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridRows}
+                  onChange={(e) => { setGridRows(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 20 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_grid_cols')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridCols}
+                  onChange={(e) => { setGridCols(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 20 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_grid_weight')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridWeight}
+                  onChange={(e) => { setGridWeight(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 100 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
             </Box>
           )}
 
           {quickGraphType === 'Melih' && (
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label={t('quickgraph_Pn')}
-                type="number"
-                fullWidth
-                value={pathLength}
-                onChange={(e) => { setpathLength(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 100 }}
-                helperText={t('quickgraph_Pn_helper')} // Bu güncellenecek
-              />
-              <TextField
-                label={t('quickgraph_Bn')}
-                type="number"
-                fullWidth
-                value={graphPathLength}
-                onChange={(e) => { setgraphPathLength(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 100 }}
-                helperText={t('quickgraph_Bn_helper')} // Bu güncellenecek
-              />
-              <TextField
-                label={t('quickgraph_Kn')}
-                type="number"
-                fullWidth
-                value={graphSize}
-                onChange={(e) => { setgraphSize(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 100 }}
-                helperText={t('quickgraph_Kn_helper')} // Bu güncellenecek
-              />
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_Pn')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={pathLength}
+                  onChange={(e) => { setpathLength(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 100 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_Bn')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={graphPathLength}
+                  onChange={(e) => { setgraphPathLength(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 100 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_Kn')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={graphSize}
+                  onChange={(e) => { setgraphSize(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 100 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
             </Box>
           )}
 
           {quickGraphType === 'bipartite' && (
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label={t('quickgraph_bipartite_a')}
-                type="number"
-                fullWidth
-                value={bipartiteA}
-                onChange={(e) => { setBipartiteA(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 200 }}
-                helperText={t('quickgraph_bipartite_a_helper')} // Bu güncellenecek
-              />
-              <TextField
-                label={t('quickgraph_bipartite_b')}
-                type="number"
-                fullWidth
-                value={bipartiteB}
-                onChange={(e) => { setBipartiteB(Number(e.target.value)); }}
-                inputProps={{ min: 1, max: 200 }}
-                helperText={t('quickgraph_bipartite_b_helper')} // Bu güncellenecek
-              />
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_bipartite_a')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={bipartiteA}
+                  onChange={(e) => { setBipartiteA(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 200 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="caption" fontWeight="600" color="text.secondary">{t('quickgraph_bipartite_b')}</Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={bipartiteB}
+                  onChange={(e) => { setBipartiteB(Number(e.target.value)); }}
+                  inputProps={{ min: 1, max: 200 }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.default' } }}
+                />
+              </Box>
             </Box>
           )}
 
           {quickGraphType === 'random' && (
-            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-              <Typography variant="subtitle2">{t('quickgraph_random_info_title')}</Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {t('quickgraph_random_info_line1')}
-              </Typography>
-              <Typography variant="body2">
-                {t('quickgraph_random_info_line2')}
-              </Typography>
-              <Typography variant="body2">
-                {t('quickgraph_random_info_line3')}
-              </Typography>
-              <Typography variant="body2">
-                {t('quickgraph_random_info_line4')}
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {t('quickgraph_random_info_line5')}
-              </Typography>
-
+            <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight="700">{t('quickgraph_random_info_title')}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t('quickgraph_random_info_line1')}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('quickgraph_random_info_line2')}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('quickgraph_random_info_line3')}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('quickgraph_random_info_line4')}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t('quickgraph_random_info_line5')}</Typography>
             </Box>
           )}
 
-          <Typography variant="caption" color="text.secondary">
-            {edgeSummary}
-          </Typography>
-
+          {edgeSummary && (
+            <Box sx={{
+              bgcolor: 'primary.50',
+              border: '1px solid',
+              borderColor: 'primary.200',
+              borderRadius: 2,
+              p: 2,
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 1.5
+            }}>
+              <InfoOutlinedIcon color="primary" fontSize="small" />
+              <Box>
+                <Typography variant="body2" fontWeight="600" color="primary.800">Preview Summary</Typography>
+                <Typography variant="body2" color="text.secondary">{edgeSummary}</Typography>
+              </Box>
+            </Box>
+          )}
 
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>
-          {t('quickgraph_cancel')}
+
+      {/* Footer */}
+      <Box sx={{
+        px: 3,
+        py: 2.5,
+        bgcolor: 'background.default',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: 1.5,
+        borderTop: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Button
+          onClick={onClose}
+          sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none', '&:hover': { bgcolor: 'action.hover' } }}
+        >
+          Cancel
         </Button>
-        <Button onClick={handleCreate} variant="contained">
-          {t('quickgraph_create')}
+        <Button
+          onClick={handleCreate}
+          variant="contained"
+          sx={{
+            px: 3,
+            py: 1,
+            borderRadius: 2,
+            fontWeight: 'bold',
+            textTransform: 'none',
+            boxShadow: '0 4px 6px -1px rgba(19, 55, 236, 0.2)'
+          }}
+        >
+          Create Graph
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 };

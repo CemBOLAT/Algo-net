@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, TextField, Select, MenuItem, FormControl } from '@mui/material';
-import { Edit, Label, Balance, TripOrigin, Place, PlayArrow, Refresh, Save } from '@mui/icons-material';
+import { Edit, Label, Balance, TripOrigin, Place, PlayArrow, Refresh, Save, BuildCircle, LegendToggle } from '@mui/icons-material';
 import CustomAlgoButton from "./CustomAlgo";
 import RunGraphAlgorithms from "./RunGraphAlgorithms";
 import ResultsPanel from "./ResultsPanel";
@@ -18,6 +18,8 @@ const Sidebar = ({
   showEdgeWeights, setShowEdgeWeights,
   algorithmResult = null,
   setAlgorithmResult = () => { },
+  onOpenBulkTools = () => { },
+  onOpenLegendEditor = () => { },
 }) => {
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
@@ -333,6 +335,63 @@ const Sidebar = ({
               <MenuItem value="package_coloring">{t('package_coloring')}</MenuItem>
             </Select>
           </FormControl>
+        </Box>
+
+        {/* Graph Tools Section */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <Typography sx={sidebarStyles.sectionHeader}>{t('graph_tools') || 'Graph Tools'}</Typography>
+          <Box sx={{ display: 'flex', gap: '8px' }}>
+            <Button
+              onClick={onOpenBulkTools}
+              sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                backgroundColor: 'transparent',
+                color: '#64748b',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: '#f8fafc',
+                },
+              }}
+            >
+              <BuildCircle sx={{ fontSize: '20px' }} />
+              {t('bulk_tools_title') || 'Bulk Tools'}
+            </Button>
+            <Button
+              onClick={onOpenLegendEditor}
+              sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                backgroundColor: 'transparent',
+                color: '#64748b',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: '#f8fafc',
+                },
+              }}
+            >
+              <LegendToggle sx={{ fontSize: '20px' }} />
+              {t('add_legend') || 'Add Legend'}
+            </Button>
+          </Box>
         </Box>
 
         {/* Toggle Buttons */}

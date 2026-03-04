@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { clearTokens } from '../../utils/auth';
 import { Typography, Box, Container, TextField, Button, Paper, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import FolderIcon from '@mui/icons-material/Folder';
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import PersonIcon from '@mui/icons-material/Person';
+import InfoIcon from '@mui/icons-material/Info';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ThemeToggle from '../../components/ThemeToggle';
 import TopBar from '../../components/TopBar';
 import FlashMessage from '../../components/FlashMessage';
@@ -135,7 +140,7 @@ const ArrayAlgorithms = () => {
         }, 700);
         return () => clearInterval(id);
     }, [playing, steps.length]);
-    
+
     React.useEffect(() => {
         if (!fastPlaying) return;
         const id = setInterval(() => {
@@ -271,13 +276,32 @@ const ArrayAlgorithms = () => {
             <TopBar
                 title={t('array_algorithms')}
                 actions={[
-                    { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
-                    { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
-                    { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
-                    { label: t('create_graph'), onClick: () => navigate('/graph-creation'), variant: 'contained', color: 'primary', ariaLabel: t('create_graph') },
-                    { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-                    { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
-                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+                    { tooltip: t('go_to_canvas'), icon: <ArrowBackIcon />, onClick: handleCanvas, color: 'inherit', ariaLabel: t('go_to_canvas') },
+                    {
+                        label: 'Graphs',
+                        icon: <FolderIcon />,
+                        menuItems: [
+                            { label: t('my_graphs'), onClick: () => navigate('/graph-list'), ariaLabel: t('graph-list') },
+                            { label: t('create_graph'), onClick: () => navigate('/graph-creation'), ariaLabel: t('create_graph') }
+                        ]
+                    },
+                    {
+                        label: 'Algorithms',
+                        icon: <DataArrayIcon />,
+                        menuItems: [
+                            { label: t('array_algorithms'), onClick: () => navigate('/array-algorithms'), ariaLabel: t('array_algorithms') },
+                            { label: t('tree_algorithms'), onClick: handleTree, ariaLabel: t('tree_algorithms') }
+                        ]
+                    },
+                    { label: t('unhcr_info'), icon: <InfoIcon />, onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+                    {
+                        label: 'User',
+                        icon: <PersonIcon />,
+                        menuItems: [
+                            { label: t('profile'), onClick: () => navigate('/profile'), ariaLabel: t('profile') },
+                            { label: t('logout'), onClick: handleLogout, color: 'error', ariaLabel: t('logout') }
+                        ]
+                    }
                 ]}
             />
             <Container maxWidth="lg" sx={{ py: 4 }}>

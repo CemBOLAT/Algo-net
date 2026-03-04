@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clearTokens, http } from '../../utils/auth';
-import { Button, Box, Container } from '@mui/material';
+import { Button, Box, Container, Typography } from '@mui/material';
 import FlashMessage from '../../components/FlashMessage';
 import TopBar from '../../components/TopBar';
 import AddIcon from '@mui/icons-material/Add';
@@ -15,6 +15,11 @@ import JsonExampleDialog from './components/JsonExampleDialog';
 import FilePreviewDialog from './components/FilePreviewDialog';
 import QuickGraphDialog from './components/QuickGraphDialog';
 import { useI18n } from '../../context/I18nContext';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import FolderIcon from '@mui/icons-material/Folder';
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import PersonIcon from '@mui/icons-material/Person';
+import InfoIcon from '@mui/icons-material/Info';
 
 // New small components
 import GraphNameOptions from './components/GraphNameOptions';
@@ -881,7 +886,7 @@ const GraphCreation = () => {
     };
 
     return (
-        <Box className="tm-root" sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+        <Box className="tm-root" sx={{ bgcolor: 'background.default', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             {/* hidden .txt file input */}
             <input
                 type="file"
@@ -899,21 +904,49 @@ const GraphCreation = () => {
                 onChange={handleJsonFileChange}
             />
 
-
             <TopBar title={t('create_graph')}
                 actions={[
-                    { label: t('go_to_canvas'), onClick: handleCanvas, variant: 'contained', color: 'primary', ariaLabel: t('go_to_canvas') },
-                    { label: t('profile'), onClick: () => navigate('/profile'), variant: 'contained', color: 'primary', ariaLabel: t('profile') },
-                    { label: t('my_graphs'), onClick: () => navigate('/graph-list'), variant: 'contained', color: 'primary', ariaLabel: t('graph-list') },
-                    { label: t('array_algorithms'), onClick: handleArray, variant: 'contained', color: 'primary', ariaLabel: t('array_algorithms') },
-                    { label: t('tree_algorithms'), onClick: handleTree, variant: 'contained', color: 'primary', ariaLabel: t('tree_algorithms') },
-                    { label: t('unhcr_info'), onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
-                    { label: t('logout'), onClick: handleLogout, variant: 'contained', color: 'error', ariaLabel: t('logout') }
+                    { tooltip: t('go_to_canvas'), icon: <ArrowBackIcon />, onClick: handleCanvas, color: 'inherit', ariaLabel: t('go_to_canvas') },
+                    {
+                        label: 'Graphs',
+                        icon: <FolderIcon />,
+                        menuItems: [
+                            { label: t('my_graphs'), onClick: () => navigate('/graph-list'), ariaLabel: t('graph-list') },
+                            { label: t('create_graph'), onClick: () => navigate('/graph-creation'), ariaLabel: t('create_graph') }
+                        ]
+                    },
+                    {
+                        label: 'Algorithms',
+                        icon: <DataArrayIcon />,
+                        menuItems: [
+                            { label: t('array_algorithms'), onClick: handleArray, ariaLabel: t('array_algorithms') },
+                            { label: t('tree_algorithms'), onClick: handleTree, ariaLabel: t('tree_algorithms') }
+                        ]
+                    },
+                    { label: t('unhcr_info'), icon: <InfoIcon />, onClick: () => navigate('/unhcr'), variant: 'contained', color: 'primary', ariaLabel: t('unhcr_info') },
+                    {
+                        label: 'User',
+                        icon: <PersonIcon />,
+                        menuItems: [
+                            { label: t('profile'), onClick: () => navigate('/profile'), ariaLabel: t('profile') },
+                            { label: t('logout'), onClick: handleLogout, color: 'error', ariaLabel: t('logout') }
+                        ]
+                    }
                 ]}
             />
-            <Container maxWidth="lg" sx={{ py: 4 }}>
-                <FlashMessage severity="error" message={createError} sx={{ mb: 2 }} />
-                <FlashMessage severity="success" message={createSuccess} sx={{ mb: 2 }} />
+
+            <Container maxWidth="lg" sx={{ py: 6, flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <FlashMessage severity="error" message={createError} sx={{ mb: 0 }} />
+                <FlashMessage severity="success" message={createSuccess} sx={{ mb: 0 }} />
+
+                <Box>
+                    <Typography variant="h3" fontWeight="900" color="text.primary" sx={{ letterSpacing: '-0.02em', mb: 1 }}>
+                        {t('create_graph')}
+                    </Typography>
+                    <Typography variant="subtitle1" color="text.secondary">
+                        Configure your graph architecture and node relationships
+                    </Typography>
+                </Box>
 
                 <GraphNameOptions
                     graphName={graphName}
@@ -924,7 +957,7 @@ const GraphCreation = () => {
                     setWeighted={setWeighted}
                 />
 
-                <Box sx={{ display: 'flex', gap: 3 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
                     <VerticesPanel
                         vertexName={vertexName}
                         setVertexName={(v) => { setVertexName(v); if (vertexError) setVertexError(''); }}

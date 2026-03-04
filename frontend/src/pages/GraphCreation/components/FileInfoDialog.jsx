@@ -1,5 +1,7 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box } from '@mui/material';
+import { Dialog, DialogContent, Button, Typography, Box, IconButton } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import IntegrationInstructionsOutlinedIcon from '@mui/icons-material/IntegrationInstructionsOutlined';
 import { useI18n } from '../../../context/I18nContext';
 
 const ColoredFormatLine = ({ vertex, targets }) => {
@@ -21,10 +23,52 @@ const FileInfoDialog = ({ open, onClose, fileInputRef, openWeightedExample, open
   const { t } = useI18n();
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t('file_info_title')}</DialogTitle>
-      <DialogContent dividers>
-        <Typography variant="body1" gutterBottom>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }
+      }}
+    >
+      {/* Header */}
+      <Box sx={{
+        px: 3,
+        py: 2,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            bgcolor: 'primary.50',
+            p: 1,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <IntegrationInstructionsOutlinedIcon color="primary" fontSize="small" />
+          </Box>
+          <Typography variant="h6" fontWeight="700" color="text.primary" sx={{ letterSpacing: '-0.02em' }}>
+            {t('file_info_title')}
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
+      <DialogContent sx={{ p: 3 }}>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
           {t('file_info_desc')}
         </Typography>
 
@@ -56,22 +100,68 @@ const FileInfoDialog = ({ open, onClose, fileInputRef, openWeightedExample, open
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('cancel')}</Button>
-        <Button onClick={openWeightedExample}>{t('file_info_select_weighted')}</Button>
-        <Button onClick={openColoredExample}>{t('file_info_select_colored')}</Button>
-        <Button
-          variant="contained"
-          onClick={() => {
-            onClose();
-            try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch { }
-            fileInputRef.current?.click();
-          }}
-        >
-          {t('weighted_example_select_file')}
-        </Button>
-        <Button variant="contained" onClick={openJsonExample}>{t('file_info_select_json')}</Button>
-      </DialogActions>
+
+      <Box sx={{
+        px: 3,
+        py: 2.5,
+        bgcolor: 'background.default',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.5,
+        borderTop: '1px solid',
+        borderColor: 'divider'
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
+          <Button
+            variant="outlined"
+            onClick={openWeightedExample}
+            sx={{ borderRadius: 2, fontWeight: 'bold', textTransform: 'none', borderColor: 'divider', color: 'text.primary' }}
+          >
+            {t('file_info_select_weighted')}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={openColoredExample}
+            sx={{ borderRadius: 2, fontWeight: 'bold', textTransform: 'none', borderColor: 'divider', color: 'text.primary' }}
+          >
+            {t('file_info_select_colored')}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={openJsonExample}
+            sx={{ borderRadius: 2, fontWeight: 'bold', textTransform: 'none', borderColor: 'divider', color: 'text.primary' }}
+          >
+            {t('file_info_select_json')}
+          </Button>
+        </Box>
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 1 }}>
+          <Button
+            onClick={onClose}
+            sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none', '&:hover': { bgcolor: 'action.hover' } }}
+          >
+            {t('cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              onClose();
+              try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch { }
+              fileInputRef.current?.click();
+            }}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              fontWeight: 'bold',
+              textTransform: 'none',
+              boxShadow: '0 4px 6px -1px rgba(19, 55, 236, 0.2)'
+            }}
+          >
+            {t('weighted_example_select_file')}
+          </Button>
+        </Box>
+      </Box>
     </Dialog>
   );
 };
