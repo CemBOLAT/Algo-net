@@ -1,4 +1,4 @@
-﻿import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
@@ -317,8 +317,15 @@ const GraphCanvas = ({
               const isSelected = selectedEdge && selectedEdge.id === edge.id;
               const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : `${n.label}`;
 
+              const handleMouseEnter = () => {
+                if (stageRef.current) stageRef.current.container().style.cursor = 'pointer';
+              };
+              const handleMouseLeave = () => {
+                if (stageRef.current) stageRef.current.container().style.cursor = 'default';
+              };
+
               return (
-                <Group key={edge.id}>
+                <Group key={edge.id} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
                   <Line
                     points={[sx, sy, c1x, c1y, c2x, c2y, ex, ey]} tension={0.5}
                     stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE}
@@ -338,12 +345,19 @@ const GraphCanvas = ({
             const key = `${minId}__${maxId}`;
             const groupAll = parallelGroups.get(key) || [edge];
 
+            const handleMouseEnter = () => {
+              if (stageRef.current) stageRef.current.container().style.cursor = 'pointer';
+            };
+            const handleMouseLeave = () => {
+              if (stageRef.current) stageRef.current.container().style.cursor = 'default';
+            };
+
             if (groupAll.length === 1) {
               const isSelected = selectedEdge && selectedEdge.id === edge.id;
               const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : '';
               const mx = (sx0 + ex0) / 2; const my = (sy0 + ey0) / 2;
               return (
-                <Group key={edge.id}>
+                <Group key={edge.id} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
                   <Line points={[sx0, sy0, ex0, ey0]} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
                   {edge.directed && <Arrow points={[sx0, sy0, ex0, ey0]} pointerLength={10} pointerWidth={8} fill={isSelected ? '#f59e0b' : (edge.color || '#999')} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} listening={false} />}
                   {showWeights && labelText && <Text x={mx} y={my - 10} text={labelText} fontSize={11} fill="#333" align="center" offsetX={labelText.length * 3} listening={false} />}
@@ -381,7 +395,7 @@ const GraphCanvas = ({
             const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : '';
 
             return (
-              <Group key={edge.id}>
+              <Group key={edge.id} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
                 {edge.directed ? (
                   <Arrow points={[sx, sy, cx, cy, ex, ey]} tension={0.5} pointerLength={8} pointerWidth={6} fill={isSelected ? '#f59e0b' : (edge.color || '#999')} stroke={isSelected ? '#f59e0b' : (edge.color || '#999')} strokeWidth={EDGE_STROKE} hitStrokeWidth={10} listening={!disabled} onClick={(e) => { e.cancelBubble = true; if (!disabled) { setSelectedEdge(edge); setSelectedNode(null); } }} />
                 ) : (
@@ -402,6 +416,12 @@ const GraphCanvas = ({
               x={draggingPositions[node.id]?.x ?? node.x}
               y={draggingPositions[node.id]?.y ?? node.y}
               draggable={!disabled}
+              onMouseEnter={() => {
+                if (stageRef.current) stageRef.current.container().style.cursor = 'pointer';
+              }}
+              onMouseLeave={() => {
+                if (stageRef.current) stageRef.current.container().style.cursor = 'default';
+              }}
               onDragStart={() => {
                 nodeDraggingRef.current = true;
                 saveToHistory();

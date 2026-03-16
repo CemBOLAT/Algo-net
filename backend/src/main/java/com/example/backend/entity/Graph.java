@@ -44,7 +44,14 @@ public class Graph {
     @Column(name = "has_legend")
     private Boolean hasLegend = false;
 
-    public Graph() {}
+    @Column(name = "show_node_labels")
+    private Boolean showNodeLabels = true;
+
+    @Column(name = "show_edge_weights")
+    private Boolean showEdgeWeights = true;
+
+    public Graph() {
+    }
 
     public Graph(String name, User user) {
         this.name = name;
@@ -63,30 +70,91 @@ public class Graph {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public String getName() {
+        return name;
+    }
 
-    public List<Node> getNodes() { return nodes; }
-    public void setNodes(List<Node> nodes) { this.nodes = nodes; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public List<Edge> getEdges() { return edges; }
-    public void setEdges(List<Edge> edges) { this.edges = edges; }
+    public User getUser() {
+        return user;
+    }
 
-    public List<LegendEntry> getLegendEntries() { return legendEntries; }
-    public void setLegendEntries(List<LegendEntry> legendEntries) { this.legendEntries = legendEntries; }
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public List<Node> getNodes() {
+        return nodes;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setNodes(List<Node> nodes) {
+        this.nodes = nodes;
+    }
 
-    public boolean isHasLegend() { return Boolean.TRUE.equals(hasLegend); }
-    public void setHasLegend(Boolean hasLegend) { this.hasLegend = hasLegend; }
+    public List<Edge> getEdges() {
+        return edges;
+    }
+
+    public void setEdges(List<Edge> edges) {
+        this.edges = edges;
+    }
+
+    public List<LegendEntry> getLegendEntries() {
+        return legendEntries;
+    }
+
+    public void setLegendEntries(List<LegendEntry> legendEntries) {
+        this.legendEntries = legendEntries;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public boolean isHasLegend() {
+        return Boolean.TRUE.equals(hasLegend);
+    }
+
+    public void setHasLegend(Boolean hasLegend) {
+        this.hasLegend = hasLegend;
+    }
+
+    public Boolean getShowNodeLabels() {
+        return showNodeLabels;
+    }
+
+    public void setShowNodeLabels(Boolean showNodeLabels) {
+        this.showNodeLabels = showNodeLabels;
+    }
+
+    public Boolean getShowEdgeWeights() {
+        return showEdgeWeights;
+    }
+
+    public void setShowEdgeWeights(Boolean showEdgeWeights) {
+        this.showEdgeWeights = showEdgeWeights;
+    }
 }

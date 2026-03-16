@@ -238,6 +238,7 @@ const translations = {
     save_btn: 'Save',
     saving_btn: 'Saving...',
     cancel_btn: 'Cancel',
+    problems_algorithms: 'Problems/Algorithms',
     algorithms_title: 'Algorithms',
     dfs: 'Depth First Search (DFS)',
     bfs: 'Breadth First Search (BFS)',

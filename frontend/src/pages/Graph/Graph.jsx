@@ -62,6 +62,7 @@ const Graph = () => {
     const [bulkEdgeTo, setBulkEdgeTo] = useState([]);
     const [bulkEdgeWeight, setBulkEdgeWeight] = useState('');
     const [bulkEdgeColor, setBulkEdgeColor] = useState('#1985d2');
+    const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
 
     // Visibility States
     const [showNodeLabels, setShowNodeLabels] = useState(true);
@@ -284,6 +285,7 @@ const Graph = () => {
                     from: edge.fromNode,
                     to: edge.toNode,
                     weight: hasWeight ? edge.weight : undefined,
+                    label: edge.label || '',
                     directed: edge.isDirected ?? false,
                     showWeight: edge.showWeight !== undefined ? edge.showWeight : true,
                     color: edge.color || '#BDBDBD'
@@ -293,9 +295,16 @@ const Graph = () => {
             setNodes(loadedNodes);
             setEdges(loadedEdges);
 
-            // Auto-detect if graph is weighted
-            const isWeighted = loadedEdges.some(e => e.weight !== undefined && e.weight !== null);
-            setShowEdgeWeights(isWeighted);
+            // Auto-detect or load visibility options
+            if (graph.showEdgeWeights !== undefined) {
+                setShowEdgeWeights(graph.showEdgeWeights);
+            } else {
+                const isWeighted = loadedEdges.some(e => e.weight !== undefined && e.weight !== null);
+                setShowEdgeWeights(isWeighted);
+            }
+            if (graph.showNodeLabels !== undefined) {
+                setShowNodeLabels(graph.showNodeLabels);
+            }
 
             if (graph.hasLegend && Array.isArray(graph.legendEntries)) {
                 setHasLegend(true);
@@ -429,6 +438,7 @@ const Graph = () => {
                 fromNode: edge.from,
                 toNode: edge.to,
                 weight: edge.weight !== undefined ? edge.weight : null,
+                label: edge.label || '',
                 isDirected: edge.directed ?? false,
                 showWeight: edge.showWeight !== undefined ? edge.showWeight : true,
                 color: edge.color || '#BDBDBD'
@@ -436,6 +446,8 @@ const Graph = () => {
 
             const requestBody = {
                 name: graphName.trim(),
+                showNodeLabels,
+                showEdgeWeights,
                 nodes: nodesData,
                 edges: edgesData,
                 hasLegend: hasLegend && legendEntries.length > 0,
@@ -609,6 +621,8 @@ const Graph = () => {
                         setAlgorithmResult={setAlgorithmResult}
                         onOpenBulkTools={() => setShowBulkTools(true)}
                         onOpenLegendEditor={() => setShowLegendEditor(v => !v)}
+                        selectedAlgorithm={selectedAlgorithm}
+                        setSelectedAlgorithm={setSelectedAlgorithm}
                     />
                 </Box>
 

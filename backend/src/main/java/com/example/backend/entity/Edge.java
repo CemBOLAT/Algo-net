@@ -32,6 +32,9 @@ public class Edge {
     @Column(name = "color")
     private String color;
 
+    @Column(name = "label")
+    private String label;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "graph_id", nullable = false)
     @JsonBackReference
@@ -110,6 +113,14 @@ public class Edge {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
     }
 
     public Graph getGraph() {

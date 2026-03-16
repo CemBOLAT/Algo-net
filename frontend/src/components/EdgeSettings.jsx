@@ -5,6 +5,7 @@ import { useI18n } from '../context/I18nContext';
 const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, nodes }) => {
   const { t } = useI18n();
   const [weight, setWeight] = useState(selectedEdge?.weight || 1);
+  const [label, setLabel] = useState(selectedEdge?.label || '');
   const [directed, setDirected] = useState(selectedEdge?.directed || false);
   const [color, setColor] = useState(selectedEdge?.color || '#1985d2');
   const [fromId, setFromId] = useState(selectedEdge?.from || '');
@@ -13,6 +14,7 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
   useEffect(() => {
     if (selectedEdge) {
       setWeight(selectedEdge.weight || 1);
+      setLabel(selectedEdge.label || '');
       setDirected(selectedEdge.directed || false);
       setColor(selectedEdge.color || '#1985d2');
       setFromId(selectedEdge.from || '');
@@ -23,6 +25,7 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
   const handleEdgeUpdate = (key, value) => {
     // Update local states where applicable
     if (key === 'weight') setWeight(value);
+    if (key === 'label') setLabel(value);
     if (key === 'directed') setDirected(value);
     if (key === 'color') setColor(value);
     if (key === 'from') setFromId(value);
@@ -54,7 +57,14 @@ const EdgeSettings = ({ selectedEdge, setSelectedEdge, setEdges, setTempEdge, no
     <Paper id="edge-settings" sx={{ position: 'absolute', top: 16, right: 16, width: 320, p: 2 }} elevation={6}>
       <Typography variant="h6" gutterBottom>{t('edge_settings_title')}</Typography>
 
-      {/* label is not important for edges in this app, hide it */}
+      <TextField
+        label={t('label_label')}
+        value={label}
+        size="small"
+        fullWidth
+        onChange={(e) => handleEdgeUpdate('label', e.target.value)}
+        sx={{ mb: 2 }}
+      />
 
       <FormControlLabel
         control={<Switch checked={(selectedEdge.showWeight ?? true)} onChange={(e) => handleEdgeUpdate('showWeight', e.target.checked)} />}

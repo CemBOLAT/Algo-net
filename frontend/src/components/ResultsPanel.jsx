@@ -169,10 +169,24 @@ const ResultsPanel = ({ result, onClear, nodes = [] }) => {
       )}
       {data.pcn != null && (
         <Box>
-          <Typography sx={styles.label}>PCN</Typography>
-          <Typography sx={{ ...styles.value, fontSize: '18px', fontWeight: 700, color: '#7c3aed' }}>
+          <Typography sx={styles.label}>Packing Chromatic Number</Typography>
+          <Typography sx={{ ...styles.value, fontSize: '18px', fontWeight: 700, color: '#059669' }}>
             {data.pcn}
           </Typography>
+          {algorithm === 'package_coloring' && (
+            <Box sx={{
+              mt: 1,
+              p: 1,
+              bgcolor: '#d1fae5',
+              border: '1px solid #34d399',
+              borderRadius: '8px',
+              textAlign: 'center'
+            }}>
+              <Typography sx={{ color: '#065f46', fontWeight: 700, fontSize: '14px' }}>
+                Optimal! χρ = {data.pcn}
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
       {data.colorGroups && Object.keys(data.colorGroups).length > 0 && (

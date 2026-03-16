@@ -1,6 +1,6 @@
 const API_BASE = import.meta?.env?.VITE_PYTHON_BASE || '/pythonms';
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Button, Container, Collapse, Box, FormControl, InputLabel, Select, MenuItem, TextField,
   Dialog, DialogTitle, DialogContent, DialogActions, Stack, Typography, Avatar, Chip, Divider, Paper
@@ -24,6 +24,7 @@ export default function RunGraphAlgorithms({
   notify = () => { },
   onLegendChange = () => { },
   onResult = () => { },
+  legendEntries = [], // ADDED
   graphName, // ADDED: receive graphName from Sidebar
   setShowEdgeWeights = () => { },
 }) {
@@ -43,6 +44,33 @@ export default function RunGraphAlgorithms({
   const [entries, setEntries] = useState([
   ]);
   const [entrySeq, setEntrySeq] = useState(2);
+
+  const [legendEntriesInitialSyncDone, setLegendEntriesInitialSyncDone] = useState(false);
+
+  // Sync with legendEntries from graph when first opening or loading
+  useEffect(() => {
+    if (onLegendChange && Array.isArray(legendEntries) && legendEntries.length > 0 && !legendEntriesInitialSyncDone) {
+      const mapped = legendEntries.map((le, i) => {
+        const attrs = le.attributes || {};
+        return {
+          id: 1000 + i, // use offset to avoid collision
+          name: le.name || '',
+          color: le.color || '#1976d2',
+          capacity: Number(attrs.Kapasite || attrs.capacity || le.capacity || 1),
+          distance: Number(attrs.Uzaklık || attrs.distance || le.distance || 1),
+          diameter: Number(attrs.Yarıçap || attrs.diameter || le.diameter || 1),
+          size: Number(attrs.Boyut || attrs.size || le.size || 1),
+          _source: 'graph'
+        };
+      });
+      setEntries(mapped);
+      const newDrafts = {};
+      mapped.forEach(e => { newDrafts[e.id] = { ...e }; });
+      setDrafts(newDrafts);
+      setEntrySeq(1000 + mapped.length);
+      setLegendEntriesInitialSyncDone(true);
+    }
+  }, [legendEntries, legendEntriesInitialSyncDone, onLegendChange]);
 
   // Small built-in UNHCR standard examples (kullanıcının sağladığı listeye göre).
   // capacity: person-per-unit (e.g. "1 per 20 persons" => capacity: 20), distance/diameter/size set to practical defaults.

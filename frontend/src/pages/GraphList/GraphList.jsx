@@ -423,6 +423,14 @@ const GraphList = () => {
                           <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Updated</Typography>
                           <Typography variant="body2" fontWeight="500">{graph.updatedAt ? new Date(graph.updatedAt).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }) : t('unknown')}</Typography>
                         </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Labels</Typography>
+                          <Typography variant="body2" fontWeight="500">{graph.showNodeLabels !== false ? "Visible" : "Hidden"}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="overline" display="block" sx={{ fontSize: '0.6875rem', fontWeight: 'bold', color: 'text.disabled', lineHeight: 1, mb: 0.5 }}>Weights</Typography>
+                          <Typography variant="body2" fontWeight="500">{graph.showEdgeWeights !== false ? "Visible" : "Hidden"}</Typography>
+                        </Grid>
                       </Grid>
                     </CardContent>
 

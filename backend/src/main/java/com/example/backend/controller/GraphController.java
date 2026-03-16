@@ -50,6 +50,9 @@ public class GraphController {
         // legend fields
         private Boolean hasLegend;
         private List<LegendEntryDTO> legendEntries;
+        // graph options
+        private Boolean showNodeLabels;
+        private Boolean showEdgeWeights;
         // NEW: user id for internal key flow
         private Long userId;
 
@@ -92,6 +95,22 @@ public class GraphController {
 
         public void setLegendEntries(List<LegendEntryDTO> legendEntries) {
             this.legendEntries = legendEntries;
+        }
+
+        public Boolean getShowNodeLabels() {
+            return showNodeLabels;
+        }
+
+        public void setShowNodeLabels(Boolean showNodeLabels) {
+            this.showNodeLabels = showNodeLabels;
+        }
+
+        public Boolean getShowEdgeWeights() {
+            return showEdgeWeights;
+        }
+
+        public void setShowEdgeWeights(Boolean showEdgeWeights) {
+            this.showEdgeWeights = showEdgeWeights;
         }
 
         // NEW: userId getter/setter
@@ -372,6 +391,8 @@ public class GraphController {
         try {
             // Create and save graph
             Graph graph = new Graph(request.getName(), user);
+            graph.setShowNodeLabels(request.getShowNodeLabels() != null ? request.getShowNodeLabels() : true);
+            graph.setShowEdgeWeights(request.getShowEdgeWeights() != null ? request.getShowEdgeWeights() : true);
 
             // Save nodes
             if (request.getNodes() != null) {
@@ -689,8 +710,10 @@ public class GraphController {
                 return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Bu graph'ı güncelleme yetkiniz yok");
             }
 
-            // Update graph name
+            // Update graph name and options
             graph.setName(request.getName());
+            graph.setShowNodeLabels(request.getShowNodeLabels() != null ? request.getShowNodeLabels() : true);
+            graph.setShowEdgeWeights(request.getShowEdgeWeights() != null ? request.getShowEdgeWeights() : true);
 
             // 1) Hard-delete existing edges and nodes to avoid duplicates
             if (graph.getEdges() != null) {

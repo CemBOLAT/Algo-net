@@ -20,8 +20,8 @@ const Sidebar = ({
   setAlgorithmResult = () => { },
   onOpenBulkTools = () => { },
   onOpenLegendEditor = () => { },
+  selectedAlgorithm, setSelectedAlgorithm,
 }) => {
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
   const [editingName, setEditingName] = useState(false);
   const [localName, setLocalName] = useState(graphName);
 
@@ -293,13 +293,13 @@ const Sidebar = ({
 
         {/* Problems/Algorithms Section */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <Typography sx={sidebarStyles.sectionHeader}>Problems/Algorithms</Typography>
+          <Typography sx={sidebarStyles.sectionHeader}>{t('problems_algorithms') || 'Problems/Algorithms'}</Typography>
 
-          <FormControl fullWidth>
+          <FormControl fullWidth size="small">
             <Select
-              value={selectedAlgorithm}
+              id="algo-select"
+              value={selectedAlgorithm || 'dfs'}
               onChange={handleAlgorithmChange}
-              displayEmpty
               sx={{
                 backgroundColor: '#f8fafc',
                 borderRadius: '12px',
@@ -428,6 +428,7 @@ const Sidebar = ({
           notify={notify}
           onLegendChange={(entries) => { setLegendEntries(entries || []); setHasLegend(!!(entries && entries.length)); }}
           onResult={(result) => setAlgorithmResult(result)}
+          legendEntries={legendEntries}
           graphName={graphName}
           setShowEdgeWeights={setShowEdgeWeights}
         />
