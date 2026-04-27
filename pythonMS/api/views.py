@@ -417,6 +417,21 @@ def run_algorithm_color(request):
     if data["selectedAlgo"] == "ordered_coloring":
         result = coloring_algorithms.greedy_coloring(data["vertices"], data["edges"])
         return Response({"result": result})
+    script_map = {
+        "b_coloring": "Cplex_B_Coloring.py",
+        "normal_coloring": "Cplex_Normal_Coloring.py",
+        "domination": "Cplex_Domination.py",
+        "total_domination": "Cplex_Total_Domination.py",
+    }
+    if data["selectedAlgo"] in script_map:
+        script_path = os.path.join(settings.BASE_DIR, script_map[data["selectedAlgo"]])
+        try:
+            result = run_fixed_python_script(script_path, data["vertices"], data["edges"], [])
+            if not result:
+                raise ScriptExecutionError("Empty result from script")
+            return Response({"result": result})
+        except ScriptExecutionError as e:
+            return Response({"result": {"error": str(e)}}, status=500)
     return Response({"result": {}})
 
 @api_view(["POST"])

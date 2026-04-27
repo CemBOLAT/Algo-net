@@ -80,6 +80,10 @@ const algoIcons = {
   dijkstra: <RouteIcon sx={{ fontSize: 16 }} />,
   ordered_coloring: <PaletteIcon sx={{ fontSize: 16 }} />,
   package_coloring: <PaletteIcon sx={{ fontSize: 16 }} />,
+  normal_coloring: <PaletteIcon sx={{ fontSize: 16 }} />,
+  b_coloring: <PaletteIcon sx={{ fontSize: 16 }} />,
+  domination: <PaletteIcon sx={{ fontSize: 16 }} />,
+  total_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   layout_planning: <MapIcon sx={{ fontSize: 16 }} />,
 };
 
