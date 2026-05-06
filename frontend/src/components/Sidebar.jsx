@@ -331,6 +331,10 @@ const Sidebar = ({
               <MenuItem value="bfs">{t('bfs')}</MenuItem>
               <MenuItem value="dijkstra">{t('dijkstra')}</MenuItem>
               <MenuItem value="ordered_coloring">{t('ordered_coloring')}</MenuItem>
+              <MenuItem value="normal_coloring">{t('normal_coloring')}</MenuItem>
+              <MenuItem value="b_coloring">{t('b_coloring')}</MenuItem>
+              <MenuItem value="domination">{t('domination')}</MenuItem>
+              <MenuItem value="total_domination">{t('total_domination')}</MenuItem>
               <MenuItem value="layout_planning">{t('layout_planning')}</MenuItem>
               <MenuItem value="package_coloring">{t('package_coloring')}</MenuItem>
             </Select>

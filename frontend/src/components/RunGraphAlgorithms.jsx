@@ -120,7 +120,7 @@ export default function RunGraphAlgorithms({
   // Utility: detect algorithm category
   const getAlgorithmCategory = (algoName) => {
 
-    const coloringAlgos = ["ordered_coloring", "package_coloring"];
+    const coloringAlgos = ["ordered_coloring", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination"];
     const searchingAlgos = ["dfs", "bfs"];
     const pathFindingAlgos = ["dijkstra"];
     const layoutAlgos = ["layout_planning"];
@@ -668,7 +668,7 @@ export default function RunGraphAlgorithms({
 
   return (
     <>
-      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring"].includes(selectedAlgo)}>
+      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: 2 }}>
           {/* From Node Select */}
           <Box sx={{ position: 'relative' }}>
