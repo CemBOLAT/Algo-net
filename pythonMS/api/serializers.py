@@ -26,6 +26,7 @@ class ColorSerializer(serializers.Serializer):
     selectedAlgo = serializers.CharField(required=True)
     Vertices = serializers.CharField(required=True)
     Edges = serializers.CharField(required=True)
+    k = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
         try:
@@ -36,6 +37,15 @@ class ColorSerializer(serializers.Serializer):
         
         attrs["vertices"] = vertices
         attrs["edges"] = edges
+        k_raw = attrs.get("k")
+        if k_raw not in (None, ""):
+            try:
+                k_value = int(k_raw)
+            except (TypeError, ValueError) as e:
+                raise serializers.ValidationError(f"Invalid k value: {e}")
+            if k_value < 1:
+                raise serializers.ValidationError("k must be a positive integer")
+            attrs["k"] = k_value
         return attrs
     
 class SearchSerializer(serializers.Serializer):

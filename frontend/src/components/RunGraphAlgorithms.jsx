@@ -33,6 +33,7 @@ export default function RunGraphAlgorithms({
 
   const [edgeFrom, setEdgeFrom] = useState('');
   const [edgeTo, setEdgeTo] = useState('');
+  const [rainbowK, setRainbowK] = useState('3');
 
   // Dialog state for layout planning
   const [layoutDialogOpen, setLayoutDialogOpen] = useState(false);
@@ -120,7 +121,16 @@ export default function RunGraphAlgorithms({
   // Utility: detect algorithm category
   const getAlgorithmCategory = (algoName) => {
 
-    const coloringAlgos = ["ordered_coloring", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination"];
+    const coloringAlgos = [
+      "ordered_coloring",
+      "package_coloring",
+      "normal_coloring",
+      "b_coloring",
+      "domination",
+      "total_domination",
+      "rainbow_domination",
+      "singleton_rainbow_domination",
+    ];
     const searchingAlgos = ["dfs", "bfs"];
     const pathFindingAlgos = ["dijkstra"];
     const layoutAlgos = ["layout_planning"];
@@ -490,6 +500,15 @@ export default function RunGraphAlgorithms({
     formData.append("Vertices", JSON.stringify(nodes));
     formData.append("Edges", JSON.stringify(edges));
 
+    if (selectedAlgo === "rainbow_domination" || selectedAlgo === "singleton_rainbow_domination") {
+      const kValue = Number(rainbowK);
+      if (!Number.isFinite(kValue) || kValue < 1) {
+        notify("error", "K must be a positive integer.", 2000);
+        return;
+      }
+      formData.append("k", String(Math.floor(kValue)));
+    }
+
     // From/To required only for pathfinding/searching
     if (["pathfinding", "searching"].includes(category)) {
       if (!edgeFrom || !edgeTo) {
@@ -668,7 +687,7 @@ export default function RunGraphAlgorithms({
 
   return (
     <>
-      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination"].includes(selectedAlgo)}>
+      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination", "rainbow_domination", "singleton_rainbow_domination"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: 2 }}>
           {/* From Node Select */}
           <Box sx={{ position: 'relative' }}>
@@ -782,6 +801,47 @@ export default function RunGraphAlgorithms({
                 ))}
               </Select>
             </FormControl>
+          </Box>
+        </Box>
+      </Collapse>
+
+      {/* K Value Input for Rainbow Domination algorithms */}
+      <Collapse in={["rainbow_domination", "singleton_rainbow_domination"].includes(selectedAlgo)}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: 2 }}>
+          <Box sx={{ position: 'relative' }}>
+            <Typography sx={{
+              position: 'absolute',
+              left: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#94a3b8',
+              fontSize: '14px',
+              fontWeight: 700,
+              zIndex: 1,
+              pointerEvents: 'none',
+              lineHeight: 1,
+            }}>K</Typography>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              value={rainbowK}
+              onChange={(e) => setRainbowK(e.target.value)}
+              placeholder="K Value"
+              inputProps={{ min: 1, step: 1, style: { paddingLeft: '28px' } }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                  '&:hover fieldset': { borderColor: '#cbd5e1' },
+                  '&.Mui-focused fieldset': { borderColor: '#06b6d4', borderWidth: '1px' },
+                },
+                '& .MuiOutlinedInput-input': {
+                  padding: '12px 16px',
+                },
+              }}
+            />
           </Box>
         </Box>
       </Collapse>

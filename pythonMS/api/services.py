@@ -89,7 +89,7 @@ def run_python_script(uploaded_file, vertices, edges):
 
 
 
-def run_fixed_python_script(script_path, vertices, edges, entries=None):
+def run_fixed_python_script(script_path, vertices, edges, entries=None, extra_payload=None):
     """
     Execute a fixed Python script using a temporary JSON file to avoid Windows argument length limits.
     Supports '$$$' delimiter in output for separating debug and result data.
@@ -103,6 +103,8 @@ def run_fixed_python_script(script_path, vertices, edges, entries=None):
         "edges": edges,
         "entries": entries or []
     }
+    if isinstance(extra_payload, dict):
+        payload.update(extra_payload)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8") as tmp:
         json.dump(payload, tmp)

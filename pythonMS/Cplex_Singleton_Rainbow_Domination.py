@@ -3,13 +3,14 @@ import os
 import sys
 import colorsys
 import pulp
-from pulp import LpProblem, LpVariable, LpBinary, lpSum, LpMaximize
+from pulp import LpProblem, LpVariable, LpBinary, lpSum, LpMinimize
 
 COLOR_PALETTE = [
     "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
     "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe",
     "#008080", "#e6beff", "#9a6324", "#fffac8", "#800000",
 ]
+
 
 def solve_with_fallback(problem):
     try_cplex_env = os.environ.get("INSTALL_CPLEX", "false").lower() in ("1", "true", "yes")
@@ -32,12 +33,14 @@ def solve_with_fallback(problem):
         pass
     raise RuntimeError("No available MIP solver (CPLEX/CBC/GLPK).")
 
+
 def color_for(index, total_colors):
     if index <= len(COLOR_PALETTE):
         return COLOR_PALETTE[index - 1]
     hue = ((index - 1) * 360) / max(1, total_colors)
     r, g, b = colorsys.hls_to_rgb(hue / 360.0, 0.5, 0.7)
     return "#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
+
 
 def build_graph(vertices, edges):
     node_ids = [str(v.get("id")) for v in vertices if v.get("id") is not None]
@@ -60,6 +63,7 @@ def build_graph(vertices, edges):
         adjacency[ib].add(ia)
     return node_ids, adjacency
 
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Missing input file argument", file=sys.stderr)
@@ -70,6 +74,7 @@ if __name__ == "__main__":
 
     vertices = data.get("vertices", [])
     edges = data.get("edges", [])
+    K = data.get("k", 3)
 
     node_ids, adjacency = build_graph(vertices, edges)
     n = len(node_ids)
@@ -80,44 +85,42 @@ if __name__ == "__main__":
         sys.exit(0)
 
     V = range(1, n + 1)
-
-    model = LpProblem(name="b_coloring", sense=LpMaximize)
-
-    # x[i,j] = 1 if vertex j belongs to color class represented by i
-    # x[i,i] = 1 if vertex i is a representative (b-vertex)
-    x = {(i, j): LpVariable(name=f"x_{i}_{j}", cat=LpBinary) for i in V for j in V}
-
-    model += lpSum(x[i, i] for i in V)
+    Colors = range(1, K + 1)
 
     adj = [[0] * n for _ in range(n)]
     for u in range(n):
         for v in adjacency.get(u, []):
             adj[u][v] = 1
 
-    for j in V:
-        valid_reps = [i for i in V if adj[i - 1][j - 1] == 0 or i == j]
-        model += lpSum(x[i, j] for i in valid_reps) == 1
+    model = LpProblem(name="k_rainbow_domination", sense=LpMinimize)
 
-    for i in V:
-        for j in V:
-            for k in V:
-                if j < k and adj[j - 1][k - 1] == 1:
-                    model += x[i, j] + x[i, k] <= x[i, i]
+    # f[v][k] = 1 if color k is in the set assigned to vertex v
+    f = {(v, k): LpVariable(name=f"f_{v}_{k}", cat=LpBinary) for v in V for k in Colors}
 
-    for i in V:
-        for j in V:
-            if i != j:
-                model += x[i, j] <= x[i, i]
+    # z[v] = 1 if vertex v has a non-empty color set
+    z = {v: LpVariable(name=f"z_{v}", cat=LpBinary) for v in V}
 
-    for i in V:
-        for j in V:
-            if i != j:
-                neighbors_of_j = [k for k in V if adj[j - 1][k - 1] == 1]
-                if neighbors_of_j:
-                    model += lpSum(x[i, k] for k in neighbors_of_j) >= x[i, i] + x[j, j] - 1
+    # Objective: minimize number of vertices with non-empty sets
+    model += lpSum(z[v] for v in V)
 
-    for i in range(1, n):
-        model += x[i, i] >= x[i + 1, i + 1]
+    # Constraint 1 - Domination:
+    # If v's set is empty (z[v]=0), then for every color k,
+    # at least one neighbor of v must have k in its set.
+    for v in V:
+        for k in Colors:
+            neighbors_of_v = [u for u in V if adj[u - 1][v - 1] == 1]
+            model += lpSum(f[u, k] for u in neighbors_of_v) >= 1 - z[v]
+
+    # Constraint 2 - Linking:
+    # If f[v][k] = 1 then z[v] must be 1
+    for v in V:
+        for k in Colors:
+            model += z[v] >= f[v, k]
+
+    # Constraint 3 - Singleton:
+    # Each vertex can have at most one color in its set
+    for v in V:
+        model += lpSum(f[v, k] for k in Colors) <= 1
 
     solve_with_fallback(model)
 
@@ -128,19 +131,18 @@ if __name__ == "__main__":
 
     assignments = {}
     max_color = 0
-    for j in V:
-        assigned = None
-        for i in V:
-            if x[i, j].value() is not None and x[i, j].value() > 0.5:
-                assigned = i
-                break
-        if assigned is None:
-            continue
-        assignments[node_ids[j - 1]] = assigned
-        if assigned > max_color:
-            max_color = assigned
+    for v in V:
+        vertex_colors = []
+        for k in Colors:
+            if f[v, k].value() is not None and f[v, k].value() > 0.5:
+                vertex_colors.append(k)
+        if vertex_colors:
+            assigned_color = vertex_colors[0]
+            assignments[node_ids[v - 1]] = assigned_color
+            if assigned_color > max_color:
+                max_color = assigned_color
 
-    color_map = {vid: color_for(col, max_color) for vid, col in assignments.items()}
+    color_map = {vid: color_for(col, max(max_color, K)) for vid, col in assignments.items()}
 
     print("$$$")
     print(json.dumps(color_map))
