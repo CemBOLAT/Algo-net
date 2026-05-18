@@ -129,7 +129,7 @@ if __name__ == "__main__":
         print(json.dumps({}))
         sys.exit(0)
 
-    assignments = {}
+    full_assignments = {}
     max_color = 0
     for v in V:
         vertex_colors = []
@@ -137,12 +137,11 @@ if __name__ == "__main__":
             if f[v, k].value() is not None and f[v, k].value() > 0.5:
                 vertex_colors.append(k)
         if vertex_colors:
-            assigned_color = vertex_colors[0]
-            assignments[node_ids[v - 1]] = assigned_color
-            if assigned_color > max_color:
-                max_color = assigned_color
+            full_assignments[node_ids[v - 1]] = vertex_colors
+            if vertex_colors[0] > max_color:
+                max_color = vertex_colors[0]
 
-    color_map = {vid: color_for(col, max(max_color, K)) for vid, col in assignments.items()}
+    color_map = {vid: color_for(cols[0], max(max_color, K)) for vid, cols in full_assignments.items()}
 
     print("$$$")
-    print(json.dumps(color_map))
+    print(json.dumps({"colors": color_map, "assignments": full_assignments}))

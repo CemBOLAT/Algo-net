@@ -84,6 +84,8 @@ const algoIcons = {
   b_coloring: <PaletteIcon sx={{ fontSize: 16 }} />,
   domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   total_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
+  rainbow_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
+  singleton_rainbow_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   layout_planning: <MapIcon sx={{ fontSize: 16 }} />,
 };
 
@@ -193,7 +195,22 @@ const ResultsPanel = ({ result, onClear, nodes = [] }) => {
           )}
         </Box>
       )}
-      {data.colorGroups && Object.keys(data.colorGroups).length > 0 && (
+      {data.rainbowAssignments && Object.keys(data.rainbowAssignments).length > 0 && (
+        <Box>
+          <Typography sx={styles.label}>Node Color Assignments</Typography>
+          <Divider sx={{ my: '4px' }} />
+          {Object.entries(data.rainbowAssignments).map(([nodeId, colors]) => (
+            <Box key={nodeId} sx={{ ...styles.colorRow, gap: '6px' }}>
+              <Box sx={styles.colorSwatch(data.colorGroups ? Object.keys(data.colorGroups).find(hex => (data.colorGroups[hex] || []).includes(nodeId)) || '#9ca3af' : '#9ca3af')} />
+              <Typography sx={{ fontSize: '12px', color: '#374151' }}>
+                <strong>{nodeLabel(nodeId)}</strong>
+                {' → {' + colors.join(', ') + '}'}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+      {!data.rainbowAssignments && data.colorGroups && Object.keys(data.colorGroups).length > 0 && (
         <Box>
           <Typography sx={styles.label}>{t('result_color_mapping')}</Typography>
           <Divider sx={{ my: '4px' }} />

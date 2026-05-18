@@ -218,6 +218,14 @@ export default function RunGraphAlgorithms({
 
       // Hide edge labels after packing coloring result
       setEdges((prev) => prev.map((e) => ({ ...e, showWeight: false })));
+    } else if (selectedAlgo === 'rainbow_domination' || selectedAlgo === 'singleton_rainbow_domination') {
+      const colorMap = data?.colors || data;
+      setNodes((prev) =>
+        prev.map((n) => ({
+          ...n,
+          color: colorMap?.[n.id] ?? n.color,
+        }))
+      );
     } else {
       setNodes((prev) =>
         prev.map((n) => ({
@@ -396,6 +404,24 @@ export default function RunGraphAlgorithms({
           colorCount: null, // Removed per user request
           pcn: data.pcn ?? null,
           colorGroups: groups,
+        },
+      });
+    } else if (selectedAlgo === 'rainbow_domination' || selectedAlgo === 'singleton_rainbow_domination') {
+      const colorMap = data?.colors || {};
+      const rainbowAssignments = data?.assignments || {};
+      const groups = {};
+      Object.entries(colorMap).forEach(([nodeId, color]) => {
+        if (!groups[color]) groups[color] = [];
+        groups[color].push(nodeId);
+      });
+      onResult({
+        algorithm: selectedAlgo,
+        type: 'coloring',
+        data: {
+          colorCount: Object.keys(groups).length,
+          pcn: null,
+          colorGroups: groups,
+          rainbowAssignments,
         },
       });
     } else {
