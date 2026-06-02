@@ -25,6 +25,12 @@ const Graph = () => {
     const [edges, setEdges] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null);
     const [selectedEdge, setSelectedEdge] = useState(null);
+    // Multi-selection via right-click rubber-band (arrays of ids)
+    const [selectedNodeIds, setSelectedNodeIds] = useState([]);
+    const [selectedEdgeIds, setSelectedEdgeIds] = useState([]);
+    // Clipboard for cut/copy/paste of a selected region
+    const clipboardRef = useRef({ nodes: [], edges: [] });
+    const pasteSeqRef = useRef(0);
 
     // Keep selectedNode in sync when algorithms update node properties (color, label, etc.)
     useEffect(() => {
@@ -500,13 +506,102 @@ const Graph = () => {
                 redo();
                 return;
             }
-            if (e.key === 'Enter') {
+            // Copy / Cut / Paste of the rubber-band selection
+            if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'C', 'X', 'V'].includes(e.key)) {
+                const el = e.target;
+                const tag = el?.tagName;
+                const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable;
+                if (isTyping) return; // let the browser handle text copy/paste in fields
+
+                const key = e.key.toLowerCase();
+
+                if (key === 'c' || key === 'x') {
+                    if (selectedNodeIds.length === 0) return;
+                    const nodeIdSet = new Set(selectedNodeIds);
+                    // Snapshot selected nodes and edges whose both endpoints are selected
+                    const copiedNodes = nodes.filter(n => nodeIdSet.has(n.id)).map(n => ({ ...n }));
+                    const copiedEdges = edges
+                        .filter(ed => nodeIdSet.has(ed.from) && nodeIdSet.has(ed.to))
+                        .map(ed => ({ ...ed }));
+                    clipboardRef.current = { nodes: copiedNodes, edges: copiedEdges };
+
+                    if (key === 'x') {
+                        e.preventDefault();
+                        saveToHistory();
+                        const edgeIdSet = new Set(selectedEdgeIds);
+                        setNodes(prev => prev.filter(n => !nodeIdSet.has(n.id)));
+                        setEdges(prev => prev.filter(ed =>
+                            !edgeIdSet.has(ed.id) && !nodeIdSet.has(ed.from) && !nodeIdSet.has(ed.to)
+                        ));
+                        setSelectedNodeIds([]);
+                        setSelectedEdgeIds([]);
+                        setSelectedNode(null);
+                        setSelectedEdge(null);
+                    }
+                    return;
+                }
+
+                if (key === 'v') {
+                    const clip = clipboardRef.current;
+                    if (!clip || clip.nodes.length === 0) return;
+                    e.preventDefault();
+                    saveToHistory();
+                    const OFFSET = 40;
+                    const stamp = `${Date.now()}_${pasteSeqRef.current++}`;
+                    const idMap = {};
+                    const newNodes = clip.nodes.map((n, i) => {
+                        const newId = `${stamp}_${i}`;
+                        idMap[n.id] = newId;
+                        return { ...n, id: newId, x: (n.x ?? 0) + OFFSET, y: (n.y ?? 0) + OFFSET };
+                    });
+                    const newEdges = clip.edges.map((ed, i) => ({
+                        ...ed,
+                        id: `${stamp}_e${i}`,
+                        from: idMap[ed.from],
+                        to: idMap[ed.to],
+                    }));
+                    setNodes(prev => [...prev, ...newNodes]);
+                    setEdges(prev => [...prev, ...newEdges]);
+                    // Select the freshly pasted region
+                    setSelectedNodeIds(newNodes.map(n => n.id));
+                    setSelectedEdgeIds(newEdges.map(ed => ed.id));
+                    setSelectedNode(null);
+                    setSelectedEdge(null);
+                    return;
+                }
+            }
+            if (e.key === 'Enter' || e.key === 'Delete' || e.key === 'Backspace') {
+                // Don't delete graph elements while typing in an input/textarea/contenteditable field
+                const el = e.target;
+                const tag = el?.tagName;
+                const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable;
+                if (isTyping) return;
+
+                // Rubber-band multi-selection takes priority
+                if (selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) {
+                    e.preventDefault();
+                    saveToHistory();
+                    const nodeIdSet = new Set(selectedNodeIds);
+                    const edgeIdSet = new Set(selectedEdgeIds);
+                    setNodes(prev => prev.filter(n => !nodeIdSet.has(n.id)));
+                    setEdges(prev => prev.filter(ed =>
+                        !edgeIdSet.has(ed.id) && !nodeIdSet.has(ed.from) && !nodeIdSet.has(ed.to)
+                    ));
+                    setSelectedNodeIds([]);
+                    setSelectedEdgeIds([]);
+                    setSelectedNode(null);
+                    setSelectedEdge(null);
+                    return;
+                }
+
                 if (selectedNode) {
+                    e.preventDefault();
                     saveToHistory();
                     setNodes(prev => prev.filter(n => n.id !== selectedNode.id));
                     setEdges(prev => prev.filter(ed => ed.from !== selectedNode.id && ed.to !== selectedNode.id));
                     setSelectedNode(null);
                 } else if (selectedEdge) {
+                    e.preventDefault();
                     saveToHistory();
                     setEdges(prev => prev.filter(ed => ed.id !== selectedEdge.id));
                     setSelectedEdge(null);
@@ -515,7 +610,7 @@ const Graph = () => {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [selectedNode, selectedEdge, undo, redo, saveToHistory]); // setters are stable
+    }, [nodes, edges, selectedNode, selectedEdge, selectedNodeIds, selectedEdgeIds, undo, redo, saveToHistory]); // setters are stable
 
     const handleLogout = () => { clearTokens(); navigate('/login'); };
 
@@ -533,6 +628,10 @@ const Graph = () => {
             setSelectedNode={setSelectedNode}
             selectedEdge={selectedEdge}
             setSelectedEdge={setSelectedEdge}
+            selectedNodeIds={selectedNodeIds}
+            setSelectedNodeIds={setSelectedNodeIds}
+            selectedEdgeIds={selectedEdgeIds}
+            setSelectedEdgeIds={setSelectedEdgeIds}
             mode={mode}
             setMode={setMode}
             tempEdge={tempEdge}
@@ -542,7 +641,7 @@ const Graph = () => {
             showEdgeWeights={showEdgeWeights}
             saveToHistory={saveToHistory}
         />
-    ), [nodes, edges, selectedNode, selectedEdge, mode, tempEdge, isSaving, showNodeLabels, showEdgeWeights, saveToHistory]);
+    ), [nodes, edges, selectedNode, selectedEdge, selectedNodeIds, selectedEdgeIds, mode, tempEdge, isSaving, showNodeLabels, showEdgeWeights, saveToHistory]);
 
 
     return (

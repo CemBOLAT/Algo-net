@@ -84,6 +84,7 @@ const algoIcons = {
   b_coloring: <PaletteIcon sx={{ fontSize: 16 }} />,
   domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   total_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
+  k_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   rainbow_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   singleton_rainbow_domination: <PaletteIcon sx={{ fontSize: 16 }} />,
   layout_planning: <MapIcon sx={{ fontSize: 16 }} />,
@@ -165,6 +166,14 @@ const ResultsPanel = ({ result, onClear, nodes = [] }) => {
 
   const renderColoringResult = () => (
     <>
+      {data.weight != null && (
+        <Box>
+          <Typography sx={styles.label}>Weight</Typography>
+          <Typography sx={{ ...styles.value, fontSize: '18px', fontWeight: 700, color: '#0ea5e9' }}>
+            {data.weight}
+          </Typography>
+        </Box>
+      )}
       {data.colorCount != null && (
         <Box>
           <Typography sx={styles.label}>{t('result_colors_used')}</Typography>

@@ -128,6 +128,7 @@ export default function RunGraphAlgorithms({
       "b_coloring",
       "domination",
       "total_domination",
+      "k_domination",
       "rainbow_domination",
       "singleton_rainbow_domination",
     ];
@@ -414,6 +415,10 @@ export default function RunGraphAlgorithms({
         if (!groups[color]) groups[color] = [];
         groups[color].push(nodeId);
       });
+      // Weight = total number of colors assigned across all vertices (k-rainbow domination number)
+      const weight = Object.values(rainbowAssignments).reduce(
+        (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0
+      );
       onResult({
         algorithm: selectedAlgo,
         type: 'coloring',
@@ -422,6 +427,7 @@ export default function RunGraphAlgorithms({
           pcn: null,
           colorGroups: groups,
           rainbowAssignments,
+          weight,
         },
       });
     } else {
@@ -526,7 +532,7 @@ export default function RunGraphAlgorithms({
     formData.append("Vertices", JSON.stringify(nodes));
     formData.append("Edges", JSON.stringify(edges));
 
-    if (selectedAlgo === "rainbow_domination" || selectedAlgo === "singleton_rainbow_domination") {
+    if (["rainbow_domination", "singleton_rainbow_domination", "k_domination"].includes(selectedAlgo)) {
       const kValue = Number(rainbowK);
       if (!Number.isFinite(kValue) || kValue < 1) {
         notify("error", "K must be a positive integer.", 2000);
@@ -548,6 +554,9 @@ export default function RunGraphAlgorithms({
       formData.append("edgeFrom", edgeFrom);
       formData.append("edgeTo", edgeTo);
     }
+
+    setNodes((prev) => prev.map((n) => ({ ...n, color: '#1976d2' })));
+    setEdges((prev) => prev.map((e) => ({ ...e, color: '#9E9E9E', width: 1.5 })));
 
     setIsLoading(true);
     try {
@@ -713,7 +722,7 @@ export default function RunGraphAlgorithms({
 
   return (
     <>
-      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination", "rainbow_domination", "singleton_rainbow_domination"].includes(selectedAlgo)}>
+      <Collapse in={!["ordered_coloring", "layout_planning", "package_coloring", "normal_coloring", "b_coloring", "domination", "total_domination", "k_domination", "rainbow_domination", "singleton_rainbow_domination"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: 2 }}>
           {/* From Node Select */}
           <Box sx={{ position: 'relative' }}>
@@ -832,7 +841,7 @@ export default function RunGraphAlgorithms({
       </Collapse>
 
       {/* K Value Input for Rainbow Domination algorithms */}
-      <Collapse in={["rainbow_domination", "singleton_rainbow_domination"].includes(selectedAlgo)}>
+      <Collapse in={["rainbow_domination", "singleton_rainbow_domination", "k_domination"].includes(selectedAlgo)}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px', mb: 2 }}>
           <Box sx={{ position: 'relative' }}>
             <Typography sx={{

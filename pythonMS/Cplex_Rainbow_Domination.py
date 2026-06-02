@@ -98,25 +98,18 @@ if __name__ == "__main__":
     # f[v][k] = 1 if color k is in the set assigned to vertex v
     f = {(v, k): LpVariable(name=f"f_{v}_{k}", cat=LpBinary) for v in V for k in Colors}
 
-    # z[v] = 1 if vertex v has a non-empty color set
-    z = {v: LpVariable(name=f"z_{v}", cat=LpBinary) for v in V}
+    # Objective: minimize the total weight Σ_v |f(v)| = Σ_v Σ_k f[v,k].
+    # This is exactly the k-rainbow domination number.
+    model += lpSum(f[v, k] for v in V for k in Colors)
 
-    # Objective: minimize number of vertices with non-empty sets
-    model += lpSum(z[v] for v in V)
-
-    # Constraint 1 - Domination:
-    # If v's set is empty (z[v]=0), then for every color k,
-    # at least one neighbor of v must have k in its set.
+    # Domination constraint:
+    # If vertex v has an empty color set (Σ_k f[v,k] = 0), then every color k
+    # must appear among its neighbors. If v already has at least one color, the
+    # RHS becomes <= 0 and the constraint is trivially satisfied.
     for v in V:
+        neighbors_of_v = [u for u in V if adj[u - 1][v - 1] == 1]
         for k in Colors:
-            neighbors_of_v = [u for u in V if adj[u - 1][v - 1] == 1]
-            model += lpSum(f[u, k] for u in neighbors_of_v) >= 1 - z[v]
-
-    # Constraint 2 - Linking:
-    # If f[v][k] = 1 then z[v] must be 1
-    for v in V:
-        for k in Colors:
-            model += z[v] >= f[v, k]
+            model += lpSum(f[u, k] for u in neighbors_of_v) >= 1 - lpSum(f[v, j] for j in Colors)
 
     solve_with_fallback(model)
 

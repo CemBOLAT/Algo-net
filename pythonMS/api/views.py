@@ -422,6 +422,7 @@ def run_algorithm_color(request):
         "normal_coloring": "Cplex_Normal_Coloring.py",
         "domination": "Cplex_Domination.py",
         "total_domination": "Cplex_Total_Domination.py",
+        "k_domination": "Cplex_K_Domination.py",
         "rainbow_domination": "Cplex_Rainbow_Domination.py",
         "singleton_rainbow_domination": "Cplex_Singleton_Rainbow_Domination.py",
     }
@@ -431,6 +432,8 @@ def run_algorithm_color(request):
             extra_payload = None
             if data["selectedAlgo"] in ("rainbow_domination", "singleton_rainbow_domination"):
                 extra_payload = {"k": data.get("k", 3)}
+            elif data["selectedAlgo"] == "k_domination":
+                extra_payload = {"k": data.get("k", 1)}
             result = run_fixed_python_script(script_path, data["vertices"], data["edges"], [], extra_payload=extra_payload)
             if not result:
                 raise ScriptExecutionError("Empty result from script")

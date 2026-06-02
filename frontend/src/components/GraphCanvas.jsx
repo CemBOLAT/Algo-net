@@ -7,7 +7,7 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import { Stage, Layer, Circle, Line, Arrow, Text, Group } from 'react-konva';
+import { Stage, Layer, Circle, Line, Arrow, Text, Group, Rect } from 'react-konva';
 import { useI18n } from '../context/I18nContext';
 
 const GraphCanvas = ({
@@ -19,6 +19,10 @@ const GraphCanvas = ({
   setSelectedNode,
   selectedEdge,
   setSelectedEdge,
+  selectedNodeIds = [],
+  setSelectedNodeIds = () => { },
+  selectedEdgeIds = [],
+  setSelectedEdgeIds = () => { },
   mode,
   setMode,
   tempEdge,
@@ -57,6 +61,17 @@ const GraphCanvas = ({
   const isPanningRef = useRef(false);
   const justDraggedRef = useRef(false);
   const nodeDraggingRef = useRef(false);
+
+  // Group drag of a rubber-band selection: { anchorStart:{x,y}, initial:{id->{x,y}} }
+  const groupDragRef = useRef(null);
+
+  // Right-click rubber-band selection (multi-select)
+  const isSelectingRef = useRef(false);
+  const selectionRectRef = useRef(null); // {x1,y1,x2,y2} in content coords (source of truth)
+  const [selectionRect, setSelectionRect] = useState(null); // mirror for rendering
+  const setRect = (r) => { selectionRectRef.current = r; setSelectionRect(r); };
+  const selectedNodeIdSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
+  const selectedEdgeIdSet = useMemo(() => new Set(selectedEdgeIds), [selectedEdgeIds]);
 
   // Momentum: velocity history and active animation frame ids per node
   const dragVelHistory = useRef({});
@@ -171,6 +186,33 @@ const GraphCanvas = ({
     if (mode === 'add-edge') return;
     const stage = stageRef.current;
     if (!stage) return;
+    const isRight = e.evt && e.evt.button === 2;
+
+    if (isRight) {
+      // Right-click on empty area → start rubber-band selection (does NOT pan)
+      if (e.target === stage) {
+        isSelectingRef.current = true;
+        const p = getPointerInContent();
+        if (p) setRect({ x1: p.x, y1: p.y, x2: p.x, y2: p.y });
+      }
+      return;
+    }
+
+    // Left button: clear the rubber-band selection UNLESS the press lands on one of
+    // the already-selected nodes (so the user can drag the whole group together).
+    if (selectedNodeIds.length || selectedEdgeIds.length) {
+      let pressedSelectedNode = false;
+      if (e.target !== stage) {
+        const grp = e.target.getParent && e.target.getParent();
+        const pressedId = grp && grp.id && grp.id();
+        pressedSelectedNode = pressedId && selectedNodeIdSet.has(pressedId);
+      }
+      if (!pressedSelectedNode) {
+        setSelectedNodeIds([]);
+        setSelectedEdgeIds([]);
+      }
+    }
+
     if (e.target === stage) {
       isPanningRef.current = true;
       const p = stage.getPointerPosition();
@@ -178,7 +220,54 @@ const GraphCanvas = ({
     }
   };
 
+  // Update the rubber-band rectangle while right-dragging
+  const handleSelectionMove = () => {
+    if (!isSelectingRef.current) return;
+    const p = getPointerInContent();
+    if (!p) return;
+    const prev = selectionRectRef.current;
+    if (!prev) return;
+    setRect({ ...prev, x2: p.x, y2: p.y });
+  };
+
+  // Finalize selection: pick nodes inside the rect, and edges whose both endpoints are inside
+  const finalizeSelection = () => {
+    const r = selectionRectRef.current;
+    if (!r) return;
+    const minX = Math.min(r.x1, r.x2);
+    const maxX = Math.max(r.x1, r.x2);
+    const minY = Math.min(r.y1, r.y2);
+    const maxY = Math.max(r.y1, r.y2);
+
+    // Treat a near-zero drag as a click → clear multi-selection
+    if (Math.abs(maxX - minX) < 3 && Math.abs(maxY - minY) < 3) {
+      setSelectedNodeIds([]);
+      setSelectedEdgeIds([]);
+      return;
+    }
+
+    const inRect = (x, y) => x >= minX && x <= maxX && y >= minY && y <= maxY;
+    const nodeIds = nodes.filter(n => inRect(n.x, n.y)).map(n => n.id);
+    const nodeIdSet = new Set(nodeIds);
+    const edgeIds = edges
+      .filter(ed => nodeIdSet.has(ed.from) && nodeIdSet.has(ed.to))
+      .map(ed => ed.id);
+
+    setSelectedNodeIds(nodeIds);
+    setSelectedEdgeIds(edgeIds);
+    // Multi-selection replaces single selection
+    setSelectedNode(null);
+    setSelectedEdge(null);
+  };
+
   const handleStageMouseUp = () => {
+    if (isSelectingRef.current) {
+      finalizeSelection();
+      isSelectingRef.current = false;
+      setRect(null);
+      isPanningRef.current = false;
+      return;
+    }
     isPanningRef.current = false;
     setTimeout(() => { justDraggedRef.current = false; }, 0);
   };
@@ -198,6 +287,8 @@ const GraphCanvas = ({
 
   const handleStageClick = (e) => {
     if (disabled) return;
+    // Right-click must never create a vertex (it's reserved for rubber-band selection)
+    if (e.evt && e.evt.button === 2) return;
     if (justDraggedRef.current || nodeDraggingRef.current) return;
     const stage = stageRef.current;
     if (!stage) return;
@@ -279,7 +370,7 @@ const GraphCanvas = ({
         width={dimensions.width}   // Dinamik genişlik
         height={dimensions.height} // Dinamik yükseklik
         onWheel={handleWheel}
-        onMouseMove={(e) => { handleStageMouseMove(); handleStageMouseMovePan(e); }}
+        onMouseMove={(e) => { handleStageMouseMove(); handleStageMouseMovePan(e); handleSelectionMove(); }}
         onMouseDown={handleStageMouseDown}
         onMouseUp={handleStageMouseUp}
         onClick={handleStageClick}
@@ -314,7 +405,7 @@ const GraphCanvas = ({
               const ey = n.y + Math.sin(endA) * r;
               const c1x = n.x - loopR; const c1y = n.y - loopR;
               const c2x = n.x + loopR; const c2y = n.y - loopR;
-              const isSelected = selectedEdge && selectedEdge.id === edge.id;
+              const isSelected = (selectedEdge && selectedEdge.id === edge.id) || selectedEdgeIdSet.has(edge.id);
               const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : `${n.label}`;
 
               const handleMouseEnter = () => {
@@ -353,7 +444,7 @@ const GraphCanvas = ({
             };
 
             if (groupAll.length === 1) {
-              const isSelected = selectedEdge && selectedEdge.id === edge.id;
+              const isSelected = (selectedEdge && selectedEdge.id === edge.id) || selectedEdgeIdSet.has(edge.id);
               const labelText = (edge.showWeight ?? true) ? `${edge.weight ?? 1}` : '';
               const mx = (sx0 + ex0) / 2; const my = (sy0 + ey0) / 2;
               return (
@@ -409,10 +500,26 @@ const GraphCanvas = ({
           {/* Temp edge */}
           {tempEdge && <Line points={[tempEdge.from.x, tempEdge.from.y, tempEdge.x, tempEdge.y]} stroke="#f59e0b" dash={[4, 4]} listening={false} />}
 
+          {/* Rubber-band selection rectangle (right-click drag) */}
+          {selectionRect && (
+            <Rect
+              x={Math.min(selectionRect.x1, selectionRect.x2)}
+              y={Math.min(selectionRect.y1, selectionRect.y2)}
+              width={Math.abs(selectionRect.x2 - selectionRect.x1)}
+              height={Math.abs(selectionRect.y2 - selectionRect.y1)}
+              fill="rgba(37,99,235,0.12)"
+              stroke="#2563eb"
+              strokeWidth={1 / scale}
+              dash={[6 / scale, 4 / scale]}
+              listening={false}
+            />
+          )}
+
           {/* Nodes */}
           {nodes.map(node => (
             <Group
               key={node.id}
+              id={String(node.id)}
               x={draggingPositions[node.id]?.x ?? node.x}
               y={draggingPositions[node.id]?.y ?? node.y}
               draggable={!disabled}
@@ -432,6 +539,20 @@ const GraphCanvas = ({
                 }
                 dragVelHistory.current[node.id] = [];
                 dragRafPendingRef.current[node.id] = false;
+
+                // Group move: if dragging one of several selected nodes, move them all together
+                if (selectedNodeIdSet.has(node.id) && selectedNodeIds.length > 1) {
+                  const initial = {};
+                  selectedNodeIds.forEach(id => {
+                    const nn = nodes.find(n => n.id === id);
+                    if (nn) initial[id] = { x: nn.x, y: nn.y };
+                  });
+                  groupDragRef.current = { anchorStart: { x: node.x, y: node.y }, initial };
+                  draggingPositionsRef.current = { ...draggingPositionsRef.current, ...initial };
+                  setDraggingPositions(prev => ({ ...prev, ...initial }));
+                  return;
+                }
+
                 // Add this node to the dragging map (other nodes keep their entries)
                 const init = { x: node.x, y: node.y };
                 draggingPositionsRef.current = { ...draggingPositionsRef.current, [node.id]: init };
@@ -439,6 +560,32 @@ const GraphCanvas = ({
               }}
               onDragMove={(e) => {
                 const nx = e.target.x(); const ny = e.target.y();
+
+                // Group move: shift every selected node by the same delta as the anchor
+                if (groupDragRef.current) {
+                  const g = groupDragRef.current;
+                  const dx = nx - g.anchorStart.x;
+                  const dy = ny - g.anchorStart.y;
+                  Object.entries(g.initial).forEach(([id, p]) => {
+                    draggingPositionsRef.current[id] = (id === node.id)
+                      ? { x: nx, y: ny }
+                      : { x: p.x + dx, y: p.y + dy };
+                  });
+                  if (!dragRafPendingRef.current[node.id]) {
+                    dragRafPendingRef.current[node.id] = true;
+                    requestAnimationFrame(() => {
+                      const snap = {};
+                      Object.keys(g.initial).forEach(id => {
+                        const pos = draggingPositionsRef.current[id];
+                        if (pos) snap[id] = { ...pos };
+                      });
+                      setDraggingPositions(prev => ({ ...prev, ...snap }));
+                      dragRafPendingRef.current[node.id] = false;
+                    });
+                  }
+                  return;
+                }
+
                 // Record position + timestamp for velocity estimation (keep last 5 samples)
                 const hist = dragVelHistory.current[node.id] || [];
                 hist.push({ x: nx, y: ny, t: performance.now() });
@@ -460,6 +607,26 @@ const GraphCanvas = ({
                 setTimeout(() => { justDraggedRef.current = false; }, 0);
                 dragRafPendingRef.current[node.id] = false;
                 const nx = e.target.x(); const ny = e.target.y();
+
+                // Group move: commit final positions of all selected nodes (no momentum)
+                if (groupDragRef.current) {
+                  const g = groupDragRef.current;
+                  const dx = nx - g.anchorStart.x;
+                  const dy = ny - g.anchorStart.y;
+                  const finalPos = {};
+                  Object.entries(g.initial).forEach(([id, p]) => {
+                    finalPos[id] = (id === node.id) ? { x: nx, y: ny } : { x: p.x + dx, y: p.y + dy };
+                  });
+                  setNodes(prev => prev.map(n => finalPos[n.id] ? { ...n, x: finalPos[n.id].x, y: finalPos[n.id].y } : n));
+                  Object.keys(g.initial).forEach(id => { delete draggingPositionsRef.current[id]; });
+                  setDraggingPositions(prev => {
+                    const next = { ...prev };
+                    Object.keys(g.initial).forEach(id => { delete next[id]; });
+                    return next;
+                  });
+                  groupDragRef.current = null;
+                  return;
+                }
 
                 // Compute velocity from recent history
                 const hist = dragVelHistory.current[node.id] || [];
@@ -544,6 +711,10 @@ const GraphCanvas = ({
                   setEdges(prev => [...prev, { id: `${prev.length + 1}_${Date.now()}`, from: tempEdge.from.id, to: node.id, label: '', weight: 1, directed: false, showWeight: true }]);
                   setMode(null); setTempEdge(null); return;
                 }
+                // A plain click selects a single node and clears any rubber-band selection
+                if (selectedNodeIds.length || selectedEdgeIds.length) {
+                  setSelectedNodeIds([]); setSelectedEdgeIds([]);
+                }
                 setSelectedNode(node); setSelectedEdge(null);
               }}
               onContextMenu={(e) => {
@@ -552,7 +723,7 @@ const GraphCanvas = ({
                 setTimeout(() => { setMode('add-edge'); setTempEdge({ from: node, x: node.x, y: node.y }); }, 0);
               }}
             >
-              <Circle radius={node.size} fill={node.color} stroke={selectedNode && selectedNode.id === node.id ? "#000" : null} strokeWidth={selectedNode && selectedNode.id === node.id ? 2 : 0} />
+              <Circle radius={node.size} fill={node.color} stroke={(selectedNode && selectedNode.id === node.id) ? "#000" : (selectedNodeIdSet.has(node.id) ? "#9333ea" : null)} strokeWidth={(selectedNode && selectedNode.id === node.id) ? 2 : (selectedNodeIdSet.has(node.id) ? 3 : 0)} />
               {showLabels && <Text text={node.label} fontSize={12} fill="#fff" width={node.size * 2} height={node.size * 2} align="center" verticalAlign="middle" offsetX={node.size} offsetY={node.size} listening={false} />}
               {showLabels && node.labelPrefix && <Text text={node.labelPrefix} fontSize={12} fill="black" fontStyle="bold" y={-(node.size * 2)} align="center" offsetX={(node.labelPrefix.length * 3.5)} listening={false} />}
             </Group>

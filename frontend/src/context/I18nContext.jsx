@@ -248,6 +248,7 @@ const translations = {
     b_coloring: 'B-Coloring',
     domination: 'Domination',
     total_domination: 'Total Domination',
+    k_domination: 'K-Domination',
     rainbow_domination: 'Rainbow Domination',
     singleton_rainbow_domination: 'Singleton Rainbow Domination',
     layout_planning: 'Layout Planning',

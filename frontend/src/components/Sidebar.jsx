@@ -335,6 +335,7 @@ const Sidebar = ({
               <MenuItem value="b_coloring">{t('b_coloring')}</MenuItem>
               <MenuItem value="domination">{t('domination')}</MenuItem>
               <MenuItem value="total_domination">{t('total_domination')}</MenuItem>
+              <MenuItem value="k_domination">{t('k_domination')}</MenuItem>
               <MenuItem value="rainbow_domination">{t('rainbow_domination')}</MenuItem>
               <MenuItem value="singleton_rainbow_domination">{t('singleton_rainbow_domination')}</MenuItem>
               <MenuItem value="layout_planning">{t('layout_planning')}</MenuItem>

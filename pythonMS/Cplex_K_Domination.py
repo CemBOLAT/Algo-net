@@ -1,9 +1,8 @@
 import json
 import os
 import sys
-import colorsys
 import pulp
-from pulp import LpProblem, LpVariable, LpBinary, lpSum, LpMaximize
+from pulp import LpProblem, LpVariable, LpBinary, lpSum, LpMinimize
 
 COLOR_PALETTE = [
     "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
@@ -31,13 +30,6 @@ def solve_with_fallback(problem):
     except Exception:
         pass
     raise RuntimeError("No available MIP solver (CPLEX/CBC/GLPK).")
-
-def color_for(index, total_colors):
-    if index <= len(COLOR_PALETTE):
-        return COLOR_PALETTE[index - 1]
-    hue = ((index - 1) * 360) / max(1, total_colors)
-    r, g, b = colorsys.hls_to_rgb(hue / 360.0, 0.5, 0.7)
-    return "#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
 
 def build_graph(vertices, edges):
     node_ids = [str(v.get("id")) for v in vertices if v.get("id") is not None]
@@ -70,6 +62,7 @@ if __name__ == "__main__":
 
     vertices = data.get("vertices", [])
     edges = data.get("edges", [])
+    k = data.get("k", 1)  # domination degree
 
     node_ids, adjacency = build_graph(vertices, edges)
     n = len(node_ids)
@@ -79,42 +72,23 @@ if __name__ == "__main__":
         print(json.dumps({}))
         sys.exit(0)
 
-    V = range(1, n + 1)
+    V = range(n)
 
-    model = LpProblem(name="b_coloring", sense=LpMaximize)
+    model = LpProblem(name="k_domination", sense=LpMinimize)
 
-    # x[i,j] = 1 if vertex j belongs to color class represented by i
-    # x[i,i] = 1 if vertex i is a representative (b-vertex)
-    x = {(i, j): LpVariable(name=f"x_{i}_{j}", cat=LpBinary) for i in V for j in V}
+    # x[v] = 1 if vertex v is in the domination set
+    x = {v: LpVariable(name=f"x_{v}", cat=LpBinary) for v in V}
 
-    model += lpSum(x[i, i] for i in V)
+    # Objective: minimize the size of the domination set
+    model += lpSum(x[v] for v in V)
 
-    adj = [[0] * n for _ in range(n)]
-    for u in range(n):
-        for v in adjacency.get(u, []):
-            adj[u][v] = 1
+    # k-domination constraint:
+    # Every vertex must either be in the set, or have at least k neighbors in the set.
+    # If x[v] = 1 then k*x[v] = k makes the constraint trivially satisfied.
+    for v in V:
+        neighbor_indices = list(adjacency.get(v, []))
+        model += lpSum(x[u] for u in neighbor_indices) + k * x[v] >= k
 
-    for j in V:
-        valid_reps = [i for i in V if adj[i - 1][j - 1] == 0 or i == j]
-        model += lpSum(x[i, j] for i in valid_reps) == 1
-
-    for i in V:
-        for j in V:
-            for k in V:
-                if j < k and adj[j - 1][k - 1] == 1:
-                    model += x[i, j] + x[i, k] <= x[i, i]
-
-    for i in V:
-        for j in V:
-            if i != j:
-                model += x[i, j] <= x[i, i]
-
-    for i in V:
-        for j in V:
-            if i != j:
-                neighbors_of_j = [k for k in V if adj[j - 1][k - 1] == 1]
-                if neighbors_of_j:
-                    model += lpSum(x[i, k] for k in neighbors_of_j) >= x[i, i] + x[j, j] - 1
     solve_with_fallback(model)
 
     if model.status != pulp.LpStatusOptimal:
@@ -122,21 +96,17 @@ if __name__ == "__main__":
         print(json.dumps({}))
         sys.exit(0)
 
-    assignments = {}
-    max_color = 0
-    for j in V:
-        assigned = None
-        for i in V:
-            if x[i, j].value() is not None and x[i, j].value() > 0.5:
-                assigned = i
-                break
-        if assigned is None:
-            continue
-        assignments[node_ids[j - 1]] = assigned
-        if assigned > max_color:
-            max_color = assigned
+    color_on = COLOR_PALETTE[0]
+    color_map = {}
 
-    color_map = {vid: color_for(col, max_color) for vid, col in assignments.items()}
+    # Only vertices in the domination set are colored.
+    # Non-selected vertices are left untouched (default color) and therefore
+    # do not appear in the "colors used" summary.
+    for v in V:
+        vid = node_ids[v]
+        selected = x[v].value() is not None and x[v].value() > 0.5
+        if selected:
+            color_map[vid] = color_on
 
     print("$$$")
     print(json.dumps(color_map))
