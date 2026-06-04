@@ -117,7 +117,12 @@ if __name__ == "__main__":
         for k in Colors:
             model += z[v] >= f[v, k]
 
-    # Constraint 3 - Singleton:
+    # Constraint 3 - Reverse Linking:
+    # If z[v] = 1 then at least one color must be assigned to v
+    for v in V:
+        model += lpSum(f[v, k] for k in Colors) >= z[v]
+
+    # Constraint 4 - Singleton:
     # Each vertex can have at most one color in its set
     for v in V:
         model += lpSum(f[v, k] for k in Colors) <= 1
