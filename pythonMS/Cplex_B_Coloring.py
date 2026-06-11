@@ -5,10 +5,25 @@ import colorsys
 import pulp
 from pulp import LpProblem, LpVariable, LpBinary, lpSum, LpMaximize
 
+# Distinctive, saturated colors. Blue / cyan / teal tones are intentionally left
+# out because the default (uncolored) vertex color is blue — color classes must
+# not be confused with uncolored nodes. Pale/low-contrast entries removed too.
 COLOR_PALETTE = [
-    "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
-    "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe",
-    "#008080", "#e6beff", "#9a6324", "#fffac8", "#800000",
+    "#e6194b",  # red
+    "#f58231",  # orange
+    "#ffe119",  # yellow
+    "#bfef45",  # lime
+    "#3cb44b",  # green
+    "#f032e6",  # magenta
+    "#911eb4",  # purple
+    "#e67e22",  # carrot
+    "#d6336c",  # rose
+    "#9a6324",  # brown
+    "#808000",  # olive
+    "#800000",  # maroon
+    "#c0392b",  # brick red
+    "#6d4c41",  # dark brown
+    "#ad1457",  # deep pink
 ]
 
 def solve_with_fallback(problem):
