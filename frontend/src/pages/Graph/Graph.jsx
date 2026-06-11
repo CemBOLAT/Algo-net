@@ -68,6 +68,9 @@ const Graph = () => {
     const [bulkEdgeTo, setBulkEdgeTo] = useState([]);
     const [bulkEdgeWeight, setBulkEdgeWeight] = useState('');
     const [bulkEdgeColor, setBulkEdgeColor] = useState('#1985d2');
+    const [bulkGridRows, setBulkGridRows] = useState('');
+    const [bulkGridCols, setBulkGridCols] = useState('');
+    const [bulkPathLength, setBulkPathLength] = useState('');
     const [selectedAlgorithm, setSelectedAlgorithm] = useState('dfs');
 
     // Visibility States
