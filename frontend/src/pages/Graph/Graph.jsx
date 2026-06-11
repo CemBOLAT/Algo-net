@@ -189,6 +189,121 @@ const Graph = () => {
         setShowBulkTools(false);
     };
 
+    // Grid graph: rows × cols lattice, each vertex linked to its right and bottom neighbor
+    const handleBulkAddGrid = () => {
+        const rows = parseInt(bulkGridRows, 10);
+        const cols = parseInt(bulkGridCols, 10);
+        if (isNaN(rows) || isNaN(cols) || rows <= 0 || cols <= 0) {
+            showError(t('enter_valid_number') || 'Invalid number');
+            return;
+        }
+        saveToHistory();
+
+        const SPACING = 80;
+        const OFFSET_X = 120;
+        const OFFSET_Y = 120;
+        const stamp = Date.now();
+        const usedLabel = (name) => nodes.some(n => n.label === name);
+
+        const newNodes = [];
+        const grid = []; // grid[r][c] = node id
+        let labelIndex = 1;
+        let counter = 0;
+        for (let r = 0; r < rows; r++) {
+            const rowIds = [];
+            for (let c = 0; c < cols; c++) {
+                let candidate = `${labelIndex}`;
+                while (usedLabel(candidate) || newNodes.some(n => n.label === candidate)) {
+                    labelIndex++;
+                    candidate = `${labelIndex}`;
+                }
+                const id = `${stamp}_${counter++}`;
+                newNodes.push({
+                    id,
+                    label: candidate,
+                    x: OFFSET_X + c * SPACING,
+                    y: OFFSET_Y + r * SPACING,
+                    size: 20,
+                    color: '#1976d2',
+                });
+                rowIds.push(id);
+                labelIndex++;
+            }
+            grid.push(rowIds);
+        }
+
+        const newEdges = [];
+        const addEdge = (from, to) => newEdges.push({
+            id: `${stamp}_e${newEdges.length}`,
+            from, to, label: '', weight: 1, directed: false, showWeight: true, color: '#9E9E9E',
+        });
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (c + 1 < cols) addEdge(grid[r][c], grid[r][c + 1]); // right neighbor
+                if (r + 1 < rows) addEdge(grid[r][c], grid[r + 1][c]); // bottom neighbor
+            }
+        }
+
+        setNodes(prev => [...prev, ...newNodes]);
+        setEdges(prev => [...prev, ...newEdges]);
+        showSuccess(`Added ${rows}×${cols} grid (${newNodes.length} nodes, ${newEdges.length} edges)`);
+        setBulkGridRows('');
+        setBulkGridCols('');
+        setShowBulkTools(false);
+    };
+
+    // Path graph: N vertices in a line, connected sequentially v1—v2—…—vN
+    const handleBulkAddPath = () => {
+        const len = parseInt(bulkPathLength, 10);
+        if (isNaN(len) || len <= 0) {
+            showError(t('enter_valid_number') || 'Invalid number');
+            return;
+        }
+        saveToHistory();
+
+        const SPACING = 80;
+        const OFFSET_X = 120;
+        const OFFSET_Y = 200;
+        const stamp = Date.now();
+        const usedLabel = (name) => nodes.some(n => n.label === name);
+
+        const newNodes = [];
+        const ids = [];
+        let labelIndex = 1;
+        for (let i = 0; i < len; i++) {
+            let candidate = `${labelIndex}`;
+            while (usedLabel(candidate) || newNodes.some(n => n.label === candidate)) {
+                labelIndex++;
+                candidate = `${labelIndex}`;
+            }
+            const id = `${stamp}_${i}`;
+            newNodes.push({
+                id,
+                label: candidate,
+                x: OFFSET_X + i * SPACING,
+                y: OFFSET_Y,
+                size: 20,
+                color: '#1976d2',
+            });
+            ids.push(id);
+            labelIndex++;
+        }
+
+        const newEdges = [];
+        for (let i = 0; i + 1 < len; i++) {
+            newEdges.push({
+                id: `${stamp}_e${i}`,
+                from: ids[i], to: ids[i + 1], label: '', weight: 1, directed: false, showWeight: true, color: '#9E9E9E',
+            });
+        }
+
+        setNodes(prev => [...prev, ...newNodes]);
+        setEdges(prev => [...prev, ...newEdges]);
+        showSuccess(`Added path of ${len} nodes`);
+        setBulkPathLength('');
+        setShowBulkTools(false);
+    };
+
     // --- Helper Functions (useCallback ile sarmalandı) ---
 
     const showError = useCallback((message) => {
@@ -800,9 +915,11 @@ const Graph = () => {
                     <Dialog open={showBulkTools} onClose={() => setShowBulkTools(false)} maxWidth="sm" fullWidth>
                         <DialogTitle>{t('bulk_tools_title')}</DialogTitle>
                         <DialogContent dividers>
-                            <Tabs value={bulkTab} onChange={(e, v) => setBulkTab(v)} sx={{ mb: 2 }}>
+                            <Tabs value={bulkTab} onChange={(e, v) => setBulkTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2 }}>
                                 <Tab label={t('add_vertices_tab')} />
                                 <Tab label={t('add_edges_tab')} />
+                                <Tab label={t('grid_tab')} />
+                                <Tab label={t('path_tab')} />
                             </Tabs>
 
                             {bulkTab === 0 && (
@@ -869,6 +986,53 @@ const Graph = () => {
                                         />
                                     </Box>
                                     <Button variant="contained" onClick={handleBulkAddEdges}>{t('add_edges_btn')}</Button>
+                                </Box>
+                            )}
+
+                            {bulkTab === 2 && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('bulk_grid_desc')}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                        <TextField
+                                            label={t('grid_rows_label')}
+                                            type="number"
+                                            size="small"
+                                            value={bulkGridRows}
+                                            onChange={(e) => setBulkGridRows(e.target.value)}
+                                            inputProps={{ min: 1, max: 50 }}
+                                            sx={{ flex: 1 }}
+                                        />
+                                        <Typography variant="body1" color="text.secondary">×</Typography>
+                                        <TextField
+                                            label={t('grid_cols_label')}
+                                            type="number"
+                                            size="small"
+                                            value={bulkGridCols}
+                                            onChange={(e) => setBulkGridCols(e.target.value)}
+                                            inputProps={{ min: 1, max: 50 }}
+                                            sx={{ flex: 1 }}
+                                        />
+                                    </Box>
+                                    <Button variant="contained" onClick={handleBulkAddGrid}>{t('add_grid_btn')}</Button>
+                                </Box>
+                            )}
+
+                            {bulkTab === 3 && (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('bulk_path_desc')}
+                                    </Typography>
+                                    <TextField
+                                        label={t('path_length_label')}
+                                        type="number"
+                                        size="small"
+                                        value={bulkPathLength}
+                                        onChange={(e) => setBulkPathLength(e.target.value)}
+                                        inputProps={{ min: 1, max: 200 }}
+                                    />
+                                    <Button variant="contained" onClick={handleBulkAddPath}>{t('add_path_btn')}</Button>
                                 </Box>
                             )}
                         </DialogContent>

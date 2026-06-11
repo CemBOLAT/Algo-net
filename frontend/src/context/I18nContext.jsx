@@ -335,6 +335,15 @@ const translations = {
     to_targets_label: 'To (Targets)',
     weight_optional_label: 'Weight (Optional)',
     add_edges_btn: 'Add Edges',
+    grid_tab: 'Grid',
+    path_tab: 'Path',
+    bulk_grid_desc: 'Create a grid graph. Vertices are placed in a rows × columns lattice and each is connected to its right and bottom neighbor (forming squares).',
+    grid_rows_label: 'Rows',
+    grid_cols_label: 'Columns',
+    add_grid_btn: 'Add Grid',
+    bulk_path_desc: 'Create a path graph: the given number of vertices placed in a line and connected sequentially (1—2—3—…).',
+    path_length_label: 'Length (vertices)',
+    add_path_btn: 'Add Path',
   },
 };
 
