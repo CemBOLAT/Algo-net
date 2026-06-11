@@ -5,10 +5,6 @@ import colorsys
 import pulp
 from pulp import LpProblem, LpVariable, LpBinary, lpSum, LpMinimize
 
-# --- Debug logging: write a structured JSON log (one record per vertex) ---
-# Enabled by default; disable with RD_DEBUG=0. Path overridable with RD_LOG.
-DEBUG = os.environ.get("RD_DEBUG", "1") not in ("0", "false", "False", "")
-
 COLOR_PALETTE = [
     "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
     "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe",
@@ -106,59 +102,6 @@ def greedy_rainbow(neighbors, V, K):
     return assignment
 
 
-def write_debug_log(V, Colors, node_ids, neighbors, f, ilp_assignment, assignment, K,
-                    status_label, objective, ilp_feasible, used_fallback, edge_count):
-    """Dump a structured JSON debug log with one record per vertex:
-    its decision variables f[v,k], the rounded ILP assignment, the final
-    assignment, and whether the domination / singleton constraints hold."""
-    if not DEBUG:
-        return
-    needed = set(range(1, K + 1))
-    vertices = []
-    for v in V:
-        cols = assignment.get(v, [])
-        empty = not cols
-        seen = set()
-        for u in neighbors[v]:
-            seen.update(assignment.get(u, ()))
-        neighbor_colors = sorted(seen)
-        domination_ok = True if not empty else needed.issubset(seen)
-        vertices.append({
-            "id": node_ids[v - 1],
-            "neighbors": [node_ids[u - 1] for u in neighbors[v]],
-            "decision_vars": {f"f[{k}]": f[v, k].value() for k in Colors},
-            "ilp_assigned": ilp_assignment.get(v, []),
-            "final_assigned": cols,
-            "empty": empty,
-            "neighbor_colors": neighbor_colors,
-            "missing_colors": sorted(needed - seen) if empty else [],
-            "domination_ok": domination_ok,
-            "singleton_ok": len(cols) <= 1,
-        })
-    payload = {
-        "meta": {
-            "n": len(node_ids),
-            "K": K,
-            "edges": edge_count,
-            "solver_status": status_label,
-            "objective": objective,
-            "ilp_feasible": ilp_feasible,
-            "used_fallback": used_fallback,
-            "all_domination_ok": all(rec["domination_ok"] for rec in vertices),
-            "all_singleton_ok": all(rec["singleton_ok"] for rec in vertices),
-        },
-        "vertices": vertices,
-    }
-    log_path = os.environ.get("RD_LOG") or os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "rd_singleton_debug_log.json"
-    )
-    try:
-        with open(log_path, "w", encoding="utf-8") as lf:
-            json.dump(payload, lf, indent=2, ensure_ascii=False)
-    except Exception as ex:
-        print(f"[RD] failed to write debug log: {ex}", file=sys.stderr)
-
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Missing input file argument", file=sys.stderr)
@@ -213,32 +156,20 @@ if __name__ == "__main__":
 
     solve_with_fallback(model)
 
-    status_label = pulp.LpStatus.get(model.status, str(model.status))
-    objective = pulp.value(model.objective)
-
     # Read the (possibly time-limited) ILP solution, rounding values to integers.
     # Singleton: keep at most one color per vertex.
-    ilp_assignment = {}
+    assignment = {}
     for v in V:
         cols = [k for k in Colors if (f[v, k].value() or 0) > 0.5]
         if cols:
-            ilp_assignment[v] = cols[:1]
+            assignment[v] = cols[:1]
 
     # The time limit can make the solver stop on a fractional / partial solution
     # whose rounding violates the rainbow condition (an uncolored vertex whose
     # neighbors don't cover all colors). Verify and, if invalid, fall back to a
     # construction that is guaranteed to be a valid k-rainbow domination.
-    ilp_feasible = is_feasible(ilp_assignment, neighbors, V, K)
-    if ilp_feasible:
-        assignment = ilp_assignment
-        used_fallback = False
-    else:
+    if not is_feasible(assignment, neighbors, V, K):
         assignment = greedy_rainbow(neighbors, V, K)
-        used_fallback = True
-
-    # Per-vertex JSON debug log (decision variables + constraint checks)
-    write_debug_log(V, Colors, node_ids, neighbors, f, ilp_assignment, assignment, K,
-                    status_label, objective, ilp_feasible, used_fallback, len(edges))
 
     full_assignments = {}
     max_color = 0
